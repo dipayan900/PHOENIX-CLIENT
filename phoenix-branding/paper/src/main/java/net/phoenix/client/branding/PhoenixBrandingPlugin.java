@@ -17,6 +17,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import java.io.File;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.HexFormat;
+import java.util.concurrent.Executors;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.LocalDate;
@@ -31,6 +39,8 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
     private static final Map<String, Cosmetic> CATALOG = new LinkedHashMap<>();
     private final Set<UUID> phoenixPlayers = ConcurrentHashMap.newKeySet();
     private Connection database;
+    private HttpServer apiServer;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     private record Cosmetic(String slot, int price, boolean emote) {}
     private record Loadout(String cape, String wings, String head, String back, String emote) {}
@@ -84,6 +94,7 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
                 s.executeUpdate("CREATE TABLE IF NOT EXISTS wallets(uuid TEXT PRIMARY KEY, coins INTEGER NOT NULL DEFAULT 100, last_daily TEXT)");
                 s.executeUpdate("CREATE TABLE IF NOT EXISTS owned(uuid TEXT NOT NULL, cosmetic_id TEXT NOT NULL, PRIMARY KEY(uuid, cosmetic_id))");
                 s.executeUpdate("CREATE TABLE IF NOT EXISTS loadouts(uuid TEXT PRIMARY KEY, cape TEXT NOT NULL DEFAULT '', wings TEXT NOT NULL DEFAULT '', head TEXT NOT NULL DEFAULT '', back TEXT NOT NULL DEFAULT '', emote TEXT NOT NULL DEFAULT '')");
+                s.executeUpdate("CREATE TABLE IF NOT EXISTS api_tokens(uuid TEXT PRIMARY KEY, token_hash TEXT NOT NULL)");
             }
         } catch (SQLException e) {
             getLogger().severe("Cosmetics database could not start: " + e.getMessage());
@@ -94,6 +105,8 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
         getServer().getMessenger().registerOutgoingPluginChannel(this, LOADOUT_CHANNEL);
         getServer().getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("phoenix"), "phoenix command missing from plugin.yml").setExecutor(this);
+        startApiServer();
+        for (Player online : Bukkit.getOnlinePlayers()) applyBranding(online);
         getLogger().info("Phoenix cosmetics database ready. Owner privileges are verified against configured Minecraft UUID.");
     }
 
@@ -101,6 +114,7 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
         getServer().getMessenger().unregisterIncomingPluginChannel(this, BRAND_CHANNEL, this);
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, LOADOUT_CHANNEL);
         phoenixPlayers.clear();
+        if (apiServer != null) apiServer.stop(0);
         try { if (database != null && !database.isClosed()) database.close(); }
         catch (SQLException e) { getLogger().warning("Could not close cosmetics database: " + e.getMessage()); }
     }
@@ -166,23 +180,153 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
         }
     }
 
+
+    private static String sha256(String value) throws Exception {
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+        return HexFormat.of().formatHex(digest);
+    }
+
+    private void startApiServer() {
+        if (!getConfig().getBoolean("api-enabled", true)) return;
+        int port = getConfig().getInt("api-port", 8765);
+        try {
+            apiServer = HttpServer.create(new InetSocketAddress(getConfig().getString("api-bind", "0.0.0.0"), port), 32);
+            apiServer.createContext("/api/inventory", e -> handleApi(e, "inventory"));
+            apiServer.createContext("/api/equip", e -> handleApi(e, "equip"));
+            apiServer.createContext("/api/unequip", e -> handleApi(e, "unequip"));
+            apiServer.setExecutor(Executors.newCachedThreadPool(r -> { Thread t = new Thread(r, "Phoenix-Launcher-API"); t.setDaemon(true); return t; }));
+            apiServer.start();
+            getLogger().warning("Phoenix launcher API listening on port " + port + ". HTTP is unencrypted: use trusted LAN only and never port-forward this API.");
+        } catch (Exception e) {
+            getLogger().severe("Could not start launcher sync API: " + e.getMessage());
+        }
+    }
+
+    private synchronized UUID authenticateApi(HttpExchange exchange) throws Exception {
+        String header = exchange.getRequestHeaders().getFirst("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) return null;
+        String hash = sha256(header.substring(7).trim());
+        try (PreparedStatement q = database.prepareStatement("SELECT uuid FROM api_tokens WHERE token_hash=?")) {
+            q.setString(1, hash);
+            try (ResultSet rs = q.executeQuery()) { return rs.next() ? UUID.fromString(rs.getString(1)) : null; }
+        }
+    }
+
+    private void reply(HttpExchange exchange, int status, String body) throws java.io.IOException {
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
+        exchange.getResponseHeaders().set("Cache-Control", "no-store");
+        exchange.sendResponseHeaders(status, bytes.length);
+        try (var out = exchange.getResponseBody()) { out.write(bytes); }
+    }
+
+    private String readBody(HttpExchange exchange) throws java.io.IOException {
+        byte[] bytes = exchange.getRequestBody().readNBytes(256);
+        if (bytes.length >= 256) throw new java.io.IOException("Request too large");
+        return new String(bytes, StandardCharsets.UTF_8).trim();
+    }
+
+    private void handleApi(HttpExchange exchange, String action) throws java.io.IOException {
+        try {
+            UUID player = authenticateApi(exchange);
+            if (player == null) { reply(exchange, 401, "Unauthorized. Run /phoenix link in game."); return; }
+            if (action.equals("inventory")) {
+                if (!exchange.getRequestMethod().equals("GET")) { reply(exchange, 405, "Use GET."); return; }
+                ensurePlayer(player);
+                Loadout l = loadout(player);
+                List<String> ids = new ArrayList<>();
+                try (PreparedStatement q = database.prepareStatement("SELECT cosmetic_id FROM owned WHERE uuid=? ORDER BY cosmetic_id")) {
+                    q.setString(1, player.toString());
+                    try (ResultSet rs = q.executeQuery()) { while (rs.next()) ids.add(rs.getString(1)); }
+                }
+                String response = "uuid=" + player + "\ncoins=" + balance(player) + "\nowner=" + isOwner(player)
+                    + "\nowned=" + String.join(",", ids) + "\ncape=" + l.cape() + "\nwings=" + l.wings()
+                    + "\nhead=" + l.head() + "\nback=" + l.back() + "\nemote=" + l.emote();
+                reply(exchange, 200, response);
+                return;
+            }
+            if (!exchange.getRequestMethod().equals("POST")) { reply(exchange, 405, "Use POST."); return; }
+            String body = readBody(exchange);
+            if (action.equals("equip")) {
+                String id = body.replaceFirst("^id=", "").toLowerCase(Locale.ROOT);
+                Cosmetic c = CATALOG.get(id);
+                if (c == null || c.emote() || !id.matches("[a-z0-9_]{1,48}")) { reply(exchange, 400, "Invalid cosmetic id."); return; }
+                if (!owns(player, id)) { reply(exchange, 403, "Cosmetic is not owned by this account."); return; }
+                synchronized (this) {
+                    try (PreparedStatement u = database.prepareStatement("UPDATE loadouts SET " + c.slot() + "=? WHERE uuid=?")) {
+                        u.setString(1, id); u.setString(2, player.toString()); u.executeUpdate();
+                    }
+                }
+                Bukkit.getScheduler().runTask(this, this::broadcastLoadouts);
+                reply(exchange, 200, "Equipped " + id);
+                return;
+            }
+            if (action.equals("unequip")) {
+                String slot = body.replaceFirst("^slot=", "").toLowerCase(Locale.ROOT);
+                if (!Set.of("cape", "wings", "head", "back", "emote").contains(slot)) { reply(exchange, 400, "Invalid slot."); return; }
+                synchronized (this) {
+                    try (PreparedStatement u = database.prepareStatement("UPDATE loadouts SET " + slot + "='' WHERE uuid=?")) {
+                        u.setString(1, player.toString()); u.executeUpdate();
+                    }
+                }
+                Bukkit.getScheduler().runTask(this, this::broadcastLoadouts);
+                reply(exchange, 200, "Unequipped " + slot);
+                return;
+            }
+            reply(exchange, 404, "Unknown endpoint.");
+        } catch (Exception e) {
+            getLogger().warning("Launcher API request failed: " + e.getMessage());
+            try { reply(exchange, 500, "Server error."); } catch (Exception ignored) { }
+        } finally { exchange.close(); }
+    }
+
+    private void createLauncherLink(Player player) throws Exception {
+        byte[] random = new byte[32];
+        secureRandom.nextBytes(random);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(random);
+        synchronized (this) {
+            try (PreparedStatement p = database.prepareStatement("INSERT OR REPLACE INTO api_tokens(uuid,token_hash) VALUES(?,?)")) {
+                p.setString(1, player.getUniqueId().toString());
+                p.setString(2, sha256(token));
+                p.executeUpdate();
+            }
+        }
+        player.sendMessage(Component.text("Phoenix launcher link token (keep private):", NamedTextColor.GREEN));
+        player.sendMessage(Component.text(token, NamedTextColor.GOLD));
+        player.sendMessage(Component.text("Enter this in Phoenix Cosmetics. /phoenix unlink revokes it. HTTP API is for trusted LAN only.", NamedTextColor.YELLOW));
+    }
+
+    private void applyBranding(Player player) {
+        boolean enabled = getConfig().getBoolean("branding-enabled", true);
+        if (enabled) {
+            player.setPlayerListName(Component.text(PREFIX, NamedTextColor.GOLD).append(Component.text(player.getName())));
+            player.setCustomName(Component.text(PREFIX, NamedTextColor.GOLD).append(Component.text(player.getName())));
+            player.setCustomNameVisible(true);
+        } else {
+            player.setPlayerListName(Component.text(player.getName()));
+            player.setCustomName(null);
+            player.setCustomNameVisible(false);
+        }
+    }
+
     @Override public void onPluginMessageReceived(String channel, Player player, byte[] message) {
         if (!BRAND_CHANNEL.equals(channel) || message.length != 0) return;
         phoenixPlayers.add(player.getUniqueId());
-        player.playerListName(Component.text(PREFIX, NamedTextColor.GOLD).append(Component.text(player.getName())));
+        applyBranding(player);
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         Player p=event.getPlayer();
         try { ensurePlayer(p.getUniqueId()); }
         catch(SQLException e){p.sendMessage(Component.text("Phoenix cosmetics database is unavailable.",NamedTextColor.RED));return;}
+        applyBranding(p);
         Bukkit.getScheduler().runTaskLater(this,this::broadcastLoadouts,20L);
     }
 
     @EventHandler public void onQuit(PlayerQuitEvent event) { phoenixPlayers.remove(event.getPlayer().getUniqueId()); }
 
     @EventHandler public void onChat(AsyncChatEvent event) {
-        if (!phoenixPlayers.contains(event.getPlayer().getUniqueId())) return;
+        if (!getConfig().getBoolean("branding-enabled", true)) return;
         ChatRenderer previous=event.renderer();
         event.renderer((source,display,message,viewer)->Component.text(PREFIX,NamedTextColor.GOLD)
                 .append(previous.render(source,display,message,viewer)));
@@ -192,8 +336,35 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
         if (!(sender instanceof Player player)) { sender.sendMessage("Run this command in-game."); return true; }
         try {
             ensurePlayer(player.getUniqueId());
+            if (args.length > 0 && args[0].equalsIgnoreCase("branding")) {
+                if (!sender.hasPermission("phoenix.admin")) { sender.sendMessage(Component.text("You need phoenix.admin permission.", NamedTextColor.RED)); return true; }
+                if (args.length < 2) { sender.sendMessage("Usage: /phoenix branding <on|off|toggle|status>"); return true; }
+                String mode = args[1].toLowerCase(Locale.ROOT);
+                boolean enabled = getConfig().getBoolean("branding-enabled", true);
+                if (mode.equals("on")) enabled = true;
+                else if (mode.equals("off")) enabled = false;
+                else if (mode.equals("toggle")) enabled = !enabled;
+                else if (!mode.equals("status")) { sender.sendMessage("Use on, off, toggle or status."); return true; }
+                getConfig().set("branding-enabled", enabled);
+                saveConfig();
+                for (Player online : Bukkit.getOnlinePlayers()) applyBranding(online);
+                sender.sendMessage(Component.text("Phoenix in-world and tab branding: " + (enabled ? "ON" : "OFF"), NamedTextColor.GOLD));
+                return true;
+            }
+            if (sender instanceof Player player && args.length > 0 && args[0].equalsIgnoreCase("link")) {
+                createLauncherLink(player);
+                return true;
+            }
+            if (sender instanceof Player player && args.length > 0 && args[0].equalsIgnoreCase("unlink")) {
+                try (PreparedStatement q = database.prepareStatement("DELETE FROM api_tokens WHERE uuid=?")) {
+                    q.setString(1, player.getUniqueId().toString());
+                    q.executeUpdate();
+                }
+                player.sendMessage(Component.text("Launcher token revoked.", NamedTextColor.YELLOW));
+                return true;
+            }
             if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-                player.sendMessage(Component.text("Phoenix Cosmetics · /phoenix balance | claim | shop | buy <id> | equip <id> | unequip <slot> | wardrobe | emote <id> | owner",NamedTextColor.GOLD));
+                player.sendMessage(Component.text("Phoenix · /phoenix balance | claim | shop | buy <id> | equip <id> | unequip <slot> | wardrobe | emote <id> | link | unlink | branding <on|off|toggle>",NamedTextColor.GOLD));
                 return true;
             }
             switch(args[0].toLowerCase(Locale.ROOT)) {
