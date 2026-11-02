@@ -960,7 +960,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         }
                         item {
                             OutlinedButton(
-                                onClick = { page = "Settings"; notice = "Open About Phoenix & Creator Credits in Settings." },
+                                onClick = { page = "Credits" },
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("ABOUT PHOENIX & CREATOR CREDITS", color = animatedAccent, fontWeight = FontWeight.Bold) }
                         }
