@@ -207,11 +207,15 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){shopCategories.forEach{FilterChip(selected=category==it,onClick={category=it},label={Text(it,fontSize=9.sp)})}}
   Column(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(17.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
    Text("COSMETIC PREVIEW",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
+   Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
+    PhoenixCharacterPreview(preview.id,Modifier.fillMaxWidth().height(250.dp))
+    Text("DRAG TO ROTATE · OPENGL 3D PREVIEW",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)
+   }
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
-    PhoenixCosmeticArtwork(preview,Modifier.size(70.dp))
+    PhoenixCosmeticArtwork(preview,Modifier.size(58.dp))
     Column(Modifier.weight(1f)){Text(preview.name,color=Color.White,fontWeight=FontWeight.Bold);Text("${preview.category} · ${preview.style}",color=shopMuted,fontSize=10.sp);Text(preview.detail,color=shopMuted,fontSize=11.sp)}
    }
-   Text("Illustrated item preview. The bundled Fabric add-on renders first-pass capes, wings, headwear, back items, tails, bracers, shoulder pets and supported emote poses in Minecraft Java 1.21.1. Other catalogue concepts remain preview-only until their renderer is added.",color=shopMuted,fontSize=10.sp)
+   Text("Drag the 3D player to rotate. The preview uses original procedural meshes; supported cosmetics are rendered by the bundled Fabric add-on in Minecraft Java 1.21.1.",color=shopMuted,fontSize=10.sp)
   }
   Text("CATALOGUE · ${visible.size} ITEMS",color=Color.White,fontWeight=FontWeight.Bold,fontSize=13.sp)
   visible.forEach{item->
