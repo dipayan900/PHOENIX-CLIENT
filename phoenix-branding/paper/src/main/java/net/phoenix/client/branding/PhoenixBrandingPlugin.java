@@ -341,12 +341,12 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
     private void applyBranding(Player player) {
         boolean enabled = getConfig().getBoolean("branding-enabled", true);
         if (enabled) {
-            player.setPlayerListName(Component.text(PREFIX, NamedTextColor.GOLD).append(Component.text(player.getName())));
-            player.setCustomName(Component.text(PREFIX, NamedTextColor.GOLD).append(Component.text(player.getName())));
+            player.playerListName(Component.text(PREFIX, NamedTextColor.GOLD).append(Component.text(player.getName())));
+            player.customName(Component.text(PREFIX, NamedTextColor.GOLD).append(Component.text(player.getName())));
             player.setCustomNameVisible(true);
         } else {
-            player.setPlayerListName(Component.text(player.getName()));
-            player.setCustomName(null);
+            player.playerListName(Component.text(player.getName()));
+            player.customName(null);
             player.setCustomNameVisible(false);
         }
     }
