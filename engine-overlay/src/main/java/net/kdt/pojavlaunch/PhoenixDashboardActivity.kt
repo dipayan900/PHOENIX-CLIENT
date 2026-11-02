@@ -2,10 +2,12 @@ package net.kdt.pojavlaunch
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalUriHandler
@@ -225,6 +228,29 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         item { Text(notice, color = PhoenixMuted, fontSize = 12.sp) }
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .background(PhoenixPanel, RoundedCornerShape(18.dp))
+                                    .clickable {
+                                        activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/MnxS3g8gxA")))
+                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.ic_discord),
+                                    contentDescription = "Discord",
+                                    modifier = Modifier.size(42.dp)
+                                )
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text("PHOENIX COMMUNITY", color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text("Join our Discord server", color = PhoenixMuted, fontSize = 12.sp)
+                                }
+                                Text("JOIN  →", color = PhoenixOrange, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
                     }
                     "Profiles" -> {
                         item {
