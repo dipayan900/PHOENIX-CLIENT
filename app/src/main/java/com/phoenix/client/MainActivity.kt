@@ -1,6 +1,7 @@
 package com.phoenix.client
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -87,7 +88,17 @@ private fun PhoenixApp() {
                                     Text("RISE FROM THE ASHES", color = theme.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                                     Text("Your next\nMinecraft era.", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 34.sp)
                                     Text("A launcher built for your next adventure.", color = Muted)
-                                    Button(onClick = { notice = "Game launch is not available yet: the Java runtime, game files and account flow have not been integrated." }, colors = ButtonDefaults.buttonColors(containerColor = theme.accent), modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+                                    Button(onClick = {
+                                        val runtimeIntent = context.packageManager.getLaunchIntentForPackage("org.angelauramc.amethyst")
+                                            ?: context.packageManager.getLaunchIntentForPackage("org.angelauramc.amethyst.debug")
+                                        if (runtimeIntent != null) {
+                                            runtimeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            context.startActivity(runtimeIntent)
+                                            notice = "Opened the separate Amethyst runtime app. Phoenix has not passed your selected profile/version into it."
+                                        } else {
+                                            notice = "Amethyst runtime is not installed. Phoenix currently provides an optional hand-off only; the game engine is not bundled."
+                                        }
+                                    }, colors = ButtonDefaults.buttonColors(containerColor = theme.accent), modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
                                         Text("▶   PLAY", color = Color.Black, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                                     }
                                 }
