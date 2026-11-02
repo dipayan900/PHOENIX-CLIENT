@@ -169,3 +169,61 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  },confirmButton={TextButton(onClick={wallet=false}){Text("CLOSE",color=accent)}})
  if(info)AlertDialog(onDismissRequest={info=false},containerColor=shopPanel,title={Text("Cosmetic compatibility",color=Color.White)},text={Text("This launcher foundation contains a local catalogue, filters, preview selection, inventory, equip slots and demo coin wallet. Actual capes, wings, accessories, emotes and particles need a runtime renderer. Other players see cosmetics only when their client or server supports the same protocol. Server-backed owner entitlements, cloud inventory and payment processing remain future milestones.",color=shopMuted,fontSize=11.sp)},confirmButton={TextButton(onClick={info=false}){Text("GOT IT",color=accent)}})
 }
+
+/**
+ * Runtime integration contracts. The current Amethyst engine checkout does not
+ * expose these hooks yet; the launcher must treat a missing provider as
+ * unsupported rather than pretending cosmetics are rendered in-game.
+ */
+data class PhoenixCosmeticAssetLicense(
+    val assetId: String,
+    val sourceUrl: String,
+    val licenseSpdx: String,
+    val attribution: String,
+    val assetSha256: String,
+    val redistributionAllowed: Boolean
+)
+
+data class PhoenixCosmeticLoadout(
+    val playerUuid: String,
+    val capeId: String? = null,
+    val wingId: String? = null,
+    val headId: String? = null,
+    val faceId: String? = null,
+    val backId: String? = null,
+    val effectIds: List<String> = emptyList()
+)
+
+data class PhoenixCosmeticEmote(
+    val id: String,
+    val animationAssetId: String,
+    val durationMillis: Long,
+    val loop: Boolean = false
+)
+
+interface PhoenixCosmeticRenderer {
+    fun isAvailable(): Boolean
+    fun showPlayerPreview(loadout: PhoenixCosmeticLoadout): Boolean
+    fun applyLoadout(loadout: PhoenixCosmeticLoadout): Boolean
+    fun playEmote(playerUuid: String, emote: PhoenixCosmeticEmote): Boolean
+    fun applyRemoteLoadout(loadout: PhoenixCosmeticLoadout): Boolean
+}
+
+data class PhoenixCloudCosmeticInventory(
+    val revision: Long,
+    val coinBalance: Long,
+    val ownedCosmeticIds: Set<String>,
+    val equippedLoadout: PhoenixCosmeticLoadout
+)
+
+data class PhoenixVerifiedOwnerEntitlement(
+    val accountSubject: String,
+    val expiresAtEpochSeconds: Long,
+    val signedEntitlement: String
+)
+
+interface PhoenixCosmeticCloudApi {
+    suspend fun fetchInventory(accessToken: String): PhoenixCloudCosmeticInventory
+    suspend fun syncLoadout(accessToken: String, loadout: PhoenixCosmeticLoadout): PhoenixCloudCosmeticInventory
+    suspend fun verifyOwnerEntitlement(accessToken: String): PhoenixVerifiedOwnerEntitlement?
+}
