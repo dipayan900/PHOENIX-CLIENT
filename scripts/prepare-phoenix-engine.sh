@@ -110,4 +110,74 @@ XML
 cp "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
 mkdir -p "$APP/src/main/kotlin/net/kdt/pojavlaunch"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt"
-echo "Phoenix branding and Compose dashboard integration applied to the Amethyst engine checkout."
+
+# Apply the Phoenix Inferno palette to the entire embedded launcher UI, not only
+# the Compose dashboard. Keep every upstream view/ID so game, auth and installer
+# behavior continues to be provided by the original engine.
+python3 - "$APP/src/main/res/values/colors.xml" "$APP/src/main/res/values/styles.xml" "$APP/src/main/res/layout/fragment_launcher.xml" <<'PY'
+from pathlib import Path
+import sys
+colors, styles, launcher = map(Path, sys.argv[1:])
+# The upstream resource names are used by account, version, profile, installer,
+# settings and mod-search screens. Recoloring these shared tokens themes them all.
+c = colors.read_text()
+for old, new in {
+    '#9649b8': '#FF702E',
+    '#181818': '#0B0910',
+    '#464646': '#211923',
+    '#242424': '#09070D',
+    '#232323': '#151019',
+    '#B2B2B2': '#B8AEBB',
+}.items():
+    c = c.replace(old, new)
+colors.write_text(c)
+
+s = styles.read_text()
+needle = '        <item name="windowActionBar">false</item>'
+if needle in s and 'name="colorAccent"' not in s:
+    s = s.replace(needle, needle + '''
+        <item name="colorAccent">@color/minebutton_color</item>
+        <item name="android:colorAccent">@color/minebutton_color</item>
+        <item name="colorControlActivated">@color/minebutton_color</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/background_app</item>''')
+styles.write_text(s)
+
+# Add Phoenix identity inside the real engine launcher while retaining all
+# original controls and their IDs, listeners, profile handling and game launch.
+x = launcher.read_text()
+if 'phoenix_engine_header' not in x:
+    header = '''\t<LinearLayout
+\t\tandroid:id="@+id/phoenix_engine_header"
+\t\tandroid:layout_width="match_parent"
+\t\tandroid:layout_height="wrap_content"
+\t\tandroid:orientation="vertical"
+\t\tandroid:paddingStart="18dp"
+\t\tandroid:paddingTop="14dp"
+\t\tandroid:paddingEnd="18dp"
+\t\tandroid:paddingBottom="10dp"
+\t\tapp:layout_constraintTop_toTopOf="parent">
+\t\t<TextView
+\t\t\tandroid:layout_width="wrap_content"
+\t\t\tandroid:layout_height="wrap_content"
+\t\t\tandroid:text="PHOENIX  /  JAVA EDITION"
+\t\t\tandroid:textColor="@color/minebutton_color"
+\t\t\tandroid:textStyle="bold"
+\t\t\tandroid:letterSpacing="0.16"
+\t\t\tandroid:textSize="11sp" />
+\t\t<TextView
+\t\t\tandroid:layout_width="wrap_content"
+\t\t\tandroid:layout_height="wrap_content"
+\t\t\tandroid:text="GAME CONTROL CENTER"
+\t\t\tandroid:textColor="@color/primary_text"
+\t\t\tandroid:textStyle="bold"
+\t\t\tandroid:textSize="20sp" />
+\t</LinearLayout>
+'''
+    x = x.replace('\t<ScrollView', header + '\t<ScrollView', 1)
+    x = x.replace('app:layout_constraintTop_toTopOf="parent"\n\t\tapp:layout_constraintBottom_toTopOf="@id/mc_version_spinner"',
+                  'app:layout_constraintTop_toBottomOf="@id/phoenix_engine_header"\n\t\tapp:layout_constraintBottom_toTopOf="@id/mc_version_spinner"', 1)
+launcher.write_text(x)
+PY
+
+echo "Phoenix branding, Inferno engine theme and Compose dashboard integration applied to the Amethyst engine checkout."
