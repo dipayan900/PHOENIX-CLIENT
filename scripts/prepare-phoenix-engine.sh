@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 gradle, strings, colors, about, manifest, test_storage = map(Path, sys.argv[1:])
 g = gradle.read_text()
-g = g.replace("compileSdk = 37", "compileSdk = 36\n    compileSdkExtension = 18")
+g = g.replace("compileSdk = 37", "compileSdk = 37\n    compileSdkMinor = 1")
 replacements = {
     'applicationId "org.angelauramc.amethyst"': 'applicationId "com.phoenix.client"',
     "applicationIdSuffix '.debug'": "// Phoenix uses one stable application ID across build types.",
