@@ -128,12 +128,10 @@ jobs:
           This package uses free demo coins only; real-money checkout is disabled.
           EOF
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
-          cd "$RUNNER_TEMP"
-          zip -qr Phoenix-Client-Complete-Test-Package.zip phoenix-complete-test
       - name: Upload one complete Phoenix test package
         uses: actions/upload-artifact@v4
         with:
-          name: phoenix-client-complete-test-package
-          path: ${{ runner.temp }}/Phoenix-Client-Complete-Test-Package.zip
+          name: Phoenix-Client-Complete-Test-Package
+          path: ${{ runner.temp }}/phoenix-complete-test/**
           if-no-files-found: error
           retention-days: 14
