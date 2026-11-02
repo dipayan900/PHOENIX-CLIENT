@@ -224,11 +224,13 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   Column(verticalArrangement=Arrangement.spacedBy(4.dp)){Text("PHOENIX COSMETICS",color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Black);Text("Build your look. Make your entrance.",color=shopMuted,fontSize=12.sp)}
   Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(17.dp)).padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
    Column{Text("PHOENIX COINS",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text("🪙 $coins",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Black);Text(if(serverConnected)"Authoritative server wallet" else "Local development wallet",color=shopMuted,fontSize=10.sp)}
-   Button(onClick={wallet=true},colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("COIN STORE",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=10.sp)}
+   Button(onClick={wallet=true},enabled=!serverConnected,colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("COIN STORE",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=10.sp)}
   }
+  if(!serverConnected){
   Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
    Column(Modifier.weight(1f)){Text("DAILY FREE COINS",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text("Claim 100 demo coins once per day",color=Color.White,fontSize=12.sp);Text("Local test balance only · no payment",color=shopMuted,fontSize=9.sp)}
    Button(onClick={if(lastDailyReward!=today){coins+=100;lastDailyReward=today;save();onNotice("100 free demo coins added to your local test wallet.")}},enabled=lastDailyReward!=today,colors=ButtonDefaults.buttonColors(containerColor=accent,disabledContainerColor=Color(0xFF39313D))){Text(if(lastDailyReward==today)"CLAIMED" else "CLAIM",color=if(lastDailyReward==today)shopMuted else Color.Black,fontSize=10.sp,fontWeight=FontWeight.Bold)}
+  }
   }
   Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF46231B),Color(0xFF211923),shopPanel)),RoundedCornerShape(17.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
    Text("PHOENIX OWNER COLLECTION",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
