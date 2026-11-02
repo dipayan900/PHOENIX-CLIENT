@@ -193,6 +193,7 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
             apiServer = HttpServer.create(new InetSocketAddress(getConfig().getString("api-bind", "0.0.0.0"), port), 32);
             apiServer.createContext("/api/inventory", e -> handleApi(e, "inventory"));
             apiServer.createContext("/api/equip", e -> handleApi(e, "equip"));
+            apiServer.createContext("/api/buy", e -> handleApi(e, "buy"));
             apiServer.createContext("/api/unequip", e -> handleApi(e, "unequip"));
             apiServer.setExecutor(Executors.newCachedThreadPool(r -> { Thread t = new Thread(r, "Phoenix-Launcher-API"); t.setDaemon(true); return t; }));
             apiServer.start();
@@ -247,6 +248,29 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
             }
             if (!exchange.getRequestMethod().equals("POST")) { reply(exchange, 405, "Use POST."); return; }
             String body = readBody(exchange);
+            if (action.equals("buy")) {
+                String id = body.replaceFirst("^id=", "").toLowerCase(Locale.ROOT);
+                Cosmetic c = CATALOG.get(id);
+                if (c == null || !id.matches("[a-z0-9_]{1,48}")) { reply(exchange, 400, "Invalid cosmetic id."); return; }
+                if (owns(player, id)) { reply(exchange, 200, "Already owned."); return; }
+                synchronized (this) {
+                    database.setAutoCommit(false);
+                    try {
+                        int coins = balance(player);
+                        if (coins < c.price()) { database.rollback(); reply(exchange, 402, "Not enough server coins."); return; }
+                        try (PreparedStatement u = database.prepareStatement("UPDATE wallets SET coins=coins-? WHERE uuid=?")) {
+                            u.setInt(1, c.price()); u.setString(2, player.toString()); u.executeUpdate();
+                        }
+                        try (PreparedStatement i = database.prepareStatement("INSERT OR IGNORE INTO owned(uuid,cosmetic_id) VALUES(?,?)")) {
+                            i.setString(1, player.toString()); i.setString(2, id); i.executeUpdate();
+                        }
+                        database.commit();
+                    } catch (Exception e) { database.rollback(); throw e; }
+                    finally { database.setAutoCommit(true); }
+                }
+                reply(exchange, 200, "Unlocked " + id);
+                return;
+            }
             if (action.equals("equip")) {
                 String id = body.replaceFirst("^id=", "").toLowerCase(Locale.ROOT);
                 Cosmetic c = CATALOG.get(id);
