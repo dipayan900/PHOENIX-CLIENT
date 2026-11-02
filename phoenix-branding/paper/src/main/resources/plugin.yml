@@ -1,5 +1,14 @@
 name: PhoenixBranding
-version: 0.1.0
+version: 0.2.0
 main: net.phoenix.client.branding.PhoenixBrandingPlugin
 api-version: '1.21'
-description: Adds a Phoenix bird mark to players whose client advertises the Phoenix branding channel.
+description: Phoenix player branding, persistent cosmetics inventory, coin wallet and multiplayer loadout sync.
+commands:
+  phoenix:
+    description: Phoenix cosmetics, wardrobe and coin commands
+    usage: /phoenix help
+    aliases: [pcosmetics]
+permissions:
+  phoenix.admin:
+    description: Phoenix cosmetics administration
+    default: op
