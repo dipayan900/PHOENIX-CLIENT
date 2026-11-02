@@ -1287,8 +1287,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                              Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                  Text("DEVELOPER LINKS", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
                                  Text("GitHub · @dipayan900", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://github.com/dipayan900") }.padding(vertical = 5.dp))
-                                 Text("Portfolio · dipayansportfolio.site", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://dipayansportfolio.site") }.padding(vertical = 5.dp))
-                                 Text("DevKrew · devkrew.in", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://devkrew.in") }.padding(vertical = 5.dp))
+                                 Text("Portfolio · dipayanportfolios.netlify.app", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://dipayanportfolios.netlify.app/") }.padding(vertical = 5.dp))
                              }
                          }
                          item {
