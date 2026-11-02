@@ -121,6 +121,7 @@ cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixDashbo
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixCosmeticsScreen.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixCosmeticsScreen.kt"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixCharacterPreview.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixCharacterPreview.kt"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixServerApi.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixServerApi.kt"
+cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixSocialScreen.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixSocialScreen.kt"
 
 # Apply the Phoenix Inferno palette to the entire embedded launcher UI, not only
 # the Compose dashboard. Keep every upstream view/ID so game, auth and installer
