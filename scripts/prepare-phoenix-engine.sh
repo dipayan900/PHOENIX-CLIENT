@@ -55,6 +55,21 @@ g = g.replace(
     "plugins {\n    id 'com.android.application' version '9.3.1'\n    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.0'\n}"
 )
 g = g.replace("buildFeatures {\n        prefab true", "buildFeatures {\n        compose true\n        prefab true")
+# Keep Kotlin Compose bytecode and Java sources on the same JVM target.
+g = g.replace(
+    "sourceCompatibility JavaVersion.VERSION_1_8\\n        targetCompatibility JavaVersion.VERSION_1_8",
+    "sourceCompatibility JavaVersion.VERSION_11\\n        targetCompatibility JavaVersion.VERSION_11"
+)
+g = g.replace(
+    "\\nafterEvaluate {",
+    """
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+}
+
+afterEvaluate {
+"""
+)
 g = g.replace("dependencies {\n", """dependencies {
     implementation platform('androidx.compose:compose-bom:2026.09.00')
     implementation 'androidx.activity:activity-compose:1.12.0'
