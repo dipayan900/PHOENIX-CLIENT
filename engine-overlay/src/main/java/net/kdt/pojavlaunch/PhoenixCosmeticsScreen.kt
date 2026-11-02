@@ -192,6 +192,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  var serverStatus by remember{mutableStateOf("Pair with a Paper server to sync your real server inventory and loadout.")}
  var serverOwner by remember{mutableStateOf(false)}
  var serverSupported by remember{mutableStateOf(emptySet<String>())}
+ fun save(){prefs.edit().putInt("demo_coins",coins).putLong("last_daily_reward_day",lastDailyReward).putStringSet("owned",owned.toSet()).putString("equipped",equipped.entries.joinToString("|"){"${it.key}=${it.value}"}).apply()}
  fun applyRemote(inv:PhoenixRemoteInventory){
   coins=inv.coins
   owned.clear()
@@ -217,7 +218,6 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
    }
   }.start()
  }
- fun save(){prefs.edit().putInt("demo_coins",coins).putLong("last_daily_reward_day",lastDailyReward).putStringSet("owned",owned.toSet()).putString("equipped",equipped.entries.joinToString("|"){"${it.key}=${it.value}"}).apply()}
  val preview=phoenixItems.firstOrNull{it.id==selected}?:phoenixItems.first()
  val visible=phoenixItems.filter{(category=="All"||it.category==category)&&(style=="All styles"||it.style==style)}
  Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
