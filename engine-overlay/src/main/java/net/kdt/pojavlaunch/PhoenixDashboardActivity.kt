@@ -551,6 +551,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
         modLoader = prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric"
         ramAllocation = prefs.getInt("ram_allocation_${activeId}", LauncherPreferences.PREF_RAM_ALLOCATION).toFloat()
     }
+    LaunchedEffect(activeId) {
+        snapshotFiles.clear()
+        snapshotFiles.addAll(listPhoenixSnapshots(context, activeId))
+    }
     LaunchedEffect(active.engineProfileId, page) {
         if (page == "Mods") {
             try {
@@ -613,7 +617,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         item {
                             Column(
                                 Modifier.fillMaxWidth().background(
-                                    Brush.linearGradient(when (bannerChoice) { "FROST" -> listOf(Color(0xFF173044), Color(0xFF18202E), PhoenixPanel); "OBSIDIAN" -> listOf(Color(0xFF29232D), Color(0xFF17131B), PhoenixPanel); else -> listOf(Color(0xFF542519), Color(0xFF21151F), PhoenixPanel) }),
+                                    Brush.linearGradient(listOf(animatedAccent.copy(alpha = 0.32f), when (bannerChoice) { "FROST" -> Color(0xFF173044); "OBSIDIAN" -> Color(0xFF29232D); else -> Color(0xFF542519) }, PhoenixPanel)),
                                     RoundedCornerShape(22.dp)
                                 ).padding(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
