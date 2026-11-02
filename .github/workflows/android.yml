@@ -13,9 +13,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    name: Build Phoenix Android launcher
+    name: Build complete Phoenix test package
     runs-on: ubuntu-22.04
-    timeout-minutes: 90
+    timeout-minutes: 100
     steps:
       - name: Checkout Phoenix project
         uses: actions/checkout@v4
@@ -66,23 +66,74 @@ jobs:
           repo: AngelAuraMC/angelauramc-openjdk-build
           branch: buildjre8
           name: jre8-pojav
-      - name: Apply Phoenix branding
+      - name: Apply Phoenix branding and cosmetics UI
         run: bash scripts/prepare-phoenix-engine.sh "$GITHUB_WORKSPACE" "$RUNNER_TEMP/phoenix-engine"
       - name: Generate upstream language resources
         working-directory: ${{ runner.temp }}/phoenix-engine
         run: bash scripts/languagelist_updater.sh
-      - name: Set up Gradle
+      - name: Set up Android Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
           gradle-version: '9.6.1'
-      - name: Build Phoenix debug APK
+      - name: Build Phoenix Android APK
         working-directory: ${{ runner.temp }}/phoenix-engine
         run: gradle --no-daemon --stacktrace :app_pojavlauncher:assembleDebug
-      - name: Upload Phoenix APK
+
+      # Build both game-side components in the same run as the APK. They are
+      # separate runtime targets, but ship together in the single test ZIP.
+      - name: Set up Fabric Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+          gradle-version: '8.12'
+      - name: Build Phoenix Fabric cosmetics mod (Minecraft 1.21.1)
+        working-directory: phoenix-branding/fabric
+        run: gradle --no-daemon clean build
+      - name: Build Phoenix Paper server plugin (Minecraft 1.21.1)
+        working-directory: phoenix-branding/paper
+        run: mvn --batch-mode clean package
+
+      - name: Assemble one complete Phoenix test ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/phoenix-complete-test"
+          mkdir -p "$OUT/android" "$OUT/fabric-client" "$OUT/paper-server"
+          cp "$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk" "$OUT/android/Phoenix-Client-debug.apk"
+          FABRIC_JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
+          test -n "$FABRIC_JAR"
+          cp "$FABRIC_JAR" "$OUT/fabric-client/"
+          cp phoenix-branding/paper/target/phoenix-branding-paper-0.2.0.jar "$OUT/paper-server/"
+          cat > "$OUT/INSTALL.txt" <<'EOF'
+          PHOENIX CLIENT — COMPLETE TEST PACKAGE
+          
+          ANDROID LAUNCHER
+          Install android/Phoenix-Client-debug.apk on your Android device.
+          
+          FABRIC CLIENT ADD-ON (Minecraft Java 1.21.1)
+          Put the JAR from fabric-client/ into the mods folder of a Fabric 1.21.1
+          game profile. Fabric API is also required. This add-on renders the
+          server-supplied Phoenix cosmetics and emote poses.
+          
+          PAPER SERVER PLUGIN (Minecraft Java 1.21.1)
+          Put the JAR from paper-server/ into the Paper server plugins/ folder,
+          then restart the server. Use /phoenix help in game.
+          
+          IMPORTANT
+          The Android launcher APK, Fabric client mod and Paper server plugin
+          are separate components for different runtime environments. The two
+          JARs are bundled beside the APK for convenience; they are not Android
+          APK modules and are not automatically installed into a Minecraft profile.
+          This package uses free demo coins only; real-money checkout is disabled.
+          EOF
+          (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+          cd "$RUNNER_TEMP"
+          zip -qr Phoenix-Client-Complete-Test-Package.zip phoenix-complete-test
+      - name: Upload one complete Phoenix test package
         uses: actions/upload-artifact@v4
         with:
-          name: phoenix-client-debug-apk
-          path: ${{ runner.temp }}/phoenix-engine/app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk
+          name: phoenix-client-complete-test-package
+          path: ${{ runner.temp }}/Phoenix-Client-Complete-Test-Package.zip
           if-no-files-found: error
           retention-days: 14
