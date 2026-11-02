@@ -1,0 +1,5 @@
+name: PhoenixBranding
+version: 0.1.0
+main: net.phoenix.client.branding.PhoenixBrandingPlugin
+api-version: '1.21'
+description: Adds a Phoenix bird mark to players whose client advertises the Phoenix branding channel.
