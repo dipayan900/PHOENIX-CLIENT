@@ -312,17 +312,19 @@ if old not in s:
     raise SystemExit("Phoenix patch failed: SelectAuthFragment local-login action changed upstream.")
 select_auth.write_text(s.replace(old, new, 1))
 
-import re
 s = local_login.read_text()
-s, count = re.subn(
-    r'(?m)^\\s*// This is overkill but meh\\n\\s*if \\(!hasOnlineProfile\\(\\)\\)\\s*\\{\\n\\s*Tools\\.swapFragment\\(requireActivity\\(\\), MainMenuFragment\\.class, MainMenuFragment\\.TAG, null\\);\\n\\s*\\}\\n',
-    '',
-    s,
-    count=1
-)
-if count != 1:
-    raise SystemExit("Phoenix patch failed: LocalLoginFragment account guard pattern not found.")
-local_login.write_text(s)
+lines = s.splitlines(keepends=True)
+start = next((i for i, line in enumerate(lines) if "// This is overkill but meh" in line), -1)
+if start < 0:
+    raise SystemExit("Phoenix patch failed: LocalLoginFragment guard comment not found.")
+guard = next((i for i in range(start + 1, len(lines)) if "if (!hasOnlineProfile())" in lines[i]), -1)
+if guard < 0:
+    raise SystemExit("Phoenix patch failed: LocalLoginFragment account guard not found.")
+end = next((i for i in range(guard + 1, len(lines)) if lines[i].strip() == "}"), -1)
+if end < 0:
+    raise SystemExit("Phoenix patch failed: LocalLoginFragment guard block is malformed.")
+del lines[start:end + 1]
+local_login.write_text("".join(lines))
 
 # Allow creating/installing vanilla, Fabric, Forge, NeoForge, Quilt and
 # modpack instances without requiring Microsoft sign-in. Installers still
