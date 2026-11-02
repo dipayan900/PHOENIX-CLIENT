@@ -38,7 +38,7 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
         return switch(id) { case "frost_wings","celestial_wings","fairy_wings" -> texture("light_blue"); case "void_wings","dragon_wings" -> texture("purple"); case "pixel_glider" -> texture("white"); case "bat_wings" -> texture("black"); case "mechanical_wings" -> texture("gray"); default -> texture("orange"); };
     }
     private static Identifier headTexture(String id) {
-        return switch(id) { case "starlight_halo","wizard_hat" -> texture("purple"); case "cyber_visor" -> texture("cyan"); case "cat_ears" -> texture("pink"); case "horns" -> texture("black"); case "samurai_helmet" -> texture("red"); default -> texture("yellow"); };
+        return switch(id) { case "starlight_halo","wizard_hat" -> texture("purple"); case "cyber_visor","respirator" -> texture("cyan"); case "cat_ears" -> texture("pink"); case "horns","pixel_shades" -> texture("black"); case "samurai_helmet","oni_mask","scarf_red" -> texture("red"); case "crown_ice" -> texture("light_blue"); case "astronaut_helmet" -> texture("gray"); case "fox_mask" -> texture("orange"); case "halo_lunar" -> texture("white"); case "gold_monocle","halo_solar","earrings_star" -> texture("yellow"); default -> texture("yellow"); };
     }
     @Override public void render(MatrixStack matrices, VertexConsumerProvider vertices, int light, AbstractClientPlayerEntity player, float limbAngle, float limbDistance, float tickDelta, float animationProgress, float headYaw, float headPitch) {
         PhoenixLoadoutState.Loadout l=PhoenixLoadoutState.get(player.getUuid()); if(l==null || player.isInvisible()) return;
