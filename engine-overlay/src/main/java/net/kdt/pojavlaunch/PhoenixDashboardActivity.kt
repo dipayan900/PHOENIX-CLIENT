@@ -799,11 +799,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             containerColor = PhoenixBg,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFF151019)) {
-                    listOf("Home", "Profiles", "Version", "Mods", "Cosmetics", "Settings").forEach { tab ->
+                    listOf("Home", "Profiles", "Version", "Mods", "Packs", "Cosmetics", "Settings").forEach { tab ->
                         NavigationBarItem(
-                            selected = page == tab,
-                            onClick = { page = tab },
-                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Cosmetics" -> "✧"; else -> "⚙" }, fontSize = 18.sp) },
+                            selected = if (tab == "Packs") page == "Toolbox" else page == tab,
+                            onClick = { page = if (tab == "Packs") "Toolbox" else tab },
+                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Packs" -> "▧"; "Cosmetics" -> "✧"; else -> "⚙" }, fontSize = 18.sp) },
                             label = { Text(tab, fontSize = 10.sp) }
                         )
                     }
@@ -900,9 +900,9 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         }
                         item {
                             PhoenixInfo(
-                                "GAME ACCOUNT REQUIRED",
-                                "Microsoft account",
-                                "Launching Minecraft Java Edition requires a Microsoft account that owns the game. Phoenix cannot create an account or grant game ownership.",
+                                "LOCAL / OFFLINE ACCOUNT",
+                                "Create a local player name",
+                                "Use the engine's Local Login option to create a device-only offline profile. It does not contact Microsoft or authenticate ownership. Offline profiles are for local/offline play; online-mode servers still require a valid authenticated account.",
                                 animatedAccent
                             )
                         }
