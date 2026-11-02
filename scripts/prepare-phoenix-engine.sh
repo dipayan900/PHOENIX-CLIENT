@@ -85,6 +85,6 @@ cat > "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" <<'XML'
 </adaptive-icon>
 XML
 cp "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
-mkdir -p "$APP/src/main/java/net/kdt/pojavlaunch"
-cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt" "$APP/src/main/java/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt"
+mkdir -p "$APP/src/main/kotlin/net/kdt/pojavlaunch"
+cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt"
 echo "Phoenix branding and Compose dashboard integration applied to the Amethyst engine checkout."
