@@ -663,6 +663,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     LaunchedEffect(activeId) {
         modLoader = prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric"
         ramAllocation = prefs.getInt("ram_allocation_${activeId}", LauncherPreferences.PREF_RAM_ALLOCATION).toFloat()
+        avatarChoice = active.avatar
+        prefs.edit().putString("cosmetic_avatar", active.avatar).apply()
     }
     LaunchedEffect(activeId) {
         snapshotFiles.clear()
