@@ -250,6 +250,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var modLoader by remember { mutableStateOf("fabric") }
     var modStatus by remember { mutableStateOf("Search Modrinth for mods compatible with your selected Minecraft version and loader.") }
     var modBusy by remember { mutableStateOf(false) }
+    val totalRamMb = remember { Tools.getTotalDeviceMemory(context) }
+    val freeRamMb = remember { Tools.getFreeDeviceMemory(context) }
+    val maxRamMb = (totalRamMb * 0.60f).toInt().coerceAtLeast(512).coerceAtMost(6144)
+    var ramAllocation by remember { mutableFloatStateOf(LauncherPreferences.PREF_RAM_ALLOCATION.toFloat()) }
     val modResults = remember { mutableStateListOf<PhoenixModResult>() }
     var editingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
@@ -593,14 +597,56 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                     }
-                    else -> {
+                    "Settings" -> {
                         item {
-                            PhoenixInfo("ENGINE SETTINGS", "Device & controls", "Renderer, Java runtime, memory, touch controls and account settings remain managed by the integrated engine.", PhoenixOrange)
+                            PhoenixInfo("ENGINE SETTINGS", "Device & controls", "Open the original engine settings for renderer, Java runtime, controls and account management. These remain connected to the real engine.", PhoenixOrange)
+                            Button(onClick = { page = "Performance" }, modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)) {
+                                Text("OPEN PERFORMANCE TUNING", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
                             Button(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) },
-                                modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)) {
-                                Text("OPEN ENGINE SETTINGS", color = Color.Black, fontWeight = FontWeight.Bold)
+                                modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                Text("OPEN ENGINE SETTINGS", color = PhoenixOrange, fontWeight = FontWeight.Bold)
                             }
                             Text("Microsoft sign-in uses the engine's official authentication screen. Phoenix does not collect or store your Microsoft password.", color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                    }
+                    "Performance" -> {
+                        item {
+                            TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = PhoenixOrange) }
+                            PhoenixInfo("PERFORMANCE CENTER", "Memory tuning", "Set Minecraft's RAM allocation. Keep memory available for Android and other apps to reduce crashes.", PhoenixOrange)
+                        }
+                        item {
+                            Text("DEVICE MEMORY", color = PhoenixOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                            Text("$totalRamMb MB total  ·  $freeRamMb MB currently available", color = PhoenixMuted, fontSize = 12.sp)
+                            Text("Minecraft allocation: ${ramAllocation.toInt()} MB", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Slider(
+                                value = ramAllocation.coerceIn(256f, maxRamMb.toFloat()),
+                                onValueChange = { ramAllocation = it },
+                                valueRange = 256f..maxRamMb.toFloat()
+                            )
+                            Text("Recommended maximum: $maxRamMb MB (60% of device RAM, capped at 6 GB).", color = PhoenixMuted, fontSize = 11.sp)
+                        }
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("LOW" to 768, "BALANCED" to 1536, "HIGH" to 3072).forEach { (label, amount) ->
+                                    OutlinedButton(
+                                        onClick = { ramAllocation = amount.coerceAtMost(maxRamMb).coerceAtLeast(256).toFloat() },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text(label, fontSize = 10.sp) }
+                                }
+                            }
+                            Button(
+                                onClick = {
+                                    val selected = ramAllocation.toInt().coerceIn(256, maxRamMb)
+                                    LauncherPreferences.PREF_RAM_ALLOCATION = selected
+                                    LauncherPreferences.DEFAULT_PREF.edit().putInt("allocation", selected).apply()
+                                    notice = "Minecraft memory allocation saved: $selected MB."
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)
+                            ) { Text("SAVE PERFORMANCE SETTINGS", color = Color.Black, fontWeight = FontWeight.Bold) }
+                            Text("These settings affect the next game launch. Renderer and Java runtime choices are available in the engine settings.", color = PhoenixMuted, fontSize = 11.sp)
                         }
                     }
                 }
