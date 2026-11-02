@@ -53,6 +53,39 @@ private data class PhoenixModResult(
     val slug: String
 )
 
+private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long)
+
+private fun phoenixModsDirectory(engineProfileId: String): File {
+    if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+    val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
+        ?: throw java.io.IOException("Select a valid game profile before managing mods.")
+    return File(Tools.getGameDirPath(profile), "mods")
+}
+
+private fun listPhoenixInstalledMods(engineProfileId: String): List<PhoenixInstalledMod> {
+    val directory = phoenixModsDirectory(engineProfileId)
+    if (!directory.exists()) return emptyList()
+    if (!directory.isDirectory) throw java.io.IOException("The mods path is not a folder.")
+    return directory.listFiles()
+        ?.filter { it.isFile && it.extension.equals("jar", ignoreCase = true) }
+        ?.sortedBy { it.name.lowercase() }
+        ?.map { PhoenixInstalledMod(it.name, it.length()) }
+        ?: emptyList()
+}
+
+private fun removePhoenixInstalledMod(engineProfileId: String, fileName: String) {
+    if (fileName.isBlank() || File(fileName).name != fileName ||
+        !fileName.endsWith(".jar", ignoreCase = true)) {
+        throw java.io.IOException("Invalid mod file selection.")
+    }
+    val directory = phoenixModsDirectory(engineProfileId).canonicalFile
+    val target = File(directory, fileName).canonicalFile
+    if (target.parentFile != directory || !target.isFile || !target.extension.equals("jar", true)) {
+        throw java.io.IOException("That mod file could not be found.")
+    }
+    if (!target.delete()) throw java.io.IOException("Could not remove " + target.name + ".")
+}
+
 private fun modrinthJson(url: String): JSONObject {
     val connection = URL(url).openConnection() as HttpURLConnection
     connection.requestMethod = "GET"
@@ -255,6 +288,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val maxRamMb = (totalRamMb * 0.60f).toInt().coerceAtLeast(512).coerceAtMost(6144)
     var ramAllocation by remember { mutableFloatStateOf(LauncherPreferences.PREF_RAM_ALLOCATION.toFloat()) }
     val modResults = remember { mutableStateListOf<PhoenixModResult>() }
+    val installedMods = remember { mutableStateListOf<PhoenixInstalledMod>() }
+    var pendingModRemoval by remember { mutableStateOf<String?>(null) }
     var editingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
@@ -268,6 +303,16 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     }
 
     LaunchedEffect(Unit) { persist() }
+    LaunchedEffect(active.engineProfileId, page) {
+        if (page == "Mods") {
+            try {
+                installedMods.clear()
+                installedMods.addAll(listPhoenixInstalledMods(active.engineProfileId))
+            } catch (error: Exception) {
+                modStatus = error.message ?: "Could not read the active profile's mods folder."
+            }
+        }
+    }
 
     MaterialTheme(colorScheme = darkColorScheme(
         primary = PhoenixOrange,
@@ -516,6 +561,41 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             PhoenixInfo("PHOENIX MOD HUB", "Powered by Modrinth", "Search public mods and install a compatible JAR into the active Minecraft profile's mods folder. Check each project's description and trust before installing.", PhoenixOrange)
                         }
                         item {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text("INSTALLED MODS", color = PhoenixOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                                    Text("${installedMods.size} JAR file(s) in ${active.name}", color = PhoenixMuted, fontSize = 12.sp)
+                                }
+                                OutlinedButton(enabled = !modBusy, onClick = {
+                                    try {
+                                        installedMods.clear()
+                                        installedMods.addAll(listPhoenixInstalledMods(active.engineProfileId))
+                                        modStatus = "Installed mod list refreshed."
+                                    } catch (error: Exception) {
+                                        modStatus = error.message ?: "Could not refresh installed mods."
+                                    }
+                                }) { Text("REFRESH", color = PhoenixOrange) }
+                            }
+                        }
+                        if (installedMods.isEmpty()) {
+                            item { Text("No .jar mods found in this profile's mods folder yet.", color = PhoenixMuted, fontSize = 12.sp) }
+                        }
+                        items(installedMods, key = { it.fileName }) { installed ->
+                            Row(
+                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(14.dp)).padding(13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(installed.fileName, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Text("${installed.sizeBytes / 1024} KB  ·  Active profile", color = PhoenixMuted, fontSize = 10.sp)
+                                }
+                                TextButton(onClick = { pendingModRemoval = installed.fileName }) {
+                                    Text("REMOVE", color = Color(0xFFFF8A80), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        item {
                             OutlinedTextField(
                                 value = modQuery,
                                 onValueChange = { modQuery = it },
@@ -652,6 +732,31 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                 }
             }
         }
+    }
+
+    if (pendingModRemoval != null) {
+        val fileName = pendingModRemoval!!
+        AlertDialog(
+            onDismissRequest = { pendingModRemoval = null },
+            title = { Text("Remove installed mod?") },
+            text = { Text("Remove $fileName from the active profile's mods folder? This only deletes this selected JAR file. Minecraft must be restarted for the change to take effect.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    try {
+                        removePhoenixInstalledMod(active.engineProfileId, fileName)
+                        installedMods.removeAll { it.fileName == fileName }
+                        modStatus = "Removed $fileName. Restart Minecraft to apply the change."
+                    } catch (error: Exception) {
+                        modStatus = error.message ?: "Could not remove the mod."
+                    }
+                    pendingModRemoval = null
+                }) { Text("REMOVE", color = Color(0xFFFF8A80)) }
+            },
+            dismissButton = { TextButton(onClick = { pendingModRemoval = null }) { Text("CANCEL") } },
+            containerColor = PhoenixPanel,
+            titleContentColor = Color.White,
+            textContentColor = PhoenixMuted
+        )
     }
 
     if (dialogOpen) {
