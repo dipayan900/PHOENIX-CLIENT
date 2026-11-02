@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Install Android SDK packages
         run: sdkmanager --install "platforms;android-37.1" "build-tools;37.0.0"
       - name: Checkout Amethyst Java engine source
