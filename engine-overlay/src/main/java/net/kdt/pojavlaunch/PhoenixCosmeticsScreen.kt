@@ -241,7 +241,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
    Text("SERVER INVENTORY SYNC",color=accent,fontSize=11.sp,fontWeight=FontWeight.Bold)
    OutlinedTextField(value=serverUrl,onValueChange={serverUrl=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("Paper server URL")},placeholder={Text("http://192.168.1.10:8765")})
    OutlinedTextField(value=serverToken,onValueChange={serverToken=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("Private link token")},placeholder={Text("Paste token from /phoenix link")})
-   Button(onClick={ { refreshServer() } },enabled=!serverBusy && serverUrl.isNotBlank() && serverToken.isNotBlank(),modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(serverBusy)"CONNECTING..." else "CONNECT & SYNC SERVER",color=Color.Black,fontWeight=FontWeight.Bold)}
+   Button(onClick={ refreshServer() },enabled=!serverBusy && serverUrl.isNotBlank() && serverToken.isNotBlank(),modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(serverBusy)"CONNECTING..." else "CONNECT & SYNC SERVER",color=Color.Black,fontWeight=FontWeight.Bold)}
    Text(serverStatus,color=if(serverConnected)Color(0xFF8EE6A0) else shopMuted,fontSize=10.sp)
    if(serverConnected) TextButton(onClick={serverConnected=false;serverStatus="Disconnected from server inventory."}){Text("DISCONNECT",color=accent)}
    Text("Pairing: join the Paper server and run /phoenix link. Paste its private token here. Use the server's LAN address and configured API port. HTTP is unencrypted: trusted LAN only; never expose/port-forward this API.",color=shopMuted,fontSize=9.sp)
