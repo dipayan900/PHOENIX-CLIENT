@@ -209,7 +209,7 @@ s = s.replace(
 styles.write_text(s)
 
 # A subtle dark tile with an ember border and a pressed-state glow.
-normal = Path("$APP/src/main/res/drawable/phoenix_menu_button.xml")
+normal = activity_layout.parent.parent / "drawable/phoenix_menu_button.xml"
 normal.write_text('''<?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
