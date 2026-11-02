@@ -1,0 +1,31 @@
+name: Phoenix Social Backend Check
+
+on:
+  push:
+    branches: [integration/amethyst-phoenix]
+    paths:
+      - "social-backend/**"
+      - ".github/workflows/phoenix-social.yml"
+  pull_request:
+    paths:
+      - "social-backend/**"
+      - ".github/workflows/phoenix-social.yml"
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: social-backend
+    steps:
+      - name: Checkout Phoenix
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck Worker
+        run: npm run typecheck
