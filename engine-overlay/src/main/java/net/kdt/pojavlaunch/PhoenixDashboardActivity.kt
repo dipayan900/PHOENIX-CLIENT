@@ -90,14 +90,12 @@ private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: S
     }
 }
 
-private fun installPhoenixMod(mod: PhoenixModResult, minecraftVersion: String, loader: String): String {
+private fun installPhoenixMod(mod: PhoenixModResult, minecraftVersion: String, loader: String, engineProfileId: String): String {
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
-    val profile = LauncherProfiles.mainProfileJson.profiles.values.firstOrNull { it.name.isNotBlank() }
-        ?: throw java.io.IOException("Create a game profile before installing mods.")
+    val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
+        ?: throw java.io.IOException("Select a valid game profile before installing mods.")
     val versions = URLEncoder.encode(org.json.JSONArray().put(minecraftVersion).toString(), "UTF-8")
     val loaders = URLEncoder.encode(org.json.JSONArray().put(loader).toString(), "UTF-8")
-    val versionList = modrinthJson("https://api.modrinth.com/v2/project/${mod.projectId}/version?game_versions=$versions&loaders=$loaders")
-        .optJSONArray("unused")
     val versionConnection = URL("https://api.modrinth.com/v2/project/${mod.projectId}/version?game_versions=$versions&loaders=$loaders")
         .openConnection() as HttpURLConnection
     versionConnection.requestMethod = "GET"
@@ -577,7 +575,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         Thread {
                                             try {
                                                 val version = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
-                                                val installed = installPhoenixMod(mod, version, modLoader)
+                                                val installed = installPhoenixMod(mod, version, modLoader, active.engineProfileId)
                                                 activity.runOnUiThread { modStatus = "Installed $installed. Restart Minecraft to load it."; modBusy = false }
                                             } catch (error: Exception) {
                                                 activity.runOnUiThread { modStatus = error.message ?: "Mod installation failed."; modBusy = false }
