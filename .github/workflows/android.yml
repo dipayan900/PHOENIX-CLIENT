@@ -30,6 +30,7 @@ jobs:
         run: sdkmanager --install "platforms;android-37" "build-tools;37.0.0"
       - name: Checkout Amethyst Java engine source
         run: |
+          git config --global url."https://github.com/".insteadOf git@github.com:
           git clone --recursive --branch v3_openjdk https://github.com/AngelAuraMC/Amethyst-Android.git "$RUNNER_TEMP/phoenix-engine"
           git -C "$RUNNER_TEMP/phoenix-engine" submodule status
       - name: Download OpenJDK 8 runtime bundle
