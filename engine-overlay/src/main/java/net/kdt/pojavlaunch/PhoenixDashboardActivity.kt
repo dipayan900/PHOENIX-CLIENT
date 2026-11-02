@@ -53,7 +53,7 @@ private data class PhoenixModResult(
     val slug: String
 )
 
-private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long)
+private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
 
 private fun phoenixModsDirectory(engineProfileId: String): File {
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
@@ -67,20 +67,33 @@ private fun listPhoenixInstalledMods(engineProfileId: String): List<PhoenixInsta
     if (!directory.exists()) return emptyList()
     if (!directory.isDirectory) throw java.io.IOException("The mods path is not a folder.")
     return directory.listFiles()
-        ?.filter { it.isFile && it.extension.equals("jar", ignoreCase = true) }
+        ?.filter { it.isFile && (it.name.endsWith(".jar", true) || it.name.endsWith(".jar.disabled", true)) }
         ?.sortedBy { it.name.lowercase() }
-        ?.map { PhoenixInstalledMod(it.name, it.length()) }
+        ?.map { PhoenixInstalledMod(it.name, it.length(), it.name.endsWith(".jar", true)) }
         ?: emptyList()
+}
+
+private fun togglePhoenixInstalledMod(engineProfileId: String, fileName: String, enable: Boolean): String {
+    val directory = phoenixModsDirectory(engineProfileId).canonicalFile
+    val source = File(directory, fileName).canonicalFile
+    if (source.parentFile != directory || !source.isFile) throw java.io.IOException("That mod file could not be found.")
+    val expectedSuffix = if (enable) ".jar.disabled" else ".jar"
+    if (!source.name.endsWith(expectedSuffix, true)) throw java.io.IOException("The selected mod is already in that state.")
+    val destinationName = if (enable) source.name.removeSuffix(".disabled") else source.name + ".disabled"
+    val destination = File(directory, destinationName)
+    if (destination.exists()) throw java.io.IOException("A file with the target name already exists.")
+    if (!source.renameTo(destination)) throw java.io.IOException("Could not change the mod state.")
+    return destination.name
 }
 
 private fun removePhoenixInstalledMod(engineProfileId: String, fileName: String) {
     if (fileName.isBlank() || File(fileName).name != fileName ||
-        !fileName.endsWith(".jar", ignoreCase = true)) {
+        !(fileName.endsWith(".jar", ignoreCase = true) || fileName.endsWith(".jar.disabled", ignoreCase = true))) {
         throw java.io.IOException("Invalid mod file selection.")
     }
     val directory = phoenixModsDirectory(engineProfileId).canonicalFile
     val target = File(directory, fileName).canonicalFile
-    if (target.parentFile != directory || !target.isFile || !target.extension.equals("jar", true)) {
+    if (target.parentFile != directory || !target.isFile || !(target.name.endsWith(".jar", true) || target.name.endsWith(".jar.disabled", true))) {
         throw java.io.IOException("That mod file could not be found.")
     }
     if (!target.delete()) throw java.io.IOException("Could not remove " + target.name + ".")
@@ -588,7 +601,19 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             ) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Text(installed.fileName, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                    Text("${installed.sizeBytes / 1024} KB  ·  Active profile", color = PhoenixMuted, fontSize = 10.sp)
+                                    Text("${installed.sizeBytes / 1024} KB  ·  ${if (installed.enabled) "Enabled" else "Disabled"}", color = PhoenixMuted, fontSize = 10.sp)
+                                }
+                                TextButton(onClick = {
+                                    try {
+                                        val renamed = togglePhoenixInstalledMod(active.engineProfileId, installed.fileName, !installed.enabled)
+                                        installedMods.clear()
+                                        installedMods.addAll(listPhoenixInstalledMods(active.engineProfileId))
+                                        modStatus = "${if (installed.enabled) "Disabled" else "Enabled"} $renamed. Restart Minecraft to apply."
+                                    } catch (error: Exception) {
+                                        modStatus = error.message ?: "Could not change mod state."
+                                    }
+                                }) {
+                                    Text(if (installed.enabled) "DISABLE" else "ENABLE", color = PhoenixOrange, fontWeight = FontWeight.Bold)
                                 }
                                 TextButton(onClick = { pendingModRemoval = installed.fileName }) {
                                     Text("REMOVE", color = Color(0xFFFF8A80), fontWeight = FontWeight.Bold)
@@ -660,7 +685,12 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                             try {
                                                 val version = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
                                                 val installed = installPhoenixMod(mod, version, modLoader, active.engineProfileId)
-                                                activity.runOnUiThread { modStatus = "Installed $installed. Restart Minecraft to load it."; modBusy = false }
+                                                activity.runOnUiThread {
+                                                    installedMods.clear()
+                                                    installedMods.addAll(listPhoenixInstalledMods(active.engineProfileId))
+                                                    modStatus = "Installed $installed. Restart Minecraft to load it."
+                                                    modBusy = false
+                                                }
                                             } catch (error: Exception) {
                                                 activity.runOnUiThread { modStatus = error.message ?: "Mod installation failed."; modBusy = false }
                                             }
