@@ -19,3 +19,14 @@ Phoenix is the user-facing product name and icon. The About / open-source notice
 ## Source and licensing
 
 The integrated engine is based on [AngelAuraMC/Amethyst-Android](https://github.com/AngelAuraMC/Amethyst-Android), distributed under LGPLv3, with dependencies under their respective licenses. See the upstream license and credits in the engine source. Phoenix-specific files remain in this repository.
+
+
+## Phoenix Cosmetics — launcher foundation
+- [x] Cosmetics navigation destination.
+- [x] Catalogue entries for capes, wings, accessories, emotes and effects.
+- [x] Minecraft-native, hybrid and fantasy-3D style filters.
+- [x] Category filters, catalogue preview, local inventory and equip slots.
+- [x] Local development coin wallet with planned 100 / 300 / 750 / 1,500 / 3,500 / 7,500 coin tiers.
+- [x] Creator-owner collection area reserved for future server-verified entitlement.
+
+This is a launcher-side catalogue foundation, not yet an in-game renderer. Actual player rendering, animation playback, multiplayer synchronization, secure owner entitlements, server balances and payment processing remain separate milestones. The local wallet is test data only.

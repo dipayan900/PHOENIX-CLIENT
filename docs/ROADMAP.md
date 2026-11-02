@@ -17,3 +17,15 @@
 ## Notes
 
 Engine features are supplied by the integrated Amethyst codebase, not by mock UI. Microsoft authentication must use Microsoft's supported authorization flow. Required copyright and license notices must remain accessible in the app. A CI build is not considered device verification.
+
+
+## Cosmetics — launcher foundation
+- [x] Cosmetics navigation and starter catalogue for capes, wings, accessories, emotes and effects.
+- [x] Minecraft-native, hybrid and fantasy-3D style filters.
+- [x] Preview selection, local inventory, equip slots and development coin wallet.
+- [x] Planned coin tiers: 100, 300, 750, 1,500, 3,500 and 7,500.
+- [ ] Import ready-made assets only with verified redistribution licenses and attribution records.
+- [ ] Integrate a 3D player preview and runtime cosmetic renderer.
+- [ ] Implement signed creator-owner entitlements and server-authoritative inventory.
+- [ ] Implement compatible multiplayer cosmetic synchronization and server support.
+- [ ] Keep real-money checkout disabled until a compliant adult-managed release setup exists.
