@@ -2,33 +2,36 @@
 
 **Rise from the ashes. Rule the game.**
 
-Phoenix Client is an Android-first Minecraft Java launcher project with an original fire-themed identity. The project is being built as a separate app and repository; it does not modify the user's other Android projects.
+Phoenix Client is an Android-first Minecraft Java launcher project with an original fire-themed identity. It is maintained as a separate app and repository.
 
-## Current implementation
+## Current implementation (0.3.0)
 
 - [x] Native Android app using Kotlin and Jetpack Compose
 - [x] Phoenix dark/fire dashboard and bottom navigation
-- [x] Local nickname editor with input filtering and automatic local persistence
-- [x] Target Minecraft version selector with automatic local persistence
-- [x] Three selectable launcher appearance themes: Inferno, Frost and Amethyst
-- [x] Optional hand-off button for an already-installed Amethyst Android runtime (stable and debug package IDs)
+- [x] Multiple local player profiles
+- [x] Create, edit, select and delete local profiles
+- [x] Per-profile nickname and target Minecraft version
+- [x] Input validation for local nicknames (letters, numbers and underscore; max 16 characters)
+- [x] Automatic local persistence of profiles and active selection
+- [x] Three launcher appearance themes: Inferno, Frost and Amethyst
+- [x] Optional hand-off button for an already-installed Amethyst Android runtime
 - [x] GitHub Actions debug APK build workflow
-- [ ] Minecraft Java runtime and actual game launch
-- [ ] Microsoft account sign-in through the documented secure OAuth flow
-- [ ] Official version manifest, game asset and library download/install pipeline
+- [ ] Integrated Minecraft Java runtime and actual game launch
+- [ ] Microsoft account sign-in through documented secure OAuth
+- [ ] Official version metadata and entitled game asset/library installation
 - [ ] Fabric/Forge/modpack integration
-- [ ] In-game HUD, touch controls and rendered cosmetics
+- [ ] In-game HUD, touch controls and supported cosmetics
 
-**Important:** This is still a launcher shell, not a playable Minecraft client. The Amethyst hand-off only opens the separate Amethyst app; it does not embed the runtime or pass Phoenix profile/version settings. The Play action intentionally explains that game launch is not available. The version picker currently saves a target version only; it does not download game files. Local nickname is not Microsoft authentication and does not grant online-mode access.
+**Important:** Phoenix is currently a launcher foundation, not yet a playable Minecraft client. The Play action only opens the separate Amethyst app if it is installed; it does not embed the runtime or transfer Phoenix profile/version settings. Version selection is a local preset and does not download game files. A local nickname is not Microsoft authentication and does not grant online-mode access.
 
 ## Runtime direction
 
-The former PojavLauncher Android repository was archived in September 2025. Its successor project is **Amethyst Android**, which documents Android Java runtimes, native graphics/input components, and Forge/Fabric support. Phoenix will evaluate Amethyst as the runtime foundation rather than copying an obsolete Pojav build or pretending a simple Activity launch is enough.
+The primary runtime candidate is **Amethyst Android**. Before integrating it, audit upstream source, submodules, native libraries, JRE artifacts, supported ABIs, Android SDK requirements and all license notices.
 
 - Amethyst Android source: https://github.com/AngelAuraMC/Amethyst-Android
-- Amethyst build instructions and component credits are documented upstream.
-- Any integration must preserve applicable LGPLv3 and third-party notices/source obligations, and must be tested on real Android hardware.
-- No Minecraft game assets or paid-account entitlements are bundled or bypassed.
+- Preserve applicable LGPLv3 and third-party license/source obligations if code is incorporated.
+- Validate installation, runtime lifecycle, graphics, input, audio, storage and crash handling on physical ARM64 Android devices.
+- Do not bundle Minecraft assets or bypass paid-account entitlements.
 
 ## Build
 
@@ -45,4 +48,4 @@ Build environment: JDK 17, Android SDK 35, Gradle 8.9.
 
 ## Legal and compatibility
 
-Phoenix Client is independent and is not affiliated with Mojang or Microsoft. Do not redistribute Minecraft game files or third-party assets without permission. Review upstream licenses before integration. The project will not implement authentication/entitlement bypass, anti-cheat evasion, or unfair gameplay automation.
+Phoenix Client is independent and is not affiliated with Mojang or Microsoft. Do not redistribute Minecraft game files or third-party assets without permission. The project will not implement authentication/entitlement bypass, anti-cheat evasion, or unfair gameplay automation.
