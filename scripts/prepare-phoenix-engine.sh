@@ -47,7 +47,7 @@ about.write_text(a)
 g = gradle.read_text()
 g = g.replace(
     "plugins {\n    id 'com.android.application' version '9.3.1'\n}",
-    "plugins {\n    id 'com.android.application' version '9.3.1'\n    id 'org.jetbrains.kotlin.android' version '2.3.0'\n    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.0'\n}"
+    "plugins {\n    id 'com.android.application' version '9.3.1'\n    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.0'\n}"
 )
 g = g.replace("buildFeatures {\n        prefab true", "buildFeatures {\n        compose true\n        prefab true")
 g = g.replace("dependencies {\n", """dependencies {
