@@ -1,51 +1,21 @@
-# PHOENIX CLIENT 🔥
+# Phoenix Client
 
-**Rise from the ashes. Rule the game.**
+Phoenix Client is an Android launcher for Minecraft: Java Edition. The integration branch builds a Phoenix-branded app around the Amethyst Android Java launcher engine.
 
-Phoenix Client is an Android-first Minecraft Java launcher project with an original fire-themed identity. It is maintained as a separate app and repository.
+## Engine integration
 
-## Current implementation (0.3.0)
+The GitHub Actions workflow checks out the upstream Amethyst `v3_openjdk` source with its required submodules, downloads its OpenJDK 8 runtime bundle, applies Phoenix branding (application ID, launcher name, fire-themed colors and Phoenix launcher icon), and builds the Android debug APK.
 
-- [x] Native Android app using Kotlin and Jetpack Compose
-- [x] Phoenix dark/fire dashboard and bottom navigation
-- [x] Multiple local player profiles
-- [x] Create, edit, select and delete local profiles
-- [x] Per-profile nickname and target Minecraft version
-- [x] Input validation for local nicknames (letters, numbers and underscore; max 16 characters)
-- [x] Automatic local persistence of profiles and active selection
-- [x] Three launcher appearance themes: Inferno, Frost and Amethyst
-- [x] Optional hand-off button for an already-installed Amethyst Android runtime
-- [x] GitHub Actions debug APK build workflow
-- [ ] Integrated Minecraft Java runtime and actual game launch
-- [ ] Microsoft account sign-in through documented secure OAuth
-- [ ] Official version metadata and entitled game asset/library installation
-- [ ] Fabric/Forge/modpack integration
-- [ ] In-game HUD, touch controls and supported cosmetics
-
-**Important:** Phoenix is currently a launcher foundation, not yet a playable Minecraft client. The Play action only opens the separate Amethyst app if it is installed; it does not embed the runtime or transfer Phoenix profile/version settings. Version selection is a local preset and does not download game files. A local nickname is not Microsoft authentication and does not grant online-mode access.
-
-## Runtime direction
-
-The primary runtime candidate is **Amethyst Android**. Before integrating it, audit upstream source, submodules, native libraries, JRE artifacts, supported ABIs, Android SDK requirements and all license notices.
-
-- Amethyst Android source: https://github.com/AngelAuraMC/Amethyst-Android
-- Preserve applicable LGPLv3 and third-party license/source obligations if code is incorporated.
-- Validate installation, runtime lifecycle, graphics, input, audio, storage and crash handling on physical ARM64 Android devices.
-- Do not bundle Minecraft assets or bypass paid-account entitlements.
+The engine provides Minecraft Java version installation and launching, Microsoft account sign-in, Java runtimes, graphics/audio backends, Forge/Fabric support and mobile controls. These features are provided by the integrated engine; they are not separately reimplemented in the Phoenix Compose prototype.
 
 ## Build
 
-Open the repository's **Actions** tab and run **Build Phoenix Client APK**, or push to the default branch. The workflow uploads a debug APK artifact named `phoenix-client-debug-apk`.
+Push to `integration/amethyst-phoenix` or run the **Build Phoenix Client (Integrated Java Engine)** workflow manually. Download the `phoenix-client-debug-apk` artifact from the successful Actions run.
 
-Build environment: JDK 17, Android SDK 35, Gradle 8.9.
+## Branding and notices
 
-## Project layout
+Phoenix is the user-facing product name and icon. The About / open-source notices retain required upstream and third-party copyright and license attributions. Phoenix Client is not affiliated with Mojang or Microsoft. Minecraft: Java Edition must be obtained with a valid account entitlement; the launcher does not include proprietary game assets.
 
-- `app/`: Android application.
-- `app/src/main/java/com/phoenix/client/`: Compose UI and app entry point.
-- `.github/workflows/`: cloud APK build.
-- `docs/ROADMAP.md`: implementation phases and integration gates.
+## Source and licensing
 
-## Legal and compatibility
-
-Phoenix Client is independent and is not affiliated with Mojang or Microsoft. Do not redistribute Minecraft game files or third-party assets without permission. The project will not implement authentication/entitlement bypass, anti-cheat evasion, or unfair gameplay automation.
+The integrated engine is based on [AngelAuraMC/Amethyst-Android](https://github.com/AngelAuraMC/Amethyst-Android), distributed under LGPLv3, with dependencies under their respective licenses. See the upstream license and credits in the engine source. Phoenix-specific files remain in this repository.
