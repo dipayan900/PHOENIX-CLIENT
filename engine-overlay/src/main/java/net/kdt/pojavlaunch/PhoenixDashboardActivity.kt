@@ -1426,7 +1426,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 ) { Text(if (packBusy) "INSTALLING..." else "DOWNLOAD & INSTALL", color = Color.Black, fontWeight = FontWeight.Bold) }
                             }
                         }
-                        }
                         item {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
