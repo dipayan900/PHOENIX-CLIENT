@@ -1128,7 +1128,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             Button(onClick = {
                                 ramAllocation = recommendedRam.toFloat()
                                 prefs.edit().putInt("ram_allocation_" + activeId, recommendedRam).apply()
-                                LauncherPreferences.PREF_RAM_ALLOCATION = recommendedRam
                                 LauncherPreferences.DEFAULT_PREF.edit().putInt("allocation", recommendedRam).apply()
                                 recordPhoenixEvent(prefs, "Performance recommendation applied", recommendedRam.toString() + " MB RAM allocation")
                                 advancedStatus = "Applied recommended RAM allocation. You can change it again in Performance Center."
@@ -1196,7 +1195,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                             .putInt("ram_allocation_" + activeId, ramAllocation.toInt())
                                             .putString("cosmetic_banner", bannerChoice).putString("cosmetic_avatar", avatarChoice)
                                             .putString("dashboard_layout", dashboardLayout).putString("theme_choice", themeChoice).apply()
-                                        LauncherPreferences.PREF_RAM_ALLOCATION = ramAllocation.toInt()
                                         LauncherPreferences.DEFAULT_PREF.edit().putInt("allocation", ramAllocation.toInt()).apply()
                                         persist()
                                         recordPhoenixEvent(prefs, "Profile snapshot restored", snapshot.name)
@@ -1342,7 +1340,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             Button(
                                 onClick = {
                                     val selected = ramAllocation.toInt().coerceIn(256, maxRamMb)
-                                    LauncherPreferences.PREF_RAM_ALLOCATION = selected
                                     LauncherPreferences.DEFAULT_PREF.edit().putInt("allocation", selected).apply()
                                     prefs.edit().putInt("ram_allocation_${activeId}", selected).apply()
                                     notice = "Minecraft memory allocation saved for ${active.name}: $selected MB."
