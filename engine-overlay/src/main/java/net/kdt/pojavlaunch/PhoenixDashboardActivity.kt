@@ -60,7 +60,7 @@ private fun phoenixGameDirectory(engineProfileId: String): File {
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
     val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
         ?: throw java.io.IOException("Select a valid game profile first.")
-    return File(Tools.getGameDirPath(profile))
+    return Tools.getGameDirPath(profile)
 }
 
 private fun listPhoenixContentFiles(engineProfileId: String, folderName: String): List<PhoenixContentFile> {
