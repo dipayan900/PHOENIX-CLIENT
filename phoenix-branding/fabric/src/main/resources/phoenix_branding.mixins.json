@@ -2,6 +2,6 @@
   "required": true,
   "package": "net.phoenix.client.branding.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["PlayerListHudMixin", "EntityRendererMixin"],
+  "client": ["PlayerListHudMixin"],
   "injectors": { "defaultRequire": 1 }
 }
