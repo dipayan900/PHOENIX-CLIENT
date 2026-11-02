@@ -1,0 +1,77 @@
+name: Deploy Phoenix Social API
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: social-backend
+    steps:
+      - name: Checkout Phoenix
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate deployment secrets
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+          SESSION_SECRET: ${{ secrets.PHOENIX_SOCIAL_SESSION_SECRET }}
+        run: |
+          for name in CF_API_TOKEN CF_ACCOUNT_ID CF_D1_DATABASE_ID SESSION_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions secret: $name"
+              exit 1
+            fi
+          done
+
+      - name: Install Wrangler
+        run: npm install
+
+      - name: Configure account and D1 database
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const path = "wrangler.toml";
+            let config = fs.readFileSync(path, "utf8");
+            config = config.replace("REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID", process.env.CF_D1_DATABASE_ID);
+            if (!config.includes("account_id =")) {
+              config = config.replace(/^name = "phoenix-social"$/m, `name = "phoenix-social"\naccount_id = "${process.env.CF_ACCOUNT_ID}"`);
+            }
+            fs.writeFileSync(path, config);
+          '
+
+      - name: Apply D1 schema
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: npx wrangler d1 execute phoenix-social --remote --file=schema.sql
+
+      - name: Set Worker session secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          SESSION_SECRET: ${{ secrets.PHOENIX_SOCIAL_SESSION_SECRET }}
+        run: printf '%s' "$SESSION_SECRET" | npx wrangler secret put SESSION_SECRET
+
+      - name: Deploy HTTPS Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: npx wrangler deploy
+
+      - name: Print Worker endpoint
+        run: |
+          echo "Phoenix Social deployment finished."
+          echo "Default endpoint: https://phoenix-social.<your-workers-subdomain>.workers.dev"
+          echo "Verify health: append /health to the deployed endpoint."
