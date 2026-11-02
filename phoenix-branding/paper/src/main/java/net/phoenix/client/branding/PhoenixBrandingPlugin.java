@@ -140,7 +140,14 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
                 try {
                     Loadout l=loadout(subject.getUniqueId());
                     String packet=subject.getUniqueId()+";"+l.cape()+";"+l.wings()+";"+l.head()+";"+l.back()+";"+l.emote();
-                    viewer.sendPluginMessage(this,LOADOUT_CHANNEL,packet.getBytes(StandardCharsets.UTF_8));
+                    byte[] body=packet.getBytes(StandardCharsets.UTF_8);
+                    // Minecraft STRING fields are VarInt-length-prefixed UTF-8, matching PacketCodecs.STRING.
+                    java.io.ByteArrayOutputStream encoded=new java.io.ByteArrayOutputStream(body.length+5);
+                    int remaining=body.length;
+                    while((remaining & 0xFFFFFF80)!=0){encoded.write((remaining & 0x7F)|0x80);remaining >>>=7;}
+                    encoded.write(remaining);
+                    encoded.writeBytes(body);
+                    viewer.sendPluginMessage(this,LOADOUT_CHANNEL,encoded.toByteArray());
                 } catch(SQLException e) { getLogger().warning("Could not sync cosmetics for "+subject.getUniqueId()); }
             }
         }
