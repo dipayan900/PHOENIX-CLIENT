@@ -54,6 +54,48 @@ private data class PhoenixModResult(
 )
 
 private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
+private data class PhoenixContentFile(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
+
+private fun phoenixGameDirectory(engineProfileId: String): File {
+    if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+    val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
+        ?: throw java.io.IOException("Select a valid game profile first.")
+    return File(Tools.getGameDirPath(profile))
+}
+
+private fun listPhoenixContentFiles(engineProfileId: String, folderName: String): List<PhoenixContentFile> {
+    if (folderName !in setOf("resourcepacks", "shaderpacks")) throw java.io.IOException("Unsupported content folder.")
+    val directory = File(phoenixGameDirectory(engineProfileId), folderName)
+    if (!directory.exists()) return emptyList()
+    if (!directory.isDirectory) throw java.io.IOException("The $folderName path is not a folder.")
+    return directory.listFiles()
+        ?.filter { it.isFile && (it.name.endsWith(".zip", true) || it.name.endsWith(".zip.disabled", true)) }
+        ?.sortedBy { it.name.lowercase() }
+        ?.map { PhoenixContentFile(it.name, it.length(), it.name.endsWith(".zip", true)) }
+        ?: emptyList()
+}
+
+private fun togglePhoenixContentFile(engineProfileId: String, folderName: String, fileName: String, enable: Boolean): String {
+    if (folderName !in setOf("resourcepacks", "shaderpacks") || File(fileName).name != fileName)
+        throw java.io.IOException("Invalid content selection.")
+    val directory = File(phoenixGameDirectory(engineProfileId), folderName).canonicalFile
+    val source = File(directory, fileName).canonicalFile
+    if (source.parentFile != directory || !source.isFile) throw java.io.IOException("That content file could not be found.")
+    val suffix = if (enable) ".zip.disabled" else ".zip"
+    if (!source.name.endsWith(suffix, true)) throw java.io.IOException("That file is already in the requested state.")
+    val destination = File(directory, if (enable) source.name.removeSuffix(".disabled") else source.name + ".disabled")
+    if (destination.exists()) throw java.io.IOException("A file with the target name already exists.")
+    if (!source.renameTo(destination)) throw java.io.IOException("Could not change the content state.")
+    return destination.name
+}
+
+private fun listPhoenixWorlds(engineProfileId: String): List<String> {
+    val saves = File(phoenixGameDirectory(engineProfileId), "saves")
+    if (!saves.exists()) return emptyList()
+    if (!saves.isDirectory) throw java.io.IOException("The saves path is not a folder.")
+    return saves.listFiles()?.filter { it.isDirectory && File(it, "level.dat").isFile }
+        ?.map { it.name }?.sortedBy { it.lowercase() } ?: emptyList()
+}
 
 private fun phoenixModsDirectory(engineProfileId: String): File {
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
@@ -303,6 +345,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val modResults = remember { mutableStateListOf<PhoenixModResult>() }
     val installedMods = remember { mutableStateListOf<PhoenixInstalledMod>() }
     var pendingModRemoval by remember { mutableStateOf<String?>(null) }
+    val resourcePacks = remember { mutableStateListOf<PhoenixContentFile>() }
+    val shaderPacks = remember { mutableStateListOf<PhoenixContentFile>() }
+    val savedWorlds = remember { mutableStateListOf<String>() }
+    var toolboxStatus by remember { mutableStateOf("Manage resource packs, shader ZIPs and inspect saved worlds for the active profile.") }
     var editingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
@@ -323,6 +369,19 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                 installedMods.addAll(listPhoenixInstalledMods(active.engineProfileId))
             } catch (error: Exception) {
                 modStatus = error.message ?: "Could not read the active profile's mods folder."
+            }
+        }
+        if (page == "Toolbox") {
+            try {
+                resourcePacks.clear()
+                resourcePacks.addAll(listPhoenixContentFiles(active.engineProfileId, "resourcepacks"))
+                shaderPacks.clear()
+                shaderPacks.addAll(listPhoenixContentFiles(active.engineProfileId, "shaderpacks"))
+                savedWorlds.clear()
+                savedWorlds.addAll(listPhoenixWorlds(active.engineProfileId))
+                toolboxStatus = "Library refreshed for ${active.name}."
+            } catch (error: Exception) {
+                toolboxStatus = error.message ?: "Could not read this profile's game folders."
             }
         }
     }
@@ -714,11 +773,100 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)) {
                                 Text("OPEN PERFORMANCE TUNING", color = Color.Black, fontWeight = FontWeight.Bold)
                             }
+                            Button(onClick = { page = "Toolbox" }, modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                Text("OPEN GAME TOOLBOX", color = PhoenixOrange, fontWeight = FontWeight.Bold)
+                            }
                             Button(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) },
                                 modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
                                 Text("OPEN ENGINE SETTINGS", color = PhoenixOrange, fontWeight = FontWeight.Bold)
                             }
                             Text("Microsoft sign-in uses the engine's official authentication screen. Phoenix does not collect or store your Microsoft password.", color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                    }
+                    "Toolbox" -> {
+                        item {
+                            TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = PhoenixOrange) }
+                            PhoenixInfo("PHOENIX TOOLBOX", "Your game library", "Manage installed resource-pack and shader ZIP files, and inspect local worlds for the active profile. This screen never deletes worlds.", PhoenixOrange)
+                            Text(toolboxStatus, color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                        item {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("RESOURCE PACKS", color = PhoenixOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text("${resourcePacks.size} ZIP file(s)", color = PhoenixMuted, fontSize = 11.sp)
+                                }
+                                TextButton(onClick = {
+                                    try {
+                                        resourcePacks.clear()
+                                        resourcePacks.addAll(listPhoenixContentFiles(active.engineProfileId, "resourcepacks"))
+                                        toolboxStatus = "Resource packs refreshed."
+                                    } catch (error: Exception) { toolboxStatus = error.message ?: "Refresh failed." }
+                                }) { Text("REFRESH") }
+                            }
+                        }
+                        items(resourcePacks, key = { "resource-" + it.fileName }) { pack ->
+                            Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(13.dp)).padding(13.dp),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(pack.fileName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("${pack.sizeBytes / 1024} KB · ${if (pack.enabled) "Enabled" else "Disabled"}", color = PhoenixMuted, fontSize = 10.sp)
+                                }
+                                TextButton(onClick = {
+                                    try {
+                                        togglePhoenixContentFile(active.engineProfileId, "resourcepacks", pack.fileName, !pack.enabled)
+                                        resourcePacks.clear()
+                                        resourcePacks.addAll(listPhoenixContentFiles(active.engineProfileId, "resourcepacks"))
+                                        toolboxStatus = "Resource pack state changed. Reopen the in-game resource-pack menu."
+                                    } catch (error: Exception) { toolboxStatus = error.message ?: "Could not change pack state." }
+                                }) { Text(if (pack.enabled) "DISABLE" else "ENABLE", color = PhoenixOrange) }
+                            }
+                        }
+                        item {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("SHADER PACKS", color = PhoenixOrange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text("${shaderPacks.size} ZIP file(s)", color = PhoenixMuted, fontSize = 11.sp)
+                                }
+                                TextButton(onClick = {
+                                    try {
+                                        shaderPacks.clear()
+                                        shaderPacks.addAll(listPhoenixContentFiles(active.engineProfileId, "shaderpacks"))
+                                        toolboxStatus = "Shader packs refreshed."
+                                    } catch (error: Exception) { toolboxStatus = error.message ?: "Refresh failed." }
+                                }) { Text("REFRESH") }
+                            }
+                        }
+                        items(shaderPacks, key = { "shader-" + it.fileName }) { pack ->
+                            Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(13.dp)).padding(13.dp),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(pack.fileName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("${pack.sizeBytes / 1024} KB · ${if (pack.enabled) "Enabled" else "Disabled"}", color = PhoenixMuted, fontSize = 10.sp)
+                                }
+                                TextButton(onClick = {
+                                    try {
+                                        togglePhoenixContentFile(active.engineProfileId, "shaderpacks", pack.fileName, !pack.enabled)
+                                        shaderPacks.clear()
+                                        shaderPacks.addAll(listPhoenixContentFiles(active.engineProfileId, "shaderpacks"))
+                                        toolboxStatus = "Shader pack state changed. Reopen shader settings in-game."
+                                    } catch (error: Exception) { toolboxStatus = error.message ?: "Could not change shader state." }
+                                }) { Text(if (pack.enabled) "DISABLE" else "ENABLE", color = PhoenixOrange) }
+                            }
+                        }
+                        item {
+                            PhoenixInfo("SAVED WORLDS", savedWorlds.size.toString(), "World folders with a valid level.dat file in this profile's saves directory. World files are shown read-only here.", PhoenixOrange)
+                        }
+                        items(savedWorlds, key = { "world-" + it }) { world ->
+                            Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(12.dp)).padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text("🌍", fontSize = 19.sp)
+                                Spacer(Modifier.width(10.dp))
+                                Text(world, color = Color.White, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        item {
+                            Text("Pack toggles rename the selected ZIP to a .disabled extension. No files are downloaded or deleted by this toolbox.", color = PhoenixMuted, fontSize = 11.sp)
                         }
                     }
                     "Performance" -> {
