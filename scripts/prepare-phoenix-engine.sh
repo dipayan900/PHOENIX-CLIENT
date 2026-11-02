@@ -41,6 +41,8 @@ s = strings.read_text()
 s = s.replace('<string name="app_name" translatable="false">Amethyst</string>',
               '<string name="app_name" translatable="false">Phoenix Client</string>')
 s = s.replace('Amethyst has unexpectedly crashed', 'Phoenix Client has unexpectedly crashed')
+s = s.replace('<string name="lazy_service_default_title">Amethyst Foreground Service</string>',
+              '<string name="lazy_service_default_title">Phoenix Foreground Service</string>')
 strings.write_text(s)
 c = colors.read_text()
 for old, new in {'#9649b8':'#FF6A24','#181818':'#100D12','#464646':'#30242C','#242424':'#171018','#232323':'#171018'}.items():
