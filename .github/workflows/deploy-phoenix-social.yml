@@ -1,6 +1,11 @@
 name: Deploy Phoenix Social API
 
 on:
+  push:
+    branches: [integration/amethyst-phoenix]
+    paths:
+      - "social-backend/**"
+      - ".github/workflows/deploy-phoenix-social.yml"
   workflow_dispatch:
 
 permissions:
