@@ -12,15 +12,17 @@ public final class PhoenixBrandingClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Register the 1.21.1 CustomPayload before any connection attempts.
         PayloadTypeRegistry.playC2S().register(PhoenixBrandPayload.ID, PhoenixBrandPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(PhoenixLoadoutPayload.ID, PhoenixLoadoutPayload.CODEC);
+        ClientPlayNetworking.registerGlobalReceiver(PhoenixLoadoutPayload.ID,
+                (payload, context) -> PhoenixLoadoutState.accept(payload.data()));
 
-        // This is a cosmetic identity signal only. It must never grant permissions,
-        // purchases, owner status, moderation exemptions or gameplay advantages.
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            PhoenixLoadoutState.clear();
             if (ClientPlayNetworking.canSend(BRAND_CHANNEL)) {
                 ClientPlayNetworking.send(new PhoenixBrandPayload());
             }
         });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> PhoenixLoadoutState.clear());
     }
 }
