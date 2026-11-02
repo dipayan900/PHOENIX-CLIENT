@@ -375,11 +375,11 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
                 sender.sendMessage(Component.text("Phoenix in-world and tab branding: " + (enabled ? "ON" : "OFF"), NamedTextColor.GOLD));
                 return true;
             }
-            if (sender instanceof Player player && args.length > 0 && args[0].equalsIgnoreCase("link")) {
+            if (args.length > 0 && args[0].equalsIgnoreCase("link")) {
                 createLauncherLink(player);
                 return true;
             }
-            if (sender instanceof Player player && args.length > 0 && args[0].equalsIgnoreCase("unlink")) {
+            if (args.length > 0 && args[0].equalsIgnoreCase("unlink")) {
                 try (PreparedStatement q = database.prepareStatement("DELETE FROM api_tokens WHERE uuid=?")) {
                     q.setString(1, player.getUniqueId().toString());
                     q.executeUpdate();
