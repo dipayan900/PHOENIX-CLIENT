@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:allowBackup="false"
+        android:icon="@drawable/ic_phoenix"
         android:label="Phoenix Client"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true">
