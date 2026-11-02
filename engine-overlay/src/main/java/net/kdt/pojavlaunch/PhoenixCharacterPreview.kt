@@ -5,7 +5,6 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.view.MotionEvent
-import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -59,7 +58,7 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
     private val model = FloatArray(16)
     private val mvp = FloatArray(16)
     private var program = 0
-    private var angle = -18f
+    @Volatile private var angle = -18f
     @Volatile private var cosmetic = ""
     private var width = 1
     private var height = 1
@@ -163,6 +162,7 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
         vertices.position(0)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,12,vertices)
+        indices.position(0)
         GLES20.glDrawElements(GLES20.GL_TRIANGLES,36,GLES20.GL_UNSIGNED_SHORT,indices)
     }
 }
