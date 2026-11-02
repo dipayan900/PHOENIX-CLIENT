@@ -59,8 +59,7 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
         add("respirator","head",350,false); add("halo_solar","head",600,false);
         add("halo_lunar","head",350,false); add("earrings_star","head",100,false);
         add("scarf_red","head",120,false);
-        add("shield_royal","back",400,false);
-        add("shield_void","back",650,false); add("dragon_tail","back",500,false);
+ add("dragon_tail","back",500,false);
         add("fox_tail","back",300,false); add("robot_arm","back",650,false);
         add("crystal_bracers","back",300,false);
         add("wave","emote",0,true); add("victory_pose","emote",250,true);
