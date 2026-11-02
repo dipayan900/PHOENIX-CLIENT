@@ -1,5 +1,7 @@
 package net.kdt.pojavlaunch
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -183,6 +185,36 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  var selected by remember{mutableStateOf("ember_cape")}
  var wallet by remember{mutableStateOf(false)}
  var info by remember{mutableStateOf(false)}
+ var serverUrl by remember{mutableStateOf(prefs.getString("server_url","").orEmpty())}
+ var serverToken by remember{mutableStateOf(prefs.getString("server_token","").orEmpty())}
+ var serverConnected by remember{mutableStateOf(false)}
+ var serverBusy by remember{mutableStateOf(false)}
+ var serverStatus by remember{mutableStateOf("Pair with a Paper server to sync your real server inventory and loadout.")}
+ var serverOwner by remember{mutableStateOf(false)}
+ fun applyRemote(inv:PhoenixRemoteInventory){
+  coins=inv.coins
+  owned.clear()
+  if(inv.isOwner) owned.addAll(phoenixItems.map{it.id}) else owned.addAll(inv.owned)
+  serverOwner=inv.isOwner
+  equipped.clear()
+  equipped.putAll(inv.equipped)
+  serverConnected=true
+  prefs.edit().putString("server_url",serverUrl.trim()).putString("server_token",serverToken.trim()).apply()
+  save()
+ }
+ fun refreshServer(message:String?=null){
+  serverBusy=true
+  Thread{
+   try{
+    val inv=PhoenixServerApi.inventory(serverUrl,serverToken)
+    Handler(Looper.getMainLooper()).post{
+     applyRemote(inv);serverBusy=false;serverStatus=message?:("Connected · "+inv.playerUuid+" · "+inv.coins+" coins")
+    }
+   }catch(error:Exception){
+    Handler(Looper.getMainLooper()).post{serverBusy=false;serverConnected=false;serverStatus=error.message?:"Server connection failed."}
+   }
+  }.start()
+ }
  fun save(){prefs.edit().putInt("demo_coins",coins).putLong("last_daily_reward_day",lastDailyReward).putStringSet("owned",owned.toSet()).putString("equipped",equipped.entries.joinToString("|"){"${it.key}=${it.value}"}).apply()}
  val preview=phoenixItems.firstOrNull{it.id==selected}?:phoenixItems.first()
  val visible=phoenixItems.filter{(category=="All"||it.category==category)&&(style=="All styles"||it.style==style)}
@@ -200,6 +232,15 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
    Text("PHOENIX OWNER COLLECTION",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
    Text("Unlimited cosmetics for the creator account",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)
    Text("Owner access is checked by the compatible Paper server against its configured Minecraft UUID. The launcher wallet and local preferences cannot grant owner privileges.",color=shopMuted,fontSize=11.sp)
+  }
+  Column(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(16.dp)).padding(13.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+   Text("SERVER INVENTORY SYNC",color=accent,fontSize=11.sp,fontWeight=FontWeight.Bold)
+   OutlinedTextField(value=serverUrl,onValueChange={serverUrl=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("Paper server URL")},placeholder={Text("http://192.168.1.10:8765")})
+   OutlinedTextField(value=serverToken,onValueChange={serverToken=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text("Private link token")},placeholder={Text("Paste token from /phoenix link")})
+   Button(onClick={ { refreshServer() } },enabled=!serverBusy && serverUrl.isNotBlank() && serverToken.isNotBlank(),modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(serverBusy)"CONNECTING..." else "CONNECT & SYNC SERVER",color=Color.Black,fontWeight=FontWeight.Bold)}
+   Text(serverStatus,color=if(serverConnected)Color(0xFF8EE6A0) else shopMuted,fontSize=10.sp)
+   if(serverConnected) TextButton(onClick={serverConnected=false;serverStatus="Disconnected from server inventory."}){Text("DISCONNECT",color=accent)}
+   Text("Pairing: join the Paper server and run /phoenix link. Paste its private token here. Use the server's LAN address and configured API port. HTTP is unencrypted: trusted LAN only; never expose/port-forward this API.",color=shopMuted,fontSize=9.sp)
   }
   Text("STYLE",color=shopMuted,fontSize=10.sp,fontWeight=FontWeight.Bold)
   Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){shopStyles.forEach{FilterChip(selected=style==it,onClick={style=it},label={Text(it,fontSize=9.sp)})}}
@@ -223,8 +264,26 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
    Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).clickable{selected=item.id}.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)){
     PhoenixCosmeticArtwork(item,Modifier.size(45.dp))
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){Text(item.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold);Text("${item.rarity} · ${item.style}",color=shopMuted,fontSize=9.sp);Text(if(active)"EQUIPPED" else if(has)"OWNED" else if(item.price==0)"FREE" else "🪙 ${item.price}",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}
-    if(has) OutlinedButton(onClick={equipped[item.category]=item.id;save();onNotice("${item.name} saved to the local wardrobe. Equip it on a compatible server with /phoenix equip ${item.id}.")},contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp)){Text(if(active)"ON" else "EQUIP",fontSize=9.sp)}
-    else Button(onClick={if(coins>=item.price){coins-=item.price;owned.add(item.id);save();onNotice("${item.name} added to local inventory.")}else onNotice("Not enough demo coins. Real-money checkout is disabled.")},contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(item.price==0)"CLAIM" else "UNLOCK",color=Color.Black,fontSize=9.sp,fontWeight=FontWeight.Bold)}
+    if(has) {
+     OutlinedButton(onClick={
+      if(serverConnected) {
+       serverBusy=true
+       Thread{try{PhoenixServerApi.equip(serverUrl,serverToken,item.id);val inv=PhoenixServerApi.inventory(serverUrl,serverToken);Handler(Looper.getMainLooper()).post{applyRemote(inv);serverBusy=false;serverStatus="Equipped on server: ${item.name}"}}
+       catch(error:Exception){Handler(Looper.getMainLooper()).post{serverBusy=false;serverStatus=error.message?:"Equip failed."}}}.start()
+      } else {equipped[when(item.category){"Capes"->"cape";"Wings"->"wings";"Accessories"->"head";"Emotes"->"emote";else->"back"}]=item.id;save();onNotice("${item.name} saved locally. Connect to a Paper server to sync it.")}
+     },enabled=!serverBusy,contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp)){Text(if(active)"ON" else "EQUIP",fontSize=9.sp)}
+     if(active) TextButton(onClick={
+      val slot=when(item.category){"Capes"->"cape";"Wings"->"wings";"Accessories"->"head";"Emotes"->"emote";else->"back"}
+      if(serverConnected){serverBusy=true;Thread{try{PhoenixServerApi.unequip(serverUrl,serverToken,slot);val inv=PhoenixServerApi.inventory(serverUrl,serverToken);Handler(Looper.getMainLooper()).post{applyRemote(inv);serverBusy=false;serverStatus="Unequipped $slot on server."}}catch(error:Exception){Handler(Looper.getMainLooper()).post{serverBusy=false;serverStatus=error.message?:"Unequip failed."}}}.start()}
+      else {equipped.remove(slot);equipped.remove(item.category);save()}
+     },enabled=!serverBusy){Text("OFF",color=Color(0xFFFF8A80),fontSize=9.sp)}
+    } else Button(onClick={
+     if(serverConnected){
+      serverBusy=true
+      Thread{try{PhoenixServerApi.buy(serverUrl,serverToken,item.id);val inv=PhoenixServerApi.inventory(serverUrl,serverToken);Handler(Looper.getMainLooper()).post{applyRemote(inv);serverBusy=false;serverStatus="Unlocked on server: ${item.name}"}}
+      catch(error:Exception){Handler(Looper.getMainLooper()).post{serverBusy=false;serverStatus=error.message?:"Purchase failed."}}}.start()
+     } else if(coins>=item.price){coins-=item.price;owned.add(item.id);save();onNotice("${item.name} added to local demo inventory. Connect to a server for synced purchases.")}else onNotice("Not enough demo coins. Real-money checkout is disabled.")
+    },enabled=!serverBusy,contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(item.price==0)"CLAIM" else "UNLOCK",color=Color.Black,fontSize=9.sp,fontWeight=FontWeight.Bold)}
    }
   }
   TextButton(onClick={info=true}){Text("Compatibility and account information",color=accent)}
@@ -232,7 +291,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  if(wallet)AlertDialog(onDismissRequest={wallet=false},containerColor=shopPanel,title={Text("Phoenix Coin Store",color=Color.White)},text={
   Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("COIN BUNDLES · PREVIEW",color=shopMuted,fontSize=11.sp);listOf("Starter · 100 coins","Explorer · 300 coins","Advanced · 750 coins","Elite · 1,500 coins","Legendary · 3,500 coins","Ultimate · 7,500 coins").forEach{Row(Modifier.fillMaxWidth().background(Color(0xFF28232D),RoundedCornerShape(9.dp)).padding(9.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(it,color=Color.White,fontSize=12.sp);Text("COMING LATER",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}};Text("Real-money checkout is intentionally disabled. This wallet uses local demo coins only; clearing app data can reset it.",color=shopMuted,fontSize=10.sp)}
  },confirmButton={TextButton(onClick={wallet=false}){Text("CLOSE",color=accent)}})
- if(info)AlertDialog(onDismissRequest={info=false},containerColor=shopPanel,title={Text("Cosmetic compatibility",color=Color.White)},text={Text("Phoenix uses original illustrated previews in this store and a first-pass procedural renderer in its bundled Fabric 1.21.1 add-on. Compatible players see supported attachments when connected to a Paper server running the Phoenix plugin. Some catalogue concepts are not rendered yet. The launcher wallet remains local demo data; cross-server cloud inventory is not deployed and real-money checkout is disabled.",color=shopMuted,fontSize=11.sp)},confirmButton={TextButton(onClick={info=false}){Text("GOT IT",color=accent)}})
+ if(info)AlertDialog(onDismissRequest={info=false},containerColor=shopPanel,title={Text("Cosmetic compatibility",color=Color.White)},text={Text("Phoenix uses an OpenGL 3D mannequin preview that can be rotated by dragging. Connect with a private /phoenix link token to use the Paper server's authoritative wallet, owned cosmetics and equip/unequip API. The API uses unencrypted HTTP and should only be used on a trusted LAN; do not port-forward it. Real-money checkout is disabled.",color=shopMuted,fontSize=11.sp)},confirmButton={TextButton(onClick={info=false}){Text("GOT IT",color=accent)}})
 }
 
 /**
