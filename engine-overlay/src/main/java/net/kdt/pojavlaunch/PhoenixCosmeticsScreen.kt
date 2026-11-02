@@ -186,10 +186,10 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  var wallet by remember{mutableStateOf(false)}
  var info by remember{mutableStateOf(false)}
  var serverUrl by remember{mutableStateOf(prefs.getString("server_url","").orEmpty())}
- var serverToken by remember{mutableStateOf(prefs.getString("server_token","").orEmpty())}
+ var serverToken by remember{mutableStateOf("")}
  var serverConnected by remember{mutableStateOf(false)}
  var serverBusy by remember{mutableStateOf(false)}
- var serverStatus by remember{mutableStateOf("Pair with a Paper server to sync your real server inventory and loadout.")}
+ var serverStatus by remember{mutableStateOf("Pair with a Paper server to sync your real server inventory and loadout. The private token is kept only for this app session.")}
  var serverOwner by remember{mutableStateOf(false)}
  var serverSupported by remember{mutableStateOf(emptySet<String>())}
  fun save(){prefs.edit().putInt("demo_coins",coins).putLong("last_daily_reward_day",lastDailyReward).putStringSet("owned",owned.toSet()).putString("equipped",equipped.entries.joinToString("|"){"${it.key}=${it.value}"}).apply()}
@@ -202,7 +202,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   equipped.clear()
   equipped.putAll(inv.equipped)
   serverConnected=true
-  prefs.edit().putString("server_url",serverUrl.trim()).putString("server_token",serverToken.trim()).apply()
+  prefs.edit().putString("server_url",serverUrl.trim()).apply()
   save()
  }
  fun refreshServer(message:String?=null){
