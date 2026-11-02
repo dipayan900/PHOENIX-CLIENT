@@ -1341,7 +1341,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
                             PhoenixInfo("PHOENIX TOOLBOX", "Your game library", "Manage installed resource-pack and shader ZIP files, and inspect local worlds for the active profile. This screen never deletes worlds.", animatedAccent)
                             Text(toolboxStatus, color = PhoenixMuted, fontSize = 12.sp)
-
+                        }
                         item {
                             Column(
                                 Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(15.dp),
@@ -1389,6 +1389,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         items(packResults, key = { "pack-search-" + it.projectId }) { result ->
+                            val selectedPackVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
                             Column(
                                 Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(15.dp)).padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1404,7 +1405,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         Thread {
                                             try {
                                                 val folder = if (packType == "shader") "shaderpacks" else "resourcepacks"
-                                                val installed = installPhoenixPack(result, packVersion, folder, active.engineProfileId)
+                                                val installed = installPhoenixPack(result, selectedPackVersion, folder, active.engineProfileId)
                                                 activity.runOnUiThread {
                                                     if (folder == "shaderpacks") {
                                                         shaderPacks.clear()
