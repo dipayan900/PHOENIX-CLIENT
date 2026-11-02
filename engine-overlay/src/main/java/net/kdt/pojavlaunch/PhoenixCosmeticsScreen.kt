@@ -144,7 +144,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF46231B),Color(0xFF211923),shopPanel)),RoundedCornerShape(17.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
    Text("PHOENIX OWNER COLLECTION",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
    Text("Unlimited cosmetics for the creator account",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)
-   Text("Reserved for a server-verified owner account. Secure sign-in and signed owner entitlements are not implemented yet; local app data cannot grant owner privileges.",color=shopMuted,fontSize=11.sp)
+   Text("Owner access is checked by the compatible Paper server against its configured Minecraft UUID. The launcher wallet and local preferences cannot grant owner privileges.",color=shopMuted,fontSize=11.sp)
   }
   Text("STYLE",color=shopMuted,fontSize=10.sp,fontWeight=FontWeight.Bold)
   Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp)){shopStyles.forEach{FilterChip(selected=style==it,onClick={style=it},label={Text(it,fontSize=9.sp)})}}
@@ -156,7 +156,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
     Box(Modifier.size(70.dp).background(Color(0xFF28232D),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text(preview.icon,fontSize=34.sp)}
     Column(Modifier.weight(1f)){Text(preview.name,color=Color.White,fontWeight=FontWeight.Bold);Text("${preview.category} · ${preview.style}",color=shopMuted,fontSize=10.sp);Text(preview.detail,color=shopMuted,fontSize=11.sp)}
    }
-   Text("Catalogue preview only. 3D player rendering and live emotes require the integrated Minecraft renderer.",color=shopMuted,fontSize=10.sp)
+   Text("Launcher preview only. In-game 3D attachments and animated emotes require the Phoenix Fabric 1.21.1 client and compatible Paper server.",color=shopMuted,fontSize=10.sp)
   }
   Text("CATALOGUE · ${visible.size} ITEMS",color=Color.White,fontWeight=FontWeight.Bold,fontSize=13.sp)
   visible.forEach{item->
@@ -164,7 +164,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
    Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).clickable{selected=item.id}.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)){
     Box(Modifier.size(45.dp).background(Color(0xFF28232D),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center){Text(item.icon,fontSize=23.sp)}
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){Text(item.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold);Text("${item.rarity} · ${item.style}",color=shopMuted,fontSize=9.sp);Text(if(active)"EQUIPPED" else if(has)"OWNED" else if(item.price==0)"FREE" else "🪙 ${item.price}",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}
-    if(has) OutlinedButton(onClick={equipped[item.category]=item.id;save();onNotice("${item.name} saved to local wardrobe; in-game rendering is pending.")},contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp)){Text(if(active)"ON" else "EQUIP",fontSize=9.sp)}
+    if(has) OutlinedButton(onClick={equipped[item.category]=item.id;save();onNotice("${item.name} saved to the local wardrobe. Equip it on a compatible server with /phoenix equip ${item.id}.")},contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp)){Text(if(active)"ON" else "EQUIP",fontSize=9.sp)}
     else Button(onClick={if(coins>=item.price){coins-=item.price;owned.add(item.id);save();onNotice("${item.name} added to local inventory.")}else onNotice("Not enough demo coins. Real-money checkout is disabled.")},contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(item.price==0)"CLAIM" else "UNLOCK",color=Color.Black,fontSize=9.sp,fontWeight=FontWeight.Bold)}
    }
   }
