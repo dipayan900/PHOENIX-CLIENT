@@ -506,7 +506,8 @@ private data class PhoenixSavedProfile(
     val name: String,
     val nickname: String,
     val version: String,
-    val engineProfileId: String = ""
+    val engineProfileId: String = "",
+    val avatar: String = "🔥"
 )
 
 class PhoenixDashboardActivity : ComponentActivity() {
@@ -536,7 +537,8 @@ private fun readPhoenixProfiles(context: Context): List<PhoenixSavedProfile> {
                     name = item.optString("name", "Player profile"),
                     nickname = item.optString("nickname", "PhoenixPlayer"),
                     version = item.optString("version", "1.21.4"),
-                    engineProfileId = item.optString("engineProfileId", "")
+                    engineProfileId = item.optString("engineProfileId", ""),
+                    avatar = item.optString("avatar", "🔥")
                 ))
             }
         }.ifEmpty { listOf(PhoenixSavedProfile(UUID.randomUUID().toString(), "Main profile", "PhoenixPlayer", "1.21.4")) }
@@ -553,7 +555,8 @@ private fun writePhoenixProfiles(context: Context, profiles: List<PhoenixSavedPr
             .put("name", p.name)
             .put("nickname", p.nickname)
             .put("version", p.version)
-            .put("engineProfileId", p.engineProfileId))
+            .put("engineProfileId", p.engineProfileId)
+            .put("avatar", p.avatar))
     }
     context.getSharedPreferences("phoenix_client", Context.MODE_PRIVATE).edit()
         .putString("profiles_json", array.toString())
@@ -595,6 +598,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var draftName by remember { mutableStateOf("") }
     var draftNickname by remember { mutableStateOf("") }
     var draftVersion by remember { mutableStateOf("1.21.4") }
+    var draftAvatar by remember { mutableStateOf("🔥") }
     var avatarChoice by remember { mutableStateOf(prefs.getString("cosmetic_avatar", "🔥") ?: "🔥") }
     var bannerChoice by remember { mutableStateOf(prefs.getString("cosmetic_banner", "EMBER") ?: "EMBER") }
     var modQuery by remember { mutableStateOf("") }
@@ -813,6 +817,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     draftName = "New profile"
                                     draftNickname = "PhoenixPlayer"
                                     draftVersion = active.version
+                                    draftAvatar = active.avatar
                                     dialogOpen = true
                                 }, colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)) { Text("+ ADD", color = Color.Black) }
                             }
@@ -825,7 +830,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(avatarChoice, fontSize = 20.sp); Text(profile.name, color = Color.White, fontWeight = FontWeight.Bold) }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(profile.avatar, fontSize = 20.sp); Text(profile.name, color = Color.White, fontWeight = FontWeight.Bold) }
                                     if (profile.id == activeId) Text("ACTIVE", color = animatedAccent, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                 }
                                 Text("@${profile.nickname}  ·  Minecraft ${profile.version}", color = PhoenixMuted, fontSize = 12.sp)
@@ -836,6 +841,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         draftName = profile.name
                                         draftNickname = profile.nickname
                                         draftVersion = profile.version
+                                        draftAvatar = profile.avatar
                                         dialogOpen = true
                                     }) { Text("EDIT", color = animatedAccent) }
                                     if (profiles.size > 1) TextButton(onClick = {
@@ -849,7 +855,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                     }
                     "Cosmetics" -> {
                         item {
-                            PhoenixInfo("PHOENIX COSMETICS", "Make your profile yours", "These are launcher profile cosmetics only. They do not change Minecraft account skins or server-side cosmetics.", animatedAccent)
+                            PhoenixInfo("PHOENIX LOCAL IDENTITIES", "Your launcher identity", "Create separate local usernames and emblems for this device. These identities are stored only in Phoenix; they are not Microsoft accounts, do not authenticate with Mojang, and do not bypass Minecraft ownership.", animatedAccent)
                         }
                         item {
                             Text("PROFILE EMBLEM", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
@@ -861,8 +867,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     .background(if (avatarChoice == emblem) Color(0xFF382019) else PhoenixPanel, RoundedCornerShape(12.dp))
                                     .clickable {
                                         avatarChoice = emblem
+                                        val index = profiles.indexOfFirst { it.id == activeId }
+                                        if (index >= 0) profiles[index] = profiles[index].copy(avatar = emblem)
                                         prefs.edit().putString("cosmetic_avatar", emblem).apply()
-                                        notice = "Phoenix profile emblem updated."
+                                        persist()
+                                        notice = "Local identity emblem updated."
                                     }.padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1623,8 +1632,20 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(draftName, { draftName = it }, label = { Text("Profile name") }, singleLine = true)
-                    OutlinedTextField(draftNickname, { draftNickname = it }, label = { Text("Local profile nickname (not account login)") }, singleLine = true)
+                    OutlinedTextField(draftNickname, { draftNickname = it }, label = { Text("Local username") }, supportingText = { Text("Up to 16 letters, numbers or underscores. Stored on this device only.") }, singleLine = true)
+                    Text("CHOOSE IDENTITY EMBLEM", color = animatedAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("🔥", "🐉", "⚡", "🌌", "🛡️", "🦅", "☄️", "🌋").forEach { emblem ->
+                            Text(
+                                emblem,
+                                modifier = Modifier.background(if (draftAvatar == emblem) Color(0xFF382019) else PhoenixPanel, RoundedCornerShape(10.dp))
+                                    .clickable { draftAvatar = emblem }.padding(7.dp),
+                                fontSize = 20.sp
+                            )
+                        }
+                    }
                     OutlinedTextField(draftVersion, { draftVersion = it }, label = { Text("Minecraft version ID") }, singleLine = true)
+                    Text("Local identity only — official Minecraft sign-in is still required for authenticated online play.", color = PhoenixMuted, fontSize = 11.sp)
                 }
             },
             confirmButton = {
@@ -1633,14 +1654,16 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                     val safeNick = draftNickname.trim().filter { it.isLetterOrDigit() || it == '_' }.take(16)
                     if (safeName.isNotBlank() && safeNick.isNotBlank() && draftVersion.isNotBlank()) {
                         val index = profiles.indexOfFirst { it.id == editingId }
-                        if (index >= 0) profiles[index] = profiles[index].copy(name = safeName, nickname = safeNick, version = draftVersion.trim())
+                        if (index >= 0) profiles[index] = profiles[index].copy(name = safeName, nickname = safeNick, version = draftVersion.trim(), avatar = draftAvatar)
                         else {
-                            val created = PhoenixSavedProfile(UUID.randomUUID().toString(), safeName, safeNick, draftVersion.trim())
+                            val created = PhoenixSavedProfile(UUID.randomUUID().toString(), safeName, safeNick, draftVersion.trim(), avatar = draftAvatar)
                             profiles.add(created)
                             activeId = created.id
                         }
                         persist()
-                        notice = "Phoenix profile saved and synchronized with the engine."
+                        avatarChoice = draftAvatar
+                        prefs.edit().putString("cosmetic_avatar", draftAvatar).apply()
+                        notice = "Phoenix local identity saved."
                         dialogOpen = false
                     }
                 }) { Text("SAVE", color = animatedAccent) }
