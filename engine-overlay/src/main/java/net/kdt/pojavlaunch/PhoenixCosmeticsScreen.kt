@@ -117,6 +117,8 @@ private val shopMuted=Color(0xFFAAA8B2)
 fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit){
  val prefs=remember{context.getSharedPreferences("phoenix_cosmetics",Context.MODE_PRIVATE)}
  var coins by remember{mutableIntStateOf(prefs.getInt("demo_coins",500))}
+ val today=remember{java.time.LocalDate.now().toEpochDay()}
+ var lastDailyReward by remember{mutableLongStateOf(prefs.getLong("last_daily_reward_day",-1L))}
  val owned=remember{mutableStateListOf<String>().apply{addAll(prefs.getStringSet("owned",setOf("ember_cape","wave")).orEmpty())}}
  val equipped=remember{mutableStateMapOf<String,String>().apply{
   prefs.getString("equipped","").orEmpty().split("|").filter{it.contains("=")}.forEach{val p=it.split("=",limit=2);this[p[0]]=p[1]}
@@ -126,7 +128,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  var selected by remember{mutableStateOf("ember_cape")}
  var wallet by remember{mutableStateOf(false)}
  var info by remember{mutableStateOf(false)}
- fun save(){prefs.edit().putInt("demo_coins",coins).putStringSet("owned",owned.toSet()).putString("equipped",equipped.entries.joinToString("|"){"${it.key}=${it.value}"}).apply()}
+ fun save(){prefs.edit().putInt("demo_coins",coins).putLong("last_daily_reward_day",lastDailyReward).putStringSet("owned",owned.toSet()).putString("equipped",equipped.entries.joinToString("|"){"${it.key}=${it.value}"}).apply()}
  val preview=phoenixItems.firstOrNull{it.id==selected}?:phoenixItems.first()
  val visible=phoenixItems.filter{(category=="All"||it.category==category)&&(style=="All styles"||it.style==style)}
  Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
@@ -134,6 +136,10 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(17.dp)).padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
    Column{Text("PHOENIX COINS",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text("🪙 $coins",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Black);Text("Local development wallet",color=shopMuted,fontSize=10.sp)}
    Button(onClick={wallet=true},colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("COIN STORE",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=10.sp)}
+  }
+  Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+   Column(Modifier.weight(1f)){Text("DAILY FREE COINS",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text("Claim 100 demo coins once per day",color=Color.White,fontSize=12.sp);Text("Local test balance only · no payment",color=shopMuted,fontSize=9.sp)}
+   Button(onClick={if(lastDailyReward!=today){coins+=100;lastDailyReward=today;save();onNotice("100 free demo coins added to your local test wallet.")}},enabled=lastDailyReward!=today,colors=ButtonDefaults.buttonColors(containerColor=accent,disabledContainerColor=Color(0xFF39313D))){Text(if(lastDailyReward==today)"CLAIMED" else "CLAIM",color=if(lastDailyReward==today)shopMuted else Color.Black,fontSize=10.sp,fontWeight=FontWeight.Bold)}
   }
   Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF46231B),Color(0xFF211923),shopPanel)),RoundedCornerShape(17.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
    Text("PHOENIX OWNER COLLECTION",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
@@ -165,7 +171,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   TextButton(onClick={info=true}){Text("Compatibility and account information",color=accent)}
  }
  if(wallet)AlertDialog(onDismissRequest={wallet=false},containerColor=shopPanel,title={Text("Phoenix Coin Store",color=Color.White)},text={
-  Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("Planned coin bundles",color=shopMuted,fontSize=11.sp);listOf("Starter · 100 coins","Explorer · 300 coins","Advanced · 750 coins","Elite · 1,500 coins","Legendary · 3,500 coins","Ultimate · 7,500 coins").forEach{Text(it,color=Color.White,fontSize=13.sp)};Text("Payment checkout is disabled. These are catalogue placeholders; no money is collected.",color=shopMuted,fontSize=10.sp)}
+  Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("COIN BUNDLES · PREVIEW",color=shopMuted,fontSize=11.sp);listOf("Starter · 100 coins","Explorer · 300 coins","Advanced · 750 coins","Elite · 1,500 coins","Legendary · 3,500 coins","Ultimate · 7,500 coins").forEach{Row(Modifier.fillMaxWidth().background(Color(0xFF28232D),RoundedCornerShape(9.dp)).padding(9.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(it,color=Color.White,fontSize=12.sp);Text("COMING LATER",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}};Text("Real-money checkout is intentionally disabled. This wallet uses local demo coins only; clearing app data can reset it.",color=shopMuted,fontSize=10.sp)}
  },confirmButton={TextButton(onClick={wallet=false}){Text("CLOSE",color=accent)}})
  if(info)AlertDialog(onDismissRequest={info=false},containerColor=shopPanel,title={Text("Cosmetic compatibility",color=Color.White)},text={Text("This launcher foundation contains a local catalogue, filters, preview selection, inventory, equip slots and demo coin wallet. Actual capes, wings, accessories, emotes and particles need a runtime renderer. Other players see cosmetics only when their client or server supports the same protocol. Server-backed owner entitlements, cloud inventory and payment processing remain future milestones.",color=shopMuted,fontSize=11.sp)},confirmButton={TextButton(onClick={info=false}){Text("GOT IT",color=accent)}})
 }
