@@ -211,7 +211,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
     PhoenixCosmeticArtwork(preview,Modifier.size(70.dp))
     Column(Modifier.weight(1f)){Text(preview.name,color=Color.White,fontWeight=FontWeight.Bold);Text("${preview.category} · ${preview.style}",color=shopMuted,fontSize=10.sp);Text(preview.detail,color=shopMuted,fontSize=11.sp)}
    }
-   Text("Launcher preview only. 62 of the 89 catalogue entries have in-game meshes or emote poses on Phoenix Fabric 1.21.1 with a compatible Paper server; the remaining entries are preview-only.",color=shopMuted,fontSize=10.sp)
+   Text("Illustrated item preview. The bundled Fabric add-on renders first-pass capes, wings, headwear, back items, tails, bracers, shoulder pets and supported emote poses in Minecraft Java 1.21.1. Other catalogue concepts remain preview-only until their renderer is added.",color=shopMuted,fontSize=10.sp)
   }
   Text("CATALOGUE · ${visible.size} ITEMS",color=Color.White,fontWeight=FontWeight.Bold,fontSize=13.sp)
   visible.forEach{item->
@@ -228,7 +228,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  if(wallet)AlertDialog(onDismissRequest={wallet=false},containerColor=shopPanel,title={Text("Phoenix Coin Store",color=Color.White)},text={
   Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("COIN BUNDLES · PREVIEW",color=shopMuted,fontSize=11.sp);listOf("Starter · 100 coins","Explorer · 300 coins","Advanced · 750 coins","Elite · 1,500 coins","Legendary · 3,500 coins","Ultimate · 7,500 coins").forEach{Row(Modifier.fillMaxWidth().background(Color(0xFF28232D),RoundedCornerShape(9.dp)).padding(9.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(it,color=Color.White,fontSize=12.sp);Text("COMING LATER",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}};Text("Real-money checkout is intentionally disabled. This wallet uses local demo coins only; clearing app data can reset it.",color=shopMuted,fontSize=10.sp)}
  },confirmButton={TextButton(onClick={wallet=false}){Text("CLOSE",color=accent)}})
- if(info)AlertDialog(onDismissRequest={info=false},containerColor=shopPanel,title={Text("Cosmetic compatibility",color=Color.White)},text={Text("This launcher foundation contains a local catalogue, filters, preview selection, inventory, equip slots and demo coin wallet. Actual capes, wings, accessories, emotes and particles need a runtime renderer. Other players see cosmetics only when their client or server supports the same protocol. Server-backed owner entitlements, cloud inventory and payment processing remain future milestones.",color=shopMuted,fontSize=11.sp)},confirmButton={TextButton(onClick={info=false}){Text("GOT IT",color=accent)}})
+ if(info)AlertDialog(onDismissRequest={info=false},containerColor=shopPanel,title={Text("Cosmetic compatibility",color=Color.White)},text={Text("Phoenix uses original illustrated previews in this store and a first-pass procedural renderer in its bundled Fabric 1.21.1 add-on. Compatible players see supported attachments when connected to a Paper server running the Phoenix plugin. Some catalogue concepts are not rendered yet. The launcher wallet remains local demo data; cross-server cloud inventory is not deployed and real-money checkout is disabled.",color=shopMuted,fontSize=11.sp)},confirmButton={TextButton(onClick={info=false}){Text("GOT IT",color=accent)}})
 }
 
 /**
