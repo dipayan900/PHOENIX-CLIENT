@@ -86,7 +86,14 @@ g = g.replace("dependencies {\n", """dependencies {
 gradle.write_text(g)
 
 m = manifest.read_text()
+# Android blocks cleartext HTTP by default. Phoenix sync uses bearer-token HTTP
+# only on a trusted private LAN; the Paper plugin warns against public exposure.
 m = m.replace(
+    '<application\n',
+    '<application\n        android:usesCleartextTraffic="true"\n'
+)
+m = m.replace(`<activity
+            android:name=".LauncherActivity"`,
     '<activity\n            android:name=".LauncherActivity"',
     '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />\n        <activity\n            android:name=".LauncherActivity"'
 )
