@@ -55,6 +55,9 @@ object PhoenixServerApi {
         )
     }
 
+    fun buy(baseUrl: String, token: String, cosmeticId: String): String =
+        request(baseUrl, token, "/api/buy", "POST", "id=" + URLEncoder.encode(cosmeticId, "UTF-8"))
+
     fun equip(baseUrl: String, token: String, cosmeticId: String): String =
         request(baseUrl, token, "/api/equip", "POST", "id=" + URLEncoder.encode(cosmeticId, "UTF-8"))
 
