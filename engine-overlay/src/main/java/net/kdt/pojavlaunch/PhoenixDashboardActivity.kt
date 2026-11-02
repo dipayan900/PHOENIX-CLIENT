@@ -632,6 +632,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val profiles = remember { mutableStateListOf<PhoenixSavedProfile>().apply { addAll(readPhoenixProfiles(context)) } }
     var activeId by remember { mutableStateOf(prefs.getString("active_profile_id", profiles.first().id) ?: profiles.first().id) }
     var page by remember { mutableStateOf("Home") }
+    var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
     val controlMapPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             try {
@@ -695,7 +696,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     ) }
     var toolboxStatus by remember { mutableStateOf("Manage resource packs, shader ZIPs and inspect saved worlds for the active profile.") }
     var editingId by remember { mutableStateOf<String?>(null) }
-    var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
     val studioAccent = when (themeChoice) { "FROST" -> Color(0xFF63C9FF); "VIOLET" -> Color(0xFFB38CFF); "MATRIX" -> Color(0xFF69E59A); else -> PhoenixOrange }
     val animatedAccent by animateColorAsState(targetValue = studioAccent, label = "phoenix-theme-accent")
