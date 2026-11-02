@@ -15,7 +15,7 @@ public final class PhoenixLoadoutState {
             "backpack_jet","backpack_turtle","shoulder_dragon","shoulder_cat","shoulder_owl",
             "aurora_cape","royal_guard_cape","shadow_cape","ocean_cape","galaxy_cape","crimson_cape","moss_cape",
             "crown_ice","astronaut_helmet","fox_mask","oni_mask","pixel_shades","gold_monocle","respirator",
-            "halo_solar","halo_lunar","earrings_star","scarf_red","sword_sheath","shield_royal","shield_void",
+            "halo_solar","halo_lunar","earrings_star","scarf_red","shield_royal","shield_void",
             "dragon_tail","fox_tail","robot_arm","crystal_bracers",
             "wave","victory_pose","pixel_dance","salute","clap","laugh","shrug","bow",
             "spin","moonwalk","guitar","sit","meditate","dance2");
