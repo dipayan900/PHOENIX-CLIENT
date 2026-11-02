@@ -46,11 +46,11 @@ about.write_text(a)
 # Enable Jetpack Compose in the engine app so Phoenix is the actual launcher UI.
 g = gradle.read_text()
 g = g.replace(
-    "plugins {\\n    id 'com.android.application' version '9.3.1'\\n}",
-    "plugins {\\n    id 'com.android.application' version '9.3.1'\\n    id 'org.jetbrains.kotlin.android' version '2.3.0'\\n    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.0'\\n}"
+    "plugins {\n    id 'com.android.application' version '9.3.1'\n}",
+    "plugins {\n    id 'com.android.application' version '9.3.1'\n    id 'org.jetbrains.kotlin.android' version '2.3.0'\n    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.0'\n}"
 )
-g = g.replace("buildFeatures {\\n        prefab true", "buildFeatures {\\n        compose true\\n        prefab true")
-g = g.replace("dependencies {\\n", """dependencies {
+g = g.replace("buildFeatures {\n        prefab true", "buildFeatures {\n        compose true\n        prefab true")
+g = g.replace("dependencies {\n", """dependencies {
     implementation platform('androidx.compose:compose-bom:2026.09.00')
     implementation 'androidx.activity:activity-compose:1.12.0'
     implementation 'androidx.compose.ui:ui'
@@ -61,8 +61,8 @@ gradle.write_text(g)
 
 m = manifest.read_text()
 m = m.replace(
-    '<activity\\n            android:name=".LauncherActivity"',
-    '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />\\n        <activity\\n            android:name=".LauncherActivity"'
+    '<activity\n            android:name=".LauncherActivity"',
+    '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />\n        <activity\n            android:name=".LauncherActivity"'
 )
 manifest.write_text(m)
 
