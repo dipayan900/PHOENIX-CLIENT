@@ -156,7 +156,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
     Box(Modifier.size(70.dp).background(Color(0xFF28232D),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text(preview.icon,fontSize=34.sp)}
     Column(Modifier.weight(1f)){Text(preview.name,color=Color.White,fontWeight=FontWeight.Bold);Text("${preview.category} · ${preview.style}",color=shopMuted,fontSize=10.sp);Text(preview.detail,color=shopMuted,fontSize=11.sp)}
    }
-   Text("Launcher preview only. In-game 3D attachments and animated emotes require the Phoenix Fabric 1.21.1 client and compatible Paper server.",color=shopMuted,fontSize=10.sp)
+   Text("Launcher preview only. 62 of the 89 catalogue entries have in-game meshes or emote poses on Phoenix Fabric 1.21.1 with a compatible Paper server; the remaining entries are preview-only.",color=shopMuted,fontSize=10.sp)
   }
   Text("CATALOGUE · ${visible.size} ITEMS",color=Color.White,fontWeight=FontWeight.Bold,fontSize=13.sp)
   visible.forEach{item->
