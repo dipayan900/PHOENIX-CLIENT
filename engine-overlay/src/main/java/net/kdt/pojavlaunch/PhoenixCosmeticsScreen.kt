@@ -262,7 +262,8 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   }
   Text("CATALOGUE · ${visible.size} ITEMS",color=Color.White,fontWeight=FontWeight.Bold,fontSize=13.sp)
   visible.forEach{item->
-   val slot=when(item.category){"Capes"->"cape";"Wings"->"wings";"Accessories"->"head";"Emotes"->"emote";else->"back"}\n   val has=if(serverConnected)serverSupported.contains(item.id)&&(serverOwner||owned.contains(item.id)) else owned.contains(item.id);val active=equipped[slot]==item.id||equipped[item.category]==item.id
+   val slot=when(item.category){"Capes"->"cape";"Wings"->"wings";"Accessories"->"head";"Emotes"->"emote";else->"back"}
+   val has=if(serverConnected)serverSupported.contains(item.id)&&(serverOwner||owned.contains(item.id)) else owned.contains(item.id);val active=equipped[slot]==item.id||equipped[item.category]==item.id
    Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).clickable{selected=item.id}.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)){
     PhoenixCosmeticArtwork(item,Modifier.size(45.dp))
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){Text(item.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold);Text("${item.rarity} · ${item.style}",color=shopMuted,fontSize=9.sp);Text(if(active)"EQUIPPED" else if(has)"OWNED" else if(item.price==0)"FREE" else "🪙 ${item.price}",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}
