@@ -57,14 +57,15 @@ g = g.replace(
 g = g.replace("buildFeatures {\n        prefab true", "buildFeatures {\n        compose true\n        prefab true")
 # Keep Kotlin Compose bytecode and Java sources on the same JVM target.
 g = g.replace(
-    "sourceCompatibility JavaVersion.VERSION_1_8\\n        targetCompatibility JavaVersion.VERSION_1_8",
-    "sourceCompatibility JavaVersion.VERSION_11\\n        targetCompatibility JavaVersion.VERSION_11"
-)
-g = g.replace(
     "\\nafterEvaluate {",
     """
+// Compose needs Kotlin 11 bytecode; keep legacy Java engine sources at Java 8.
+// --release 8 also avoids JDK module-package collisions in the Android compatibility stubs.
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+}
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
 }
 
 afterEvaluate {
