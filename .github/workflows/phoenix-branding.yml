@@ -37,5 +37,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: phoenix-branding-paper-1.21.1
-          path: phoenix-branding/paper/target/phoenix-branding-paper-0.1.0.jar
+          path: phoenix-branding/paper/target/phoenix-branding-paper-0.2.0.jar
           if-no-files-found: error
