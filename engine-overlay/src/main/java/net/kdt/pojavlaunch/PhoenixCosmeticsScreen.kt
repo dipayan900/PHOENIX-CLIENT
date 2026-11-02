@@ -1,5 +1,6 @@
 package net.kdt.pojavlaunch
 import android.content.Context
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -10,6 +11,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
@@ -114,6 +118,57 @@ private val shopPanel=Color(0xFF17171F)
 private val shopMuted=Color(0xFFAAA8B2)
 
 @Composable
+private fun PhoenixCosmeticArtwork(item: Cosmetic, modifier: Modifier = Modifier) {
+ val tint = when {
+  item.id.contains("frost") || item.id.contains("ice") || item.id.contains("glacier") || item.id.contains("ocean") -> Color(0xFF68C9F5)
+  item.id.contains("void") || item.id.contains("nebula") || item.id.contains("galaxy") || item.id.contains("shadow") -> Color(0xFFAA83F5)
+  item.id.contains("royal") || item.id.contains("crown") || item.id.contains("solar") -> Color(0xFFFFC45E)
+  item.id.contains("moss") || item.id.contains("leaf") || item.id.contains("verdant") -> Color(0xFF79D49A)
+  item.id.contains("crimson") || item.id.contains("samurai") -> Color(0xFFFF6D66)
+  else -> Color(0xFFFF8A43)
+ }
+ Canvas(modifier = modifier) {
+  val w=size.width; val h=size.height
+  drawRoundRect(Color(0xFF28232F),cornerRadius=CornerRadius(w*0.18f))
+  // A small original low-poly player mannequin gives each catalogue entry a real visual preview.
+  if(item.category=="Capes" || item.category=="Back Items" || item.category=="Tails") {
+   val p=Path().apply { moveTo(w*.30f,h*.34f); lineTo(w*.70f,h*.34f); lineTo(w*.82f,h*.90f); lineTo(w*.18f,h*.90f); close() }
+   drawPath(p,tint.copy(alpha=.9f))
+   drawRoundRect(tint.copy(alpha=.45f),Offset(w*.22f,h*.42f),androidx.compose.ui.geometry.Size(w*.56f,h*.42f),CornerRadius(w*.06f))
+  }
+  if(item.category=="Wings") {
+   val left=Path().apply { moveTo(w*.42f,h*.42f); lineTo(w*.05f,h*.18f); lineTo(w*.12f,h*.72f); lineTo(w*.42f,h*.64f); close() }
+   val right=Path().apply { moveTo(w*.58f,h*.42f); lineTo(w*.95f,h*.18f); lineTo(w*.88f,h*.72f); lineTo(w*.58f,h*.64f); close() }
+   drawPath(left,tint); drawPath(right,tint)
+   drawLine(Color.White.copy(alpha=.55f),Offset(w*.12f,h*.28f),Offset(w*.39f,h*.55f),w*.035f)
+   drawLine(Color.White.copy(alpha=.55f),Offset(w*.88f,h*.28f),Offset(w*.61f,h*.55f),w*.035f)
+  }
+  // Head, torso, arms and legs.
+  drawRoundRect(Color(0xFFEDC49B),Offset(w*.36f,h*.12f),androidx.compose.ui.geometry.Size(w*.28f,h*.25f),CornerRadius(w*.05f))
+  drawRoundRect(tint,Offset(w*.29f,h*.39f),androidx.compose.ui.geometry.Size(w*.42f,h*.33f),CornerRadius(w*.06f))
+  drawRoundRect(Color(0xFFB9A7A0),Offset(w*.30f,h*.69f),androidx.compose.ui.geometry.Size(w*.16f,h*.23f),CornerRadius(w*.04f))
+  drawRoundRect(Color(0xFFB9A7A0),Offset(w*.54f,h*.69f),androidx.compose.ui.geometry.Size(w*.16f,h*.23f),CornerRadius(w*.04f))
+  when(item.category) {
+   "Headwear","Helmets","Masks","Face","Accessories" -> {
+    if(item.id.contains("halo")) drawCircle(tint, w*.25f, Offset(w*.5f,h*.12f),style=androidx.compose.ui.graphics.drawscope.Stroke(width=w*.055f))
+    else drawRoundRect(tint,Offset(w*.29f,h*.07f),androidx.compose.ui.geometry.Size(w*.42f,h*.12f),CornerRadius(w*.06f))
+   }
+   "Emotes" -> {
+    drawCircle(Color.White, w*.045f, Offset(w*.80f,h*.22f))
+    drawCircle(tint, w*.065f, Offset(w*.86f,h*.37f))
+    drawLine(tint,Offset(w*.74f,h*.52f),Offset(w*.92f,h*.38f),w*.045f)
+   }
+   "Effects","Footsteps","Trails","Particles" -> {
+    drawCircle(tint.copy(alpha=.75f),w*.09f,Offset(w*.18f,h*.22f))
+    drawCircle(Color.White.copy(alpha=.8f),w*.045f,Offset(w*.82f,h*.18f))
+    drawCircle(tint.copy(alpha=.55f),w*.07f,Offset(w*.83f,h*.76f))
+   }
+  }
+  drawRoundRect(Color.White.copy(alpha=.16f),Offset(w*.08f,h*.06f),androidx.compose.ui.geometry.Size(w*.84f,h*.025f),CornerRadius(w))
+ }
+}
+
+@Composable
 fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit){
  val prefs=remember{context.getSharedPreferences("phoenix_cosmetics",Context.MODE_PRIVATE)}
  var coins by remember{mutableIntStateOf(prefs.getInt("demo_coins",500))}
@@ -153,7 +208,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   Column(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(17.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
    Text("COSMETIC PREVIEW",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
-    Box(Modifier.size(70.dp).background(Color(0xFF28232D),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text(preview.icon,fontSize=34.sp)}
+    PhoenixCosmeticArtwork(preview,Modifier.size(70.dp))
     Column(Modifier.weight(1f)){Text(preview.name,color=Color.White,fontWeight=FontWeight.Bold);Text("${preview.category} · ${preview.style}",color=shopMuted,fontSize=10.sp);Text(preview.detail,color=shopMuted,fontSize=11.sp)}
    }
    Text("Launcher preview only. 62 of the 89 catalogue entries have in-game meshes or emote poses on Phoenix Fabric 1.21.1 with a compatible Paper server; the remaining entries are preview-only.",color=shopMuted,fontSize=10.sp)
@@ -162,7 +217,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   visible.forEach{item->
    val has=owned.contains(item.id);val active=equipped[item.category]==item.id
    Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).clickable{selected=item.id}.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)){
-    Box(Modifier.size(45.dp).background(Color(0xFF28232D),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center){Text(item.icon,fontSize=23.sp)}
+    PhoenixCosmeticArtwork(item,Modifier.size(45.dp))
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){Text(item.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold);Text("${item.rarity} · ${item.style}",color=shopMuted,fontSize=9.sp);Text(if(active)"EQUIPPED" else if(has)"OWNED" else if(item.price==0)"FREE" else "🪙 ${item.price}",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}
     if(has) OutlinedButton(onClick={equipped[item.category]=item.id;save();onNotice("${item.name} saved to the local wardrobe. Equip it on a compatible server with /phoenix equip ${item.id}.")},contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp)){Text(if(active)"ON" else "EQUIP",fontSize=9.sp)}
     else Button(onClick={if(coins>=item.price){coins-=item.price;owned.add(item.id);save();onNotice("${item.name} added to local inventory.")}else onNotice("Not enough demo coins. Real-money checkout is disabled.")},contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(item.price==0)"CLAIM" else "UNLOCK",color=Color.Black,fontSize=9.sp,fontWeight=FontWeight.Bold)}
