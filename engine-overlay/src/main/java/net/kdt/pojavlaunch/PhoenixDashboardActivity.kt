@@ -76,6 +76,48 @@ private data class PhoenixModCheck(val name: String, val state: String, val deta
 private data class PhoenixExtension(val id: String, val name: String, val description: String)
 
 
+
+private fun applyPhoenixFpsProfile(engineProfileId: String, preset: String): String {
+    val gameDir = phoenixGameDirectory(engineProfileId).canonicalFile
+    if (!gameDir.isDirectory) throw java.io.IOException("Open this Minecraft profile once before applying a performance profile.")
+    val options = File(gameDir, "options.txt").canonicalFile
+    if (options.parentFile != gameDir) throw java.io.IOException("Invalid Minecraft options path.")
+    val backup = File(gameDir, ".phoenix-backup-options.txt")
+    if (options.exists() && !backup.exists()) options.copyTo(backup, overwrite = false)
+    val settings = when (preset) {
+        "ULTRA" -> linkedMapOf("graphics" to "0", "renderDistance" to "4", "simulationDistance" to "3", "maxFps" to "60", "enableVsync" to "false", "clouds" to "0", "particles" to "2", "entityShadows" to "false", "biomeBlendRadius" to "0", "mipmapLevels" to "0", "entityDistanceScaling" to "0.5", "ao" to "false")
+        "BALANCED" -> linkedMapOf("graphics" to "0", "renderDistance" to "8", "simulationDistance" to "5", "maxFps" to "60", "enableVsync" to "false", "clouds" to "1", "particles" to "1", "entityShadows" to "false", "biomeBlendRadius" to "1", "mipmapLevels" to "2", "entityDistanceScaling" to "0.75", "ao" to "false")
+        else -> linkedMapOf("graphics" to "0", "renderDistance" to "6", "simulationDistance" to "4", "maxFps" to "60", "enableVsync" to "false", "clouds" to "0", "particles" to "2", "entityShadows" to "false", "biomeBlendRadius" to "0", "mipmapLevels" to "1", "entityDistanceScaling" to "0.5", "ao" to "false")
+    }
+    val oldLines = if (options.isFile) options.readLines() else emptyList()
+    val output = mutableListOf<String>()
+    val seen = mutableSetOf<String>()
+    oldLines.forEach { line ->
+        val key = line.substringBefore(':', "")
+        if (key in settings.keys) {
+            if (seen.add(key)) output.add(key + ":" + settings.getValue(key))
+        } else output.add(line)
+    }
+    settings.forEach { (key, value) -> if (seen.add(key)) output.add(key + ":" + value) }
+    val temp = File(gameDir, "options.txt.phoenix-tmp")
+    temp.writeText(output.joinToString("\n", postfix = "\n"))
+    if (options.exists() && !options.delete()) { temp.delete(); throw java.io.IOException("Could not replace options.txt. Close Minecraft and retry.") }
+    if (!temp.renameTo(options)) { temp.delete(); throw java.io.IOException("Could not save Minecraft video settings.") }
+    return "Applied " + preset + " profile to " + settings.size + " video settings. Original options are backed up."
+}
+
+private fun restorePhoenixOptions(engineProfileId: String): String {
+    val gameDir = phoenixGameDirectory(engineProfileId).canonicalFile
+    val options = File(gameDir, "options.txt")
+    val backup = File(gameDir, ".phoenix-backup-options.txt")
+    if (!backup.isFile) throw java.io.IOException("No Phoenix options backup exists for this profile.")
+    val temp = File(gameDir, "options.txt.phoenix-restore")
+    backup.copyTo(temp, overwrite = true)
+    if (options.exists() && !options.delete()) { temp.delete(); throw java.io.IOException("Could not replace options.txt. Close Minecraft and retry.") }
+    if (!temp.renameTo(options)) { temp.delete(); throw java.io.IOException("Could not restore the original video settings.") }
+    return "Original Minecraft video settings restored from the Phoenix backup."
+}
+
 private fun importPhoenixControlMap(context: Context, uri: Uri, engineProfileId: String): String {
     val input = context.contentResolver.openInputStream(uri)
         ?: throw java.io.IOException("Phoenix could not open the selected control file.")
@@ -685,6 +727,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var dashboardLayout by remember { mutableStateOf(prefs.getString("dashboard_layout", "EXPANDED") ?: "EXPANDED") }
     val snapshotFiles = remember { mutableStateListOf<File>() }
     var advancedStatus by remember { mutableStateOf("Phoenix Advanced Studio ready.") }
+    var fpsPreset by remember { mutableStateOf(prefs.getString("fps_profile_${activeId}", "PERFORMANCE") ?: "PERFORMANCE") }
+    var fpsStatus by remember { mutableStateOf("Choose a profile to tune Minecraft video settings for smoother gameplay.") }
     val extensionModules = remember { listOf(
         PhoenixExtension("crash_lab", "Crash Lab", "Log analysis and failure signatures"),
         PhoenixExtension("mod_radar", "Smart Mod Radar", "Loader metadata and disabled-mod checks"),
@@ -712,6 +756,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     LaunchedEffect(activeId) {
         modLoader = prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric"
         ramAllocation = prefs.getInt("ram_allocation_${activeId}", LauncherPreferences.PREF_RAM_ALLOCATION).toFloat()
+        fpsPreset = prefs.getString("fps_profile_${activeId}", "PERFORMANCE") ?: "PERFORMANCE"
+        fpsStatus = "Performance settings loaded for " + active.name + "."
         avatarChoice = active.avatar
         prefs.edit().putString("cosmetic_avatar", active.avatar).apply()
     }
@@ -1351,6 +1397,39 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)) {
                                 Text("APPLY RECOMMENDED RAM", color = Color.Black, fontWeight = FontWeight.Bold)
                             }
+                        }
+                        item {
+                            PhoenixInfo("PHOENIX FPS & FRAME-PACING LAB", "Tune Minecraft for smoother gameplay", "These presets edit this profile's options.txt before launch. They reduce GPU/CPU workload; actual FPS depends on the device, renderer, Minecraft version, mods and world. Minecraft must be fully closed before applying.", animatedAccent)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                listOf("ULTRA", "PERFORMANCE", "BALANCED").forEach { preset ->
+                                    FilterChip(selected = fpsPreset == preset, onClick = {
+                                        fpsPreset = preset
+                                        prefs.edit().putString("fps_profile_${activeId}", preset).apply()
+                                    }, label = { Text(preset, fontSize = 9.sp) })
+                                }
+                            }
+                            Text(when (fpsPreset) {
+                                "ULTRA" -> "4 chunks render · 3 simulation · low particles · clouds off · 60 FPS cap"
+                                "BALANCED" -> "8 chunks render · 5 simulation · reduced effects · 60 FPS cap"
+                                else -> "6 chunks render · 4 simulation · low effects · 60 FPS cap"
+                            }, color = PhoenixMuted, fontSize = 12.sp)
+                            Button(onClick = {
+                                try {
+                                    fpsStatus = applyPhoenixFpsProfile(active.engineProfileId, fpsPreset)
+                                    recordPhoenixEvent(prefs, "FPS profile applied", fpsPreset + " · " + active.name)
+                                } catch (error: Exception) { fpsStatus = error.message ?: "Could not apply Minecraft video settings." }
+                            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)) {
+                                Text("APPLY FPS PROFILE", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(onClick = {
+                                try {
+                                    fpsStatus = restorePhoenixOptions(active.engineProfileId)
+                                    recordPhoenixEvent(prefs, "Video settings restored", active.name)
+                                } catch (error: Exception) { fpsStatus = error.message ?: "Could not restore the backup." }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("RESTORE ORIGINAL VIDEO SETTINGS", color = animatedAccent) }
+                            Text(fpsStatus, color = PhoenixMuted, fontSize = 12.sp)
+                            Text("MORE FPS TIPS", color = animatedAccent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("• Disable shader packs on mobile when chasing stable FPS.\n• Prefer lightweight Fabric performance mods that match your exact Minecraft version.\n• Keep render distance modest; simulation distance also affects CPU load.\n• Close background apps and leave thermal headroom; overheating can reduce performance.\n• Keep enough free storage for game files and Java runtime.\n• If a renderer fails, use a compatible renderer rather than forcing unsupported Vulkan features.", color = PhoenixMuted, fontSize = 12.sp, lineHeight = 18.sp)
                         }
                         item {
                             PhoenixInfo("PHOENIX THEME STUDIO", "Personalise the dashboard", "Choose a Phoenix colour identity, banner and compact or expanded layout. Theme gradients transition with the selected preset.", animatedAccent)
