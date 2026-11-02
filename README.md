@@ -11,6 +11,7 @@ Phoenix Client is an Android-first Minecraft Java launcher project with an origi
 - [x] Local nickname editor with input filtering and automatic local persistence
 - [x] Target Minecraft version selector with automatic local persistence
 - [x] Three selectable launcher appearance themes: Inferno, Frost and Amethyst
+- [x] Optional hand-off button for an already-installed Amethyst Android runtime (stable and debug package IDs)
 - [x] GitHub Actions debug APK build workflow
 - [ ] Minecraft Java runtime and actual game launch
 - [ ] Microsoft account sign-in through the documented secure OAuth flow
@@ -18,7 +19,7 @@ Phoenix Client is an Android-first Minecraft Java launcher project with an origi
 - [ ] Fabric/Forge/modpack integration
 - [ ] In-game HUD, touch controls and rendered cosmetics
 
-**Important:** This is still a launcher shell, not a playable Minecraft client. The Play action intentionally explains that game launch is not available. The version picker currently saves a target version only; it does not download game files. Local nickname is not Microsoft authentication and does not grant online-mode access.
+**Important:** This is still a launcher shell, not a playable Minecraft client. The Amethyst hand-off only opens the separate Amethyst app; it does not embed the runtime or pass Phoenix profile/version settings. The Play action intentionally explains that game launch is not available. The version picker currently saves a target version only; it does not download game files. Local nickname is not Microsoft authentication and does not grant online-mode access.
 
 ## Runtime direction
 
