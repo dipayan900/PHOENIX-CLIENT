@@ -33,11 +33,124 @@ import net.kdt.pojavlaunch.value.launcherprofiles.MinecraftProfile
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 
 private val PhoenixBg = Color(0xFF0B0910)
 private val PhoenixPanel = Color(0xFF19131D)
 private val PhoenixMuted = Color(0xFFB8AEBB)
 private val PhoenixOrange = Color(0xFFFF702E)
+
+
+private data class PhoenixModResult(
+    val projectId: String,
+    val title: String,
+    val description: String,
+    val downloads: Long,
+    val slug: String
+)
+
+private fun modrinthJson(url: String): JSONObject {
+    val connection = URL(url).openConnection() as HttpURLConnection
+    connection.requestMethod = "GET"
+    connection.connectTimeout = 15000
+    connection.readTimeout = 30000
+    connection.setRequestProperty("User-Agent", "PhoenixClient/1.0 (https://github.com/dipayan900/PHOENIX-CLIENT)")
+    try {
+        if (connection.responseCode !in 200..299) throw java.io.IOException("Modrinth returned HTTP ${connection.responseCode}")
+        return JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+    } finally {
+        connection.disconnect()
+    }
+}
+
+private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: String): List<PhoenixModResult> {
+    val facets = org.json.JSONArray()
+        .put(org.json.JSONArray().put("project_type:mod"))
+        .put(org.json.JSONArray().put("versions:$minecraftVersion"))
+        .put(org.json.JSONArray().put("categories:$loader"))
+    val encodedFacets = URLEncoder.encode(facets.toString(), "UTF-8")
+    val encodedQuery = URLEncoder.encode(query, "UTF-8")
+    val data = modrinthJson("https://api.modrinth.com/v2/search?query=$encodedQuery&facets=$encodedFacets&index=downloads&limit=20")
+    val hits = data.optJSONArray("hits") ?: return emptyList()
+    return buildList {
+        for (i in 0 until hits.length()) {
+            val hit = hits.optJSONObject(i) ?: continue
+            add(PhoenixModResult(
+                projectId = hit.optString("project_id"),
+                title = hit.optString("title", "Untitled mod"),
+                description = hit.optString("description", ""),
+                downloads = hit.optLong("downloads", 0),
+                slug = hit.optString("slug", "")
+            ))
+        }
+    }
+}
+
+private fun installPhoenixMod(mod: PhoenixModResult, minecraftVersion: String, loader: String): String {
+    if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+    val profile = LauncherProfiles.mainProfileJson.profiles.values.firstOrNull { it.name.isNotBlank() }
+        ?: throw java.io.IOException("Create a game profile before installing mods.")
+    val versions = URLEncoder.encode(org.json.JSONArray().put(minecraftVersion).toString(), "UTF-8")
+    val loaders = URLEncoder.encode(org.json.JSONArray().put(loader).toString(), "UTF-8")
+    val versionList = modrinthJson("https://api.modrinth.com/v2/project/${mod.projectId}/version?game_versions=$versions&loaders=$loaders")
+        .optJSONArray("unused")
+    val versionConnection = URL("https://api.modrinth.com/v2/project/${mod.projectId}/version?game_versions=$versions&loaders=$loaders")
+        .openConnection() as HttpURLConnection
+    versionConnection.requestMethod = "GET"
+    versionConnection.connectTimeout = 15000
+    versionConnection.readTimeout = 30000
+    versionConnection.setRequestProperty("User-Agent", "PhoenixClient/1.0 (https://github.com/dipayan900/PHOENIX-CLIENT)")
+    val versionArray = try {
+        if (versionConnection.responseCode !in 200..299) throw java.io.IOException("No compatible release found for $minecraftVersion / $loader.")
+        org.json.JSONArray(versionConnection.inputStream.bufferedReader().use { it.readText() })
+    } finally {
+        versionConnection.disconnect()
+    }
+    if (versionArray.length() == 0) throw java.io.IOException("No compatible release found for $minecraftVersion / $loader.")
+    val release = versionArray.getJSONObject(0)
+    val files = release.optJSONArray("files") ?: throw java.io.IOException("The mod has no downloadable files.")
+    var chosen: JSONObject? = null
+    for (i in 0 until files.length()) {
+        val file = files.optJSONObject(i) ?: continue
+        if (file.optBoolean("primary", false)) { chosen = file; break }
+        if (chosen == null) chosen = file
+    }
+    val selected = chosen ?: throw java.io.IOException("The mod has no downloadable files.")
+    val downloadUrl = selected.optString("url")
+    val rawName = selected.optString("filename", mod.slug + ".jar")
+    if (!downloadUrl.startsWith("https://") || !rawName.endsWith(".jar", true)) {
+        throw java.io.IOException("The selected release is not a valid mod JAR.")
+    }
+    val gameDir = Tools.getGameDirPath(profile)
+    val modsDir = File(gameDir, "mods")
+    if (!modsDir.exists() && !modsDir.mkdirs()) throw java.io.IOException("Cannot create the mods folder.")
+    val safeName = rawName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+    var destination = File(modsDir, safeName)
+    if (destination.exists()) destination = File(modsDir, safeName.removeSuffix(".jar") + "-phoenix-" + System.currentTimeMillis() + ".jar")
+    val download = URL(downloadUrl).openConnection() as HttpURLConnection
+    download.connectTimeout = 15000
+    download.readTimeout = 60000
+    download.setRequestProperty("User-Agent", "PhoenixClient/1.0 (https://github.com/dipayan900/PHOENIX-CLIENT)")
+    val temporary = File(modsDir, destination.name + ".part")
+    try {
+        if (download.responseCode !in 200..299) throw java.io.IOException("Mod download failed: HTTP ${download.responseCode}")
+        download.inputStream.use { input ->
+            FileOutputStream(temporary).use { output -> input.copyTo(output) }
+        }
+        if (temporary.length() <= 0L) throw java.io.IOException("The downloaded file was empty.")
+        if (!temporary.renameTo(destination)) throw java.io.IOException("Could not move the downloaded mod into the mods folder.")
+    } catch (error: Exception) {
+        temporary.delete()
+        throw error
+    } finally {
+        download.disconnect()
+    }
+    return destination.name
+}
 
 private data class PhoenixSavedProfile(
     val id: String,
@@ -135,6 +248,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var draftVersion by remember { mutableStateOf("1.21.4") }
     var avatarChoice by remember { mutableStateOf(prefs.getString("cosmetic_avatar", "🔥") ?: "🔥") }
     var bannerChoice by remember { mutableStateOf(prefs.getString("cosmetic_banner", "EMBER") ?: "EMBER") }
+    var modQuery by remember { mutableStateOf("") }
+    var modLoader by remember { mutableStateOf("fabric") }
+    var modStatus by remember { mutableStateOf("Search Modrinth for mods compatible with your selected Minecraft version and loader.") }
+    var modBusy by remember { mutableStateOf(false) }
+    val modResults = remember { mutableStateListOf<PhoenixModResult>() }
     var editingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
@@ -393,10 +511,87 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                     }
                     "Mods" -> {
                         item {
-                            PhoenixInfo("MODS & MODPACKS", "Engine-powered", "Open the game launcher to import modpacks and manage Fabric / Forge installations.", PhoenixOrange)
-                            Button(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) },
-                                modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)) {
-                                Text("OPEN MOD & VERSION MANAGER", color = Color.Black, fontWeight = FontWeight.Bold)
+                            PhoenixInfo("PHOENIX MOD HUB", "Powered by Modrinth", "Search public mods and install a compatible JAR into the active Minecraft profile's mods folder. Check each project's description and trust before installing.", PhoenixOrange)
+                        }
+                        item {
+                            OutlinedTextField(
+                                value = modQuery,
+                                onValueChange = { modQuery = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Search mods") },
+                                placeholder = { Text("Sodium, Iris, Lithium...") },
+                                singleLine = true
+                            )
+                        }
+                        item {
+                            Text("MOD LOADER", color = PhoenixOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                listOf("fabric", "forge", "neoforge", "quilt").forEach { loader ->
+                                    FilterChip(
+                                        selected = modLoader == loader,
+                                        onClick = { modLoader = loader },
+                                        label = { Text(loader.replaceFirstChar { it.uppercase() }, fontSize = 10.sp) }
+                                    )
+                                }
+                            }
+                            val gameVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
+                            Text("Minecraft $gameVersion", color = PhoenixMuted, fontSize = 12.sp)
+                            Button(
+                                enabled = !modBusy && modQuery.isNotBlank(),
+                                onClick = {
+                                    modBusy = true
+                                    modStatus = "Searching Modrinth..."
+                                    Thread {
+                                        try {
+                                            val version = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
+                                            val found = searchPhoenixMods(modQuery.trim(), version, modLoader)
+                                            activity.runOnUiThread {
+                                                modResults.clear()
+                                                modResults.addAll(found)
+                                                modStatus = if (found.isEmpty()) "No compatible mods found. Check the version and loader filters." else "Found ${found.size} compatible projects."
+                                                modBusy = false
+                                            }
+                                        } catch (error: Exception) {
+                                            activity.runOnUiThread { modStatus = error.message ?: "Mod search failed."; modBusy = false }
+                                        }
+                                    }.start()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)
+                            ) { Text(if (modBusy) "SEARCHING..." else "SEARCH MODRINTH", color = Color.Black, fontWeight = FontWeight.Bold) }
+                            Text(modStatus, color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                        items(modResults, key = { it.projectId }) { mod ->
+                            Column(
+                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(16.dp)).padding(15.dp),
+                                verticalArrangement = Arrangement.spacedBy(7.dp)
+                            ) {
+                                Text(mod.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text(mod.description, color = PhoenixMuted, fontSize = 12.sp, maxLines = 3)
+                                Text("${mod.downloads} downloads  ·  ${mod.slug}", color = PhoenixOrange, fontSize = 10.sp)
+                                Button(
+                                    enabled = !modBusy,
+                                    onClick = {
+                                        modBusy = true
+                                        modStatus = "Checking compatible release and downloading ${mod.title}..."
+                                        Thread {
+                                            try {
+                                                val version = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
+                                                val installed = installPhoenixMod(mod, version, modLoader)
+                                                activity.runOnUiThread { modStatus = "Installed $installed. Restart Minecraft to load it."; modBusy = false }
+                                            } catch (error: Exception) {
+                                                activity.runOnUiThread { modStatus = error.message ?: "Mod installation failed."; modBusy = false }
+                                            }
+                                        }.start()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)
+                                ) { Text("DOWNLOAD & INSTALL", color = Color.Black, fontWeight = FontWeight.Bold) }
+                            }
+                        }
+                        item {
+                            Text("Mod compatibility depends on the installed loader and Minecraft version. Phoenix does not guarantee third-party mod safety; only install projects you trust.", color = PhoenixMuted, fontSize = 11.sp)
+                            TextButton(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) }) {
+                                Text("OPEN ENGINE MODPACK / LOADER MANAGER", color = PhoenixOrange)
                             }
                         }
                     }
