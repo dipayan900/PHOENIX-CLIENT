@@ -38,6 +38,8 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.net.Socket
+import java.util.zip.ZipFile
 
 private val PhoenixBg = Color(0xFF0B0910)
 private val PhoenixPanel = Color(0xFF19131D)
@@ -56,6 +58,10 @@ private data class PhoenixModResult(
 private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
 private data class PhoenixContentFile(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
 private data class PhoenixReadinessItem(val title: String, val value: String, val detail: String, val healthy: Boolean)
+private data class PhoenixDiagnostic(val title: String, val cause: String, val fix: String)
+private data class PhoenixServer(val label: String, val host: String, val port: Int)
+private data class PhoenixModCheck(val name: String, val state: String, val detail: String, val warning: Boolean)
+private data class PhoenixExtension(val id: String, val name: String, val description: String)
 
 
 private fun phoenixGameDirectory(engineProfileId: String): File {
@@ -91,6 +97,129 @@ private fun scanPhoenixReadiness(engineProfileId: String): List<PhoenixReadiness
         PhoenixReadinessItem("Latest log", if (latestLog.isFile) "Found" else "Not found", "The engine writes this file after a game session starts.", latestLog.isFile),
         PhoenixReadinessItem("Free game storage", "$freeGb GB", "Available storage on the filesystem containing this game directory.", freeGb >= 2L)
     )
+}
+
+
+private fun diagnosePhoenixLogs(engineProfileId: String): List<PhoenixDiagnostic> {
+    val dir = phoenixGameDirectory(engineProfileId)
+    val files = listOf(File(dir, "crash-reports"), File(dir, "logs")).flatMap { folder ->
+        folder.listFiles()?.filter { it.isFile && (it.name.endsWith(".txt", true) || it.name == "latest.log") } ?: emptyList()
+    }.sortedByDescending { it.lastModified() }.take(8)
+    if (files.isEmpty()) return listOf(PhoenixDiagnostic("No diagnostic logs found", "No standard crash report or latest.log exists for this profile.", "Launch once or open the engine log viewer after a failed launch."))
+    val patterns = listOf(
+        Triple(Regex("(?i)outofmemoryerror|java heap space|could not reserve enough space"), "Memory exhaustion", "Lower RAM allocation, close background apps and test without heavy shaders."),
+        Triple(Regex("(?i)Mixin apply failed|MixinApplyError|InjectionError"), "Mixin / mod conflict", "Check the named mod versions, loader version and Minecraft version. Disable recently added mods one at a time."),
+        Triple(Regex("(?i)NoSuchMethodError|NoClassDefFoundError|ClassNotFoundException"), "Missing or incompatible class", "Update or remove the mod/library named near the first error."),
+        Triple(Regex("(?i)UnsupportedClassVersionError"), "Java runtime mismatch", "Use the Java runtime required by this Minecraft version and loader."),
+        Triple(Regex("(?i)GL_OUT_OF_MEMORY|OpenGL error|Failed to create framebuffer|shader compilation"), "Graphics / renderer issue", "Try another renderer, disable shaders and reduce resolution or effects."),
+        Triple(Regex("(?i)Failed to download|Connection timed out|UnknownHostException|SSLHandshakeException"), "Network or download failure", "Check connectivity and retry the download."),
+        Triple(Regex("(?i)ModLoadingException|LoadingFailedException|Incompatible mods"), "Mod loading failure", "Review the mod list for loader/version mismatches.")
+    )
+    val findings = mutableListOf<PhoenixDiagnostic>()
+    files.forEach { file ->
+        val content = runCatching { file.readLines().takeLast(500).joinToString("\n").takeLast(90000) }.getOrDefault("")
+        patterns.forEach { pattern ->
+            if (pattern.first.containsMatchIn(content) && findings.none { it.title == pattern.second }) {
+                val line = content.lineSequence().firstOrNull { pattern.first.containsMatchIn(it) } ?: file.name
+                findings.add(PhoenixDiagnostic(pattern.second, line.take(220) + " (source: " + file.name + ")", pattern.third))
+            }
+        }
+    }
+    if (findings.isEmpty()) findings.add(PhoenixDiagnostic("No known signature matched", "Available logs did not contain a recognised common failure pattern.", "Review the full log manually. This heuristic scanner cannot identify every crash."))
+    return findings
+}
+
+private fun scanPhoenixMods(engineProfileId: String, selectedLoader: String): List<PhoenixModCheck> {
+    val mods = listPhoenixInstalledMods(engineProfileId)
+    if (mods.isEmpty()) return listOf(PhoenixModCheck("No mod JAR files", "Empty", "Install mods into this profile to run checks.", false))
+    return mods.map { mod ->
+        if (!mod.enabled) return@map PhoenixModCheck(mod.fileName, "Disabled", "This .jar.disabled file will not load as a normal mod.", false)
+        val file = File(phoenixModsDirectory(engineProfileId), mod.fileName)
+        val detected = runCatching {
+            ZipFile(file).use { zip ->
+                when {
+                    zip.getEntry("fabric.mod.json") != null -> "fabric"
+                    zip.getEntry("quilt.mod.json") != null -> "quilt"
+                    zip.getEntry("META-INF/neoforge.mods.toml") != null -> "neoforge"
+                    zip.getEntry("META-INF/mods.toml") != null -> {
+                        val entry = zip.getEntry("META-INF/mods.toml")
+                        val text = zip.getInputStream(entry).bufferedReader().use { it.readText().take(30000) }
+                        if (text.contains("neoforge", true)) "neoforge" else "forge"
+                    }
+                    else -> "unknown"
+                }
+            }
+        }.getOrDefault("unreadable")
+        val mismatch = detected != "unknown" && detected != "unreadable" && detected != selectedLoader
+        when {
+            detected == "unreadable" -> PhoenixModCheck(mod.fileName, "Unreadable JAR", "Could not inspect this archive. Verify the download.", true)
+            detected == "unknown" -> PhoenixModCheck(mod.fileName, "Unknown loader", "No common Fabric, Quilt, Forge or NeoForge marker was found.", false)
+            mismatch -> PhoenixModCheck(mod.fileName, "Possible loader mismatch", "Archive marker suggests " + detected + " but the selected loader is " + selectedLoader + ". Verify project support.", true)
+            else -> PhoenixModCheck(mod.fileName, "Loader marker: " + detected, "Loader marker matches. Exact Minecraft version compatibility is not guaranteed.", false)
+        }
+    }
+}
+
+private fun pingPhoenixServer(host: String, port: Int): Long {
+    val start = System.nanoTime()
+    Socket().use { it.connect(java.net.InetSocketAddress(host, port), 3500) }
+    return (System.nanoTime() - start) / 1000000L
+}
+
+private fun readPhoenixServers(prefs: android.content.SharedPreferences): List<PhoenixServer> {
+    val array = runCatching { JSONArray(prefs.getString("server_favourites", "[]")) }.getOrDefault(JSONArray())
+    return buildList {
+        for (i in 0 until array.length()) {
+            val item = array.optJSONObject(i) ?: continue
+            val host = item.optString("host")
+            val port = item.optInt("port", 25565)
+            if (host.isNotBlank() && port in 1..65535) add(PhoenixServer(item.optString("label", host), host, port))
+        }
+    }
+}
+
+private fun writePhoenixServers(prefs: android.content.SharedPreferences, servers: List<PhoenixServer>) {
+    val array = JSONArray()
+    servers.forEach { array.put(JSONObject().put("label", it.label).put("host", it.host).put("port", it.port)) }
+    prefs.edit().putString("server_favourites", array.toString()).apply()
+}
+
+private fun recordPhoenixEvent(prefs: android.content.SharedPreferences, title: String, detail: String) {
+    val old = runCatching { JSONArray(prefs.getString("session_timeline", "[]")) }.getOrDefault(JSONArray())
+    val next = JSONArray().put(JSONObject().put("time", System.currentTimeMillis()).put("title", title).put("detail", detail))
+    for (i in 0 until minOf(old.length(), 39)) next.put(old.optJSONObject(i) ?: JSONObject())
+    prefs.edit().putString("session_timeline", next.toString()).apply()
+}
+
+private fun phoenixTimeline(prefs: android.content.SharedPreferences): List<Pair<String, String>> {
+    val array = runCatching { JSONArray(prefs.getString("session_timeline", "[]")) }.getOrDefault(JSONArray())
+    return buildList {
+        for (i in 0 until array.length()) {
+            val item = array.optJSONObject(i) ?: continue
+            val time = item.optLong("time", 0L)
+            if (time > 0L) add(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(time)) to (item.optString("title") + " · " + item.optString("detail")))
+        }
+    }
+}
+
+private fun savePhoenixSnapshot(context: Context, profile: PhoenixSavedProfile, loader: String, ram: Int, banner: String, avatar: String, layout: String): String {
+    val dir = File(context.filesDir, "phoenix_snapshots/" + profile.id)
+    if (!dir.exists() && !dir.mkdirs()) throw java.io.IOException("Could not create snapshot storage.")
+    val name = "snapshot-" + System.currentTimeMillis() + ".json"
+    val json = JSONObject().put("profileName", profile.name).put("nickname", profile.nickname)
+        .put("version", profile.version).put("loader", loader).put("ram", ram)
+        .put("banner", banner).put("avatar", avatar).put("layout", layout).put("createdAt", System.currentTimeMillis())
+    File(dir, name).writeText(json.toString(2))
+    return name
+}
+
+private fun listPhoenixSnapshots(context: Context, profileId: String): List<File> =
+    File(context.filesDir, "phoenix_snapshots/" + profileId).listFiles()
+        ?.filter { it.isFile && it.name.endsWith(".json") }?.sortedByDescending { it.lastModified() } ?: emptyList()
+
+private fun restorePhoenixSnapshot(file: File): JSONObject {
+    if (!file.isFile || !file.name.startsWith("snapshot-") || !file.name.endsWith(".json")) throw java.io.IOException("Invalid profile snapshot.")
+    return JSONObject(file.readText().take(20000))
 }
 
 private fun listPhoenixContentFiles(engineProfileId: String, folderName: String): List<PhoenixContentFile> {
