@@ -335,13 +335,13 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var avatarChoice by remember { mutableStateOf(prefs.getString("cosmetic_avatar", "🔥") ?: "🔥") }
     var bannerChoice by remember { mutableStateOf(prefs.getString("cosmetic_banner", "EMBER") ?: "EMBER") }
     var modQuery by remember { mutableStateOf("") }
-    var modLoader by remember { mutableStateOf("fabric") }
+    var modLoader by remember { mutableStateOf(prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric") }
     var modStatus by remember { mutableStateOf("Search Modrinth for mods compatible with your selected Minecraft version and loader.") }
     var modBusy by remember { mutableStateOf(false) }
     val totalRamMb = remember { Tools.getTotalDeviceMemory(context) }
     val freeRamMb = remember { Tools.getFreeDeviceMemory(context) }
     val maxRamMb = (totalRamMb * 0.60f).toInt().coerceAtLeast(512).coerceAtMost(6144)
-    var ramAllocation by remember { mutableFloatStateOf(LauncherPreferences.PREF_RAM_ALLOCATION.toFloat()) }
+    var ramAllocation by remember { mutableFloatStateOf(prefs.getInt("ram_allocation_${activeId}", LauncherPreferences.PREF_RAM_ALLOCATION).toFloat()) }
     val modResults = remember { mutableStateListOf<PhoenixModResult>() }
     val installedMods = remember { mutableStateListOf<PhoenixInstalledMod>() }
     var pendingModRemoval by remember { mutableStateOf<String?>(null) }
@@ -362,6 +362,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     }
 
     LaunchedEffect(Unit) { persist() }
+    LaunchedEffect(activeId) {
+        modLoader = prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric"
+        ramAllocation = prefs.getInt("ram_allocation_${activeId}", LauncherPreferences.PREF_RAM_ALLOCATION).toFloat()
+    }
     LaunchedEffect(active.engineProfileId, page) {
         if (page == "Mods") {
             try {
@@ -695,7 +699,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 listOf("fabric", "forge", "neoforge", "quilt").forEach { loader ->
                                     FilterChip(
                                         selected = modLoader == loader,
-                                        onClick = { modLoader = loader },
+                                        onClick = {
+                                            modLoader = loader
+                                            prefs.edit().putString("mod_loader_${activeId}", loader).apply()
+                                        },
                                         label = { Text(loader.replaceFirstChar { it.uppercase() }, fontSize = 10.sp) }
                                     )
                                 }
@@ -899,7 +906,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     val selected = ramAllocation.toInt().coerceIn(256, maxRamMb)
                                     LauncherPreferences.PREF_RAM_ALLOCATION = selected
                                     LauncherPreferences.DEFAULT_PREF.edit().putInt("allocation", selected).apply()
-                                    notice = "Minecraft memory allocation saved: $selected MB."
+                                    prefs.edit().putInt("ram_allocation_${activeId}", selected).apply()
+                                    notice = "Minecraft memory allocation saved for ${active.name}: $selected MB."
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)
