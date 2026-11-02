@@ -1230,6 +1230,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
                                 Text("OPEN PHOENIX ADVANCED STUDIO", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
+                            Button(onClick = { page = "Credits" }, modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                Text("ABOUT PHOENIX & CREATOR CREDITS", color = animatedAccent, fontWeight = FontWeight.Bold)
+                            }
                             Button(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) },
                                 modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
                                 Text("OPEN ENGINE SETTINGS", color = animatedAccent, fontWeight = FontWeight.Bold)
@@ -1237,7 +1241,47 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             Text("Microsoft sign-in uses the engine's official authentication screen. Phoenix does not collect or store your Microsoft password.", color = PhoenixMuted, fontSize = 12.sp)
                         }
                     }
-                    "Intelligence" -> {
+                    "Credits" -> {
+                         item {
+                             TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
+                             Column(
+                                 Modifier.fillMaxWidth().background(
+                                     Brush.linearGradient(listOf(Color(0xFF48251B), Color(0xFF241823), PhoenixPanel)),
+                                     RoundedCornerShape(22.dp)
+                                 ).padding(20.dp),
+                                 verticalArrangement = Arrangement.spacedBy(9.dp)
+                             ) {
+                                 Text("PHOENIX CLIENT", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                                 Text("Built to bring Java Edition closer to mobile.", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                                 Text("An independent Minecraft Java launcher project focused on performance, customization and a better mobile experience.", color = PhoenixMuted, fontSize = 13.sp)
+                             }
+                         }
+                         item {
+                             Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                 Text("FOUNDER & DEVELOPER", color = animatedAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                                 Text("Dipayan Roy", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                                 Text("Developer · Community Builder · Creator", color = animatedAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                 Text("Phoenix Client is created and developed by Dipayan Roy, an independent Android-first developer building Minecraft, hosting and web projects with a focus on practical tools, community and futuristic experiences.", color = PhoenixMuted, fontSize = 13.sp)
+                                 Text("Project: Phoenix Client · Android launcher with an integrated Java Edition engine", color = Color.White, fontSize = 12.sp)
+                             }
+                         }
+                         item {
+                             Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                 Text("DEVELOPER LINKS", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                                 Text("GitHub · @dipayan900", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://github.com/dipayan900") }.padding(vertical = 5.dp))
+                                 Text("Portfolio · dipayansportfolio.site", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://dipayansportfolio.site") }.padding(vertical = 5.dp))
+                                 Text("DevKrew · devkrew.in", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://devkrew.in") }.padding(vertical = 5.dp))
+                             }
+                         }
+                         item {
+                             Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                 Text("CREDITS & ACKNOWLEDGEMENTS", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                                 Text("Built on the open-source Amethyst / PojavLauncher ecosystem. Minecraft and Java Edition are trademarks of their respective owners. Phoenix Client is an independent community project and is not an official Mojang or Microsoft product.", color = PhoenixMuted, fontSize = 12.sp)
+                                 Text("Thank you to the open-source maintainers, contributors, testers and Phoenix community members who make projects like this possible.", color = PhoenixMuted, fontSize = 12.sp)
+                             }
+                         }
+                     }
+                     "Intelligence" -> {
                         item {
                             TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
                             PhoenixInfo("PHOENIX LAUNCH INTELLIGENCE", "Pre-flight system scan", "A local, read-only health check for the active game profile. It does not modify or delete Minecraft files.", animatedAccent)
