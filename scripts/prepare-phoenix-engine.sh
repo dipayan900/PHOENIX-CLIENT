@@ -12,6 +12,8 @@ import sys
 gradle, strings, colors, about, manifest, test_storage = map(Path, sys.argv[1:])
 g = gradle.read_text()
 g = g.replace("compileSdk = 37", "compileSdk = 37\n    compileSdkMinor = 1")
+g = g.replace("sourceCompatibility JavaVersion.VERSION_1_8", "sourceCompatibility JavaVersion.VERSION_11")
+g = g.replace("targetCompatibility JavaVersion.VERSION_1_8", "targetCompatibility JavaVersion.VERSION_11")
 replacements = {
     'applicationId "org.angelauramc.amethyst"': 'applicationId "com.phoenix.client"',
     'minSdkVersion 21': 'minSdkVersion 26',
