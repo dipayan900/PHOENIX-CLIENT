@@ -194,6 +194,7 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
             apiServer.createContext("/api/inventory", e -> handleApi(e, "inventory"));
             apiServer.createContext("/api/equip", e -> handleApi(e, "equip"));
             apiServer.createContext("/api/buy", e -> handleApi(e, "buy"));
+            apiServer.createContext("/api/emote", e -> handleApi(e, "emote"));
             apiServer.createContext("/api/unequip", e -> handleApi(e, "unequip"));
             apiServer.setExecutor(Executors.newCachedThreadPool(r -> { Thread t = new Thread(r, "Phoenix-Launcher-API"); t.setDaemon(true); return t; }));
             apiServer.start();
@@ -241,7 +242,7 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
                     try (ResultSet rs = q.executeQuery()) { while (rs.next()) ids.add(rs.getString(1)); }
                 }
                 String response = "uuid=" + player + "\ncoins=" + balance(player) + "\nowner=" + isOwner(player)
-                    + "\nowned=" + String.join(",", ids) + "\ncape=" + l.cape() + "\nwings=" + l.wings()
+                    + "\ncatalog=" + String.join(",", CATALOG.keySet()) + "\nowned=" + String.join(",", ids) + "\ncape=" + l.cape() + "\nwings=" + l.wings()
                     + "\nhead=" + l.head() + "\nback=" + l.back() + "\nemote=" + l.emote();
                 reply(exchange, 200, response);
                 return;
@@ -269,6 +270,20 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
                     finally { database.setAutoCommit(true); }
                 }
                 reply(exchange, 200, "Unlocked " + id);
+                return;
+            }
+            if (action.equals("emote")) {
+                String id = body.replaceFirst("^id=", "").toLowerCase(Locale.ROOT);
+                Cosmetic c = CATALOG.get(id);
+                if (c == null || !c.emote() || !id.matches("[a-z0-9_]{1,48}")) { reply(exchange, 400, "Invalid emote id."); return; }
+                if (!owns(player, id)) { reply(exchange, 403, "Emote is not owned by this account."); return; }
+                synchronized (this) {
+                    try (PreparedStatement u = database.prepareStatement("UPDATE loadouts SET emote=? WHERE uuid=?")) {
+                        u.setString(1, id); u.setString(2, player.toString()); u.executeUpdate();
+                    }
+                }
+                Bukkit.getScheduler().runTask(this, this::broadcastLoadouts);
+                reply(exchange, 200, "Playing emote " + id);
                 return;
             }
             if (action.equals("equip")) {
