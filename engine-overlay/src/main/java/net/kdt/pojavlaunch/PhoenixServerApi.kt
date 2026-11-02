@@ -9,6 +9,7 @@ data class PhoenixRemoteInventory(
     val coins: Int,
     val isOwner: Boolean,
     val owned: Set<String>,
+    val catalog: Set<String>,
     val equipped: Map<String, String>
 )
 
@@ -51,12 +52,16 @@ object PhoenixServerApi {
             coins = fields["coins"]?.toIntOrNull() ?: 0,
             isOwner = fields["owner"].equals("true", true),
             owned = fields["owned"].orEmpty().split(',').filter { it.isNotBlank() }.toSet(),
+            catalog = fields["catalog"].orEmpty().split(',').filter { it.isNotBlank() }.toSet(),
             equipped = equipped
         )
     }
 
     fun buy(baseUrl: String, token: String, cosmeticId: String): String =
         request(baseUrl, token, "/api/buy", "POST", "id=" + URLEncoder.encode(cosmeticId, "UTF-8"))
+
+    fun playEmote(baseUrl: String, token: String, cosmeticId: String): String =
+        request(baseUrl, token, "/api/emote", "POST", "id=" + URLEncoder.encode(cosmeticId, "UTF-8"))
 
     fun equip(baseUrl: String, token: String, cosmeticId: String): String =
         request(baseUrl, token, "/api/equip", "POST", "id=" + URLEncoder.encode(cosmeticId, "UTF-8"))
