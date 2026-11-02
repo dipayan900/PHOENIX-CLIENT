@@ -319,14 +319,17 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
         } finally { exchange.close(); }
     }
 
-    private void createLauncherLink(Player player) throws Exception {
+    private void createLauncherLink(Player player) throws SQLException {
         byte[] random = new byte[32];
         secureRandom.nextBytes(random);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(random);
+        String tokenHash;
+        try { tokenHash = sha256(token); }
+        catch (Exception e) { throw new SQLException("SHA-256 is unavailable", e); }
         synchronized (this) {
             try (PreparedStatement p = database.prepareStatement("INSERT OR REPLACE INTO api_tokens(uuid,token_hash) VALUES(?,?)")) {
                 p.setString(1, player.getUniqueId().toString());
-                p.setString(2, sha256(token));
+                p.setString(2, tokenHash);
                 p.executeUpdate();
             }
         }
