@@ -323,6 +323,20 @@ private fun modrinthJson(url: String): JSONObject {
     }
 }
 
+private fun modrinthJsonArray(url: String): JSONArray {
+    val connection = URL(url).openConnection() as HttpURLConnection
+    connection.requestMethod = "GET"
+    connection.connectTimeout = 15000
+    connection.readTimeout = 30000
+    connection.setRequestProperty("User-Agent", "PhoenixClient/1.0 (https://github.com/dipayan900/PHOENIX-CLIENT)")
+    try {
+        if (connection.responseCode !in 200..299) throw java.io.IOException("Modrinth returned HTTP ${connection.responseCode}")
+        return JSONArray(connection.inputStream.bufferedReader().use { it.readText() })
+    } finally {
+        connection.disconnect()
+    }
+}
+
 private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: String): List<PhoenixModResult> {
     val facets = org.json.JSONArray()
         .put(org.json.JSONArray().put("project_type:mod"))
@@ -376,8 +390,7 @@ private fun installPhoenixPack(pack: PhoenixPackResult, minecraftVersion: String
     val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
         ?: throw java.io.IOException("Select a valid game profile before installing packs.")
     val versions = URLEncoder.encode(JSONArray().put(minecraftVersion).toString(), "UTF-8")
-    val versionArray = modrinthJson("https://api.modrinth.com/v2/project/${pack.projectId}/version?game_versions=$versions")
-        .let { JSONArray(it.toString()) }
+    val versionArray = modrinthJsonArray("https://api.modrinth.com/v2/project/${pack.projectId}/version?game_versions=$versions")
     if (versionArray.length() == 0) throw java.io.IOException("No release is available for Minecraft $minecraftVersion.")
     val release = versionArray.getJSONObject(0)
     val files = release.optJSONArray("files") ?: throw java.io.IOException("This project has no downloadable files.")
