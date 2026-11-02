@@ -826,12 +826,12 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             containerColor = PhoenixBg,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFF151019)) {
-                    listOf("Home", "Profiles", "Version", "Mods", "Packs", "Cosmetics", "Settings").forEach { tab ->
+                    listOf("Home", "Profiles", "Version", "Mods", "Packs", "Cosmetics", "Friends", "Settings").forEach { tab ->
                         NavigationBarItem(
                             selected = if (tab == "Packs") page == "Toolbox" else page == tab,
                             onClick = { page = if (tab == "Packs") "Toolbox" else tab },
-                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Packs" -> "▧"; "Cosmetics" -> "✧"; else -> "⚙" }, fontSize = 18.sp) },
-                            label = { Text(tab, fontSize = 10.sp) }
+                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Packs" -> "▧"; "Cosmetics" -> "✧"; "Friends" -> "◎"; else -> "⚙" }, fontSize = 18.sp) },
+                            label = { Text(if (tab == "Profiles") "Accounts" else tab, fontSize = 10.sp) }
                         )
                     }
                 }
@@ -951,6 +951,19 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 Text("JOIN OUR DISCORD SERVER", color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
+                        item {
+                            Button(
+                                onClick = { page = "Friends" },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
+                            ) { Text("FRIENDS & PRIVATE CHAT  →", color = Color.Black, fontWeight = FontWeight.Bold) }
+                        }
+                        item {
+                            OutlinedButton(
+                                onClick = { page = "Settings"; notice = "Open About Phoenix & Creator Credits in Settings." },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("ABOUT PHOENIX & CREATOR CREDITS", color = animatedAccent, fontWeight = FontWeight.Bold) }
+                        }
                         item { Text(notice, color = PhoenixMuted, fontSize = 12.sp) }
                         item {
                             Row(
@@ -974,6 +987,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 }
                                 Text("JOIN  →", color = animatedAccent, fontSize = 12.sp, fontWeight = FontWeight.Black)
                             }
+                        }
+                    }
+                    "Friends" -> {
+                        item {
+                            PhoenixSocialScreen(context = context, accent = animatedAccent)
                         }
                     }
                     "Profiles" -> {
