@@ -993,59 +993,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                     }
                     "Cosmetics" -> {
                         item {
-                            PhoenixInfo("PHOENIX LOCAL IDENTITIES", "Your launcher identity", "Create separate local usernames and emblems for this device. These identities are stored only in Phoenix; they are not Microsoft accounts, do not authenticate with Mojang, and do not bypass Minecraft ownership.", animatedAccent)
-                        }
-                        item {
-                            Text("PROFILE EMBLEM", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                            Text("Choose a saved Phoenix identity emblem.", color = PhoenixMuted, fontSize = 12.sp)
-                        }
-                        items(listOf("🔥", "🐉", "⚡", "🌌", "🛡️", "🦅", "☄️", "🌋")) { emblem ->
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .background(if (avatarChoice == emblem) Color(0xFF382019) else PhoenixPanel, RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        avatarChoice = emblem
-                                        val index = profiles.indexOfFirst { it.id == activeId }
-                                        if (index >= 0) profiles[index] = profiles[index].copy(avatar = emblem)
-                                        prefs.edit().putString("cosmetic_avatar", emblem).apply()
-                                        persist()
-                                        notice = "Local identity emblem updated."
-                                    }.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text(emblem, fontSize = 24.sp)
-                                    Text("Phoenix emblem", color = Color.White)
-                                }
-                                if (avatarChoice == emblem) Text("EQUIPPED", color = animatedAccent, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
-                        item {
-                            Text("PROFILE BANNER", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                            Text("Choose the look of your Phoenix dashboard banner.", color = PhoenixMuted, fontSize = 12.sp)
-                        }
-                        items(listOf("EMBER", "OBSIDIAN", "FROST")) { banner ->
-                            val selected = bannerChoice == banner
-                            val colors = when (banner) {
-                                "FROST" -> listOf(Color(0xFF173044), Color(0xFF18202E), PhoenixPanel)
-                                "OBSIDIAN" -> listOf(Color(0xFF29232D), Color(0xFF17131B), PhoenixPanel)
-                                else -> listOf(Color(0xFF542519), Color(0xFF21151F), PhoenixPanel)
-                            }
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .background(Brush.linearGradient(colors), RoundedCornerShape(14.dp))
-                                    .clickable {
-                                        bannerChoice = banner
-                                        prefs.edit().putString("cosmetic_banner", banner).apply()
-                                        notice = "$banner banner equipped."
-                                    }.padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(banner, color = Color.White, fontWeight = FontWeight.Bold)
-                                if (selected) Text("EQUIPPED", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                            }
+                            PhoenixCosmeticsScreen(
+                                context = context,
+                                accent = animatedAccent,
+                                onNotice = { notice = it }
+                            )
                         }
                     }
                     "Version" -> {
