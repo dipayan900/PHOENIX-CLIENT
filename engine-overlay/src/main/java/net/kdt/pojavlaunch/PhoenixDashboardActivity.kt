@@ -590,6 +590,33 @@ private data class PhoenixSavedProfile(
     val avatar: String = "🔥"
 )
 
+private fun installPhoenixBundledCosmeticMod(context: Context, engineProfileId: String, version: String, loader: String): String {
+    if (loader != "fabric") return "Phoenix cosmetics auto-install is for Fabric profiles. Your selected loader is $loader."
+    if (!version.contains("1.21.1")) return "Phoenix cosmetics add-on currently supports Minecraft Java 1.21.1 only."
+    if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+    val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
+        ?: throw java.io.IOException("Active Minecraft profile was not found.")
+    val gameDir = Tools.getGameDirPath(profile).canonicalFile
+    val modsDir = File(gameDir, "mods").canonicalFile
+    if (modsDir.parentFile != gameDir) throw java.io.IOException("Invalid Minecraft mods directory.")
+    if (!modsDir.exists() && !modsDir.mkdirs()) throw java.io.IOException("Could not create the Minecraft mods folder.")
+    if (!modsDir.isDirectory) throw java.io.IOException("The Minecraft mods path is not a folder.")
+    val target = File(modsDir, "phoenix-branding-client.jar")
+    val temp = File(modsDir, "phoenix-branding-client.jar.part")
+    try {
+        context.assets.open("phoenix/phoenix-branding-fabric.jar").use { input ->
+            FileOutputStream(temp).use { output -> input.copyTo(output) }
+        }
+        if (temp.length() < 1024L) throw java.io.IOException("The bundled Phoenix cosmetics add-on is incomplete.")
+        if (target.exists() && !target.delete()) throw java.io.IOException("Close Minecraft before updating the Phoenix cosmetics add-on.")
+        if (!temp.renameTo(target)) throw java.io.IOException("Could not install the Phoenix cosmetics add-on.")
+    } catch (error: Exception) {
+        temp.delete()
+        throw error
+    }
+    return "Phoenix cosmetics add-on installed automatically for Fabric 1.21.1."
+}
+
 class PhoenixDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -839,6 +866,12 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 Button(
                                     onClick = {
                                         persist()
+                                        try {
+                                            val cosmeticStatus = installPhoenixBundledCosmeticMod(context, active.engineProfileId, active.version, modLoader)
+                                            notice = cosmeticStatus
+                                        } catch (error: Exception) {
+                                            notice = error.message ?: "Phoenix cosmetics add-on could not be installed."
+                                        }
                                         recordPhoenixEvent(prefs, "Game launch requested", active.name + " · " + active.version)
                                         activity.startActivity(Intent(activity, LauncherActivity::class.java))
                                     },
