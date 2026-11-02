@@ -134,6 +134,8 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
 
     private synchronized void broadcastLoadouts() {
         for (Player viewer : Bukkit.getOnlinePlayers()) {
+            // Only send the custom S2C channel to clients that registered the Phoenix protocol.
+            if (!phoenixPlayers.contains(viewer.getUniqueId())) continue;
             for (Player subject : Bukkit.getOnlinePlayers()) {
                 try {
                     Loadout l=loadout(subject.getUniqueId());
