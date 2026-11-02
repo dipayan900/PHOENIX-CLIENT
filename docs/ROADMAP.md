@@ -36,3 +36,16 @@
 - Authentication or entitlement bypass.
 - Anti-cheat evasion or unfair gameplay automation.
 - Redistributing proprietary Minecraft files or unlicensed third-party assets.
+
+
+## Phase 4A — Cosmetics catalogue foundation
+- [x] Cosmetics navigation destination and catalogue.
+- [x] Capes, wings, accessories, emotes and visual-effect entries.
+- [x] Minecraft-native, hybrid and fantasy-3D style filters.
+- [x] Preview selection, local inventory, equip slots and demo coin wallet.
+- [x] Planned coin tiers: 100, 300, 750, 1,500, 3,500 and 7,500.
+- [ ] Import ready-made assets only with verified per-asset redistribution licenses and attribution records.
+- [ ] Add a real 3D player preview and runtime cosmetic renderer.
+- [ ] Add signed owner entitlements and server-authoritative inventory.
+- [ ] Add supported multiplayer synchronization and server compatibility.
+- [ ] Keep real-money checkout disabled until appropriate adult-managed compliance and payment setup exists.

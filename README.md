@@ -49,3 +49,15 @@ Build environment: JDK 17, Android SDK 35, Gradle 8.9.
 ## Legal and compatibility
 
 Phoenix Client is independent and is not affiliated with Mojang or Microsoft. Do not redistribute Minecraft game files or third-party assets without permission. The project will not implement authentication/entitlement bypass, anti-cheat evasion, or unfair gameplay automation.
+
+
+## Phoenix Cosmetics (launcher foundation)
+
+- [x] Cosmetics navigation destination.
+- [x] Starter catalogue: capes, wings, accessories, emotes and effects.
+- [x] Minecraft-native, hybrid and fantasy-3D style filters.
+- [x] Category filters, catalogue preview, local inventory and equip slots.
+- [x] Local development coin wallet and planned bundle tiers: 100 / 300 / 750 / 1,500 / 3,500 / 7,500.
+- [x] Owner collection area reserved for a future server-verified creator entitlement.
+
+This is a launcher-side catalogue foundation, not an in-game renderer. 3D player previews, animated rendering, multiplayer synchronization, signed owner access, server balances and payment processing remain unimplemented. The local wallet is test data only and cannot be purchased or redeemed.
