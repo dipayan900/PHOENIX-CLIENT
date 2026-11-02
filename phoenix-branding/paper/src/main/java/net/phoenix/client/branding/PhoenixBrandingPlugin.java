@@ -262,7 +262,15 @@ public final class PhoenixBrandingPlugin extends JavaPlugin
     }
 
     private void playEmote(Player p,String[] args) throws SQLException {
-        if(args.length<2){p.sendMessage("Usage: /phoenix emote <emote-id>");return;}
+        if(args.length>=2 && args[1].equalsIgnoreCase("stop")) {
+            try(PreparedStatement u=database.prepareStatement("UPDATE loadouts SET emote='' WHERE uuid=?")) {
+                u.setString(1,p.getUniqueId().toString()); u.executeUpdate();
+            }
+            broadcastLoadouts();
+            p.sendMessage(Component.text("Emote stopped.",NamedTextColor.GREEN));
+            return;
+        }
+        if(args.length<2){p.sendMessage("Usage: /phoenix emote <emote-id|stop>");return;}
         String id=args[1].toLowerCase(Locale.ROOT);Cosmetic c=CATALOG.get(id);
         if(c==null || !c.emote()){p.sendMessage(Component.text("Unknown emote.",NamedTextColor.RED));return;}
         if(!owns(p.getUniqueId(),id)){p.sendMessage(Component.text("You do not own that emote.",NamedTextColor.RED));return;}
