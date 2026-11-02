@@ -13,6 +13,10 @@ public final class PhoenixLoadoutState {
             "mechanical_wings","fairy_wings","bat_wings","phoenix_crown","starlight_halo",
             "cyber_visor","wizard_hat","cat_ears","horns","samurai_helmet","explorer_pack",
             "backpack_jet","backpack_turtle","shoulder_dragon","shoulder_cat","shoulder_owl",
+            "aurora_cape","royal_guard_cape","shadow_cape","ocean_cape","galaxy_cape","crimson_cape","moss_cape",
+            "crown_ice","astronaut_helmet","fox_mask","oni_mask","pixel_shades","gold_monocle","respirator",
+            "halo_solar","halo_lunar","earrings_star","scarf_red","sword_sheath","shield_royal","shield_void",
+            "dragon_tail","fox_tail","robot_arm","crystal_bracers",
             "wave","victory_pose","pixel_dance","salute","clap","laugh","shrug","bow",
             "spin","moonwalk","guitar","sit","meditate","dance2");
     private static final Map<UUID, Loadout> LOADOUTS = new ConcurrentHashMap<>();
