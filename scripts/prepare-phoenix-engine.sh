@@ -293,3 +293,50 @@ elif 'if (!hasOnlineProfile())' in s:
     raise SystemExit("LocalLoginFragment guard changed; refusing an unsafe partial patch.")
 p.write_text(s)
 PY
+
+# Phoenix offline accounts and independent game instances.
+# A local/offline identity is intentionally device-only and never grants
+# Microsoft authentication or online-mode entitlement.
+python3 - "$APP/src/main/java/net/kdt/pojavlaunch/fragments/SelectAuthFragment.java" "$APP/src/main/java/net/kdt/pojavlaunch/fragments/LocalLoginFragment.java" "$APP/src/main/java/net/kdt/pojavlaunch/fragments/ProfileTypeSelectFragment.java" <<'PY'
+from pathlib import Path
+import sys
+select_auth, local_login, profile_types = map(Path, sys.argv[1:])
+
+# Local Login must be reachable even when no Microsoft account is present.
+# The upstream dialog/guard prevented first-time offline users from creating
+# their first local account.
+s = select_auth.read_text()
+old = 'mLocalButton.setOnClickListener(v -> hasNoOnlineProfileDialog(requireActivity(), () -> Tools.swapFragment(requireActivity(), LocalLoginFragment.class, LocalLoginFragment.TAG, null)));'
+new = 'mLocalButton.setOnClickListener(v -> Tools.swapFragment(requireActivity(), LocalLoginFragment.class, LocalLoginFragment.TAG, null));'
+if old not in s:
+    raise SystemExit("Phoenix patch failed: SelectAuthFragment local-login action changed upstream.")
+select_auth.write_text(s.replace(old, new, 1))
+
+s = local_login.read_text()
+old = '''        // This is overkill but meh
+        if (!hasOnlineProfile()){
+            Tools.swapFragment(requireActivity(), MainMenuFragment.class, MainMenuFragment.TAG, null);
+        }
+'''
+if old not in s:
+    raise SystemExit("Phoenix patch failed: LocalLoginFragment account guard changed upstream.")
+local_login.write_text(s.replace(old, '', 1))
+
+# Allow creating/installing vanilla, Fabric, Forge, NeoForge, Quilt and
+# modpack instances without requiring Microsoft sign-in. Installers still
+# need network access; actual online Minecraft play still requires entitlement.
+s = profile_types.read_text()
+old = '''    private void tryInstall(Class<? extends Fragment> fragmentClass, String tag){
+        if(!hasOnlineProfile()){
+            hasNoOnlineProfileDialog(requireActivity());
+        } else {
+            Tools.swapFragment(requireActivity(), fragmentClass, tag, null);
+        }
+    }'''
+new = '''    private void tryInstall(Class<? extends Fragment> fragmentClass, String tag){
+        Tools.swapFragment(requireActivity(), fragmentClass, tag, null);
+    }'''
+if old not in s:
+    raise SystemExit("Phoenix patch failed: ProfileTypeSelectFragment installer gate changed upstream.")
+profile_types.write_text(s.replace(old, new, 1))
+PY
