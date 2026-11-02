@@ -4,6 +4,8 @@ PHOENIX_ROOT="${1:?Phoenix repository path required}"
 ENGINE_ROOT="${2:?Amethyst checkout path required}"
 APP="$ENGINE_ROOT/app_pojavlauncher"
 test -f "$APP/build.gradle"
+# Enable AGP 9 built-in Kotlin for the Phoenix Compose dashboard.
+sed -i "s/^android\\.builtInKotlin=false$/android.builtInKotlin=true/" "$ENGINE_ROOT/gradle.properties"
 python3 - "$APP/build.gradle" "$APP/src/main/res/values/strings.xml" "$APP/src/main/res/values/colors.xml" "$APP/src/main/assets/about_en.txt" "$APP/src/main/AndroidManifest.xml" "$APP/src/main/java/net/kdt/pojavlaunch/TestStorageActivity.java" <<'PY'
 from pathlib import Path
 import sys
