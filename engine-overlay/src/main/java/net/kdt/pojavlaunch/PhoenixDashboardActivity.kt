@@ -133,6 +133,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var draftName by remember { mutableStateOf("") }
     var draftNickname by remember { mutableStateOf("") }
     var draftVersion by remember { mutableStateOf("1.21.4") }
+    var avatarChoice by remember { mutableStateOf(prefs.getString("cosmetic_avatar", "🔥") ?: "🔥") }
+    var bannerChoice by remember { mutableStateOf(prefs.getString("cosmetic_banner", "EMBER") ?: "EMBER") }
     var editingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
@@ -157,11 +159,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             containerColor = PhoenixBg,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFF151019)) {
-                    listOf("Home", "Profiles", "Version", "Mods", "Settings").forEach { tab ->
+                    listOf("Home", "Profiles", "Version", "Mods", "Cosmetics", "Settings").forEach { tab ->
                         NavigationBarItem(
                             selected = page == tab,
                             onClick = { page = tab },
-                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; else -> "⚙" }, fontSize = 18.sp) },
+                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Cosmetics" -> "✧"; else -> "⚙" }, fontSize = 18.sp) },
                             label = { Text(tab, fontSize = 10.sp) }
                         )
                     }
@@ -176,7 +178,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("PHOENIX CLIENT", color = PhoenixOrange, fontWeight = FontWeight.Black, letterSpacing = 3.sp, fontSize = 12.sp)
-                        Text("JAVA EDITION", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text(avatarChoice, fontSize = 27.sp); Text("JAVA EDITION", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold) }
                         Text("Your world. Your profiles. Your rules.", color = PhoenixMuted, fontSize = 13.sp)
                     }
                 }
@@ -295,6 +297,60 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         persist()
                                     }) { Text("DELETE", color = Color(0xFFFF8A80)) }
                                 }
+                            }
+                        }
+                    }
+                    "Cosmetics" -> {
+                        item {
+                            PhoenixInfo("PHOENIX COSMETICS", "Make your profile yours", "These are launcher profile cosmetics only. They do not change Minecraft account skins or server-side cosmetics.", PhoenixOrange)
+                        }
+                        item {
+                            Text("PROFILE EMBLEM", color = PhoenixOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                            Text("Choose a saved Phoenix identity emblem.", color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                        items(listOf("🔥", "🐉", "⚡", "🌌", "🛡️", "🦅", "☄️", "🌋")) { emblem ->
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .background(if (avatarChoice == emblem) Color(0xFF382019) else PhoenixPanel, RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        avatarChoice = emblem
+                                        prefs.edit().putString("cosmetic_avatar", emblem).apply()
+                                        notice = "Phoenix profile emblem updated."
+                                    }.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text(emblem, fontSize = 24.sp)
+                                    Text("Phoenix emblem", color = Color.White)
+                                }
+                                if (avatarChoice == emblem) Text("EQUIPPED", color = PhoenixOrange, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        item {
+                            Text("PROFILE BANNER", color = PhoenixOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                            Text("Choose the look of your Phoenix dashboard banner.", color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                        items(listOf("EMBER", "OBSIDIAN", "FROST")) { banner ->
+                            val selected = bannerChoice == banner
+                            val colors = when (banner) {
+                                "FROST" -> listOf(Color(0xFF173044), Color(0xFF18202E), PhoenixPanel)
+                                "OBSIDIAN" -> listOf(Color(0xFF29232D), Color(0xFF17131B), PhoenixPanel)
+                                else -> listOf(Color(0xFF542519), Color(0xFF21151F), PhoenixPanel)
+                            }
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .background(Brush.linearGradient(colors), RoundedCornerShape(14.dp))
+                                    .clickable {
+                                        bannerChoice = banner
+                                        prefs.edit().putString("cosmetic_banner", banner).apply()
+                                        notice = "$banner banner equipped."
+                                    }.padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(banner, color = Color.White, fontWeight = FontWeight.Bold)
+                                if (selected) Text("EQUIPPED", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
