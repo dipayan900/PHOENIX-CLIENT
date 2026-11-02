@@ -102,7 +102,7 @@ async function minecraftLogin(msAccessToken: string) {
     headers: { "content-type": "application/json", "accept": "application/json" },
     body: JSON.stringify({
       Properties: { AuthMethod: "RPS", SiteName: "user.auth.xboxlive.com", RpsTicket: "d=" + msAccessToken },
-      RelyingParty: "http://auth.xboxlive.com/",
+      RelyingParty: "http://auth.xboxlive.com",
       TokenType: "JWT",
     }),
   });
@@ -123,7 +123,7 @@ async function minecraftLogin(msAccessToken: string) {
   if (!uhs) throw new Error("Xbox account identity was not returned.");
   const mcResponse = await fetch("https://api.minecraftservices.com/authentication/login_with_xbox", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "accept": "application/json" },
     body: JSON.stringify({ identityToken: "XBL3.0 x=" + uhs + ";" + xsts.Token }),
   });
   if (!mcResponse.ok) throw new Error("Minecraft account sign-in failed.");
@@ -355,6 +355,18 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return json({ messages: rows.results ?? [] });
   }
 
+  const removeFriendMatch = path.match(/^\/v1\/friends\/([0-9a-f-]+)$/i);
+  if (method === "DELETE" && removeFriendMatch) {
+    const otherId = removeFriendMatch[1];
+    const [a, b] = [user.id, otherId].sort();
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM friendships WHERE user_a = ? AND user_b = ?").bind(a, b),
+      env.DB.prepare("UPDATE friend_requests SET status = 'cancelled', updated_at = ? WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status = 'accepted'")
+        .bind(now(), user.id, otherId, otherId, user.id),
+    ]);
+    return json({ ok: true });
+  }
+
   if (method === "POST" && path === "/v1/blocks") {
     const data = await body<{ userId?: string }>(request);
     const blockedId = data?.userId ?? "";
@@ -364,7 +376,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       env.DB.prepare("INSERT OR IGNORE INTO blocks(blocker_id, blocked_id, created_at) VALUES (?, ?, ?)")
         .bind(user.id, blockedId, now()),
       env.DB.prepare("DELETE FROM friendships WHERE user_a = ? AND user_b = ?").bind(a, b),
-      env.DB.prepare("UPDATE friend_requests SET status = 'cancelled', updated_at = ? WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status = 'pending'")
+      env.DB.prepare("UPDATE friend_requests SET status = 'cancelled', updated_at = ? WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status IN ('pending', 'accepted')")
         .bind(now(), user.id, blockedId, blockedId, user.id),
     ]);
     return json({ ok: true });
