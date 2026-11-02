@@ -750,6 +750,13 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         item { PhoenixInfo("CONNECTED ENGINE PROFILE", active.name, "Saved directly to the engine's launcher_profiles.json", animatedAccent) }
                         item { PhoenixInfo("LOCAL PHOENIX PROFILES", profiles.size.toString(), "These save launcher settings and a local nickname only. They do not sign in to Minecraft or grant game ownership.", animatedAccent) }
                         item {
+                            Button(
+                                onClick = { page = "Profiles" },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
+                            ) { Text("MANAGE LOCAL PROFILES", color = Color.Black, fontWeight = FontWeight.Bold) }
+                        }
+                        item {
                             PhoenixInfo(
                                 "GAME ACCOUNT REQUIRED",
                                 "Microsoft account",
