@@ -1,50 +1,31 @@
-# Phoenix cosmetics runtime, multiplayer and cloud plan
+# Phoenix cosmetics runtime, multiplayer and cloud status
 
-## Current launcher implementation
-- Expanded catalogue and category/style filters are part of the integrated dashboard.
-- Local preview selection, local inventory/equip slots and a development-only coin wallet are available.
-- The catalogue is a launcher UI; emoji entries are not 3D assets.
+## Launcher
+- Phoenix launcher contains the cosmetic catalogue, filters, local preview, local development wallet and wardrobe UI.
+- The launcher wallet is demo data and is separate from the server inventory.
 
-## Runtime bridge contract
-`PhoenixCosmeticRenderer` defines the engine-facing operations for player preview,
-loadout application, emote playback and remote-player loadouts. It is an interface
-only. The upstream Amethyst renderer does not implement it yet, so the launcher
-must not report real in-game rendering as available.
+## In-game Fabric client (Minecraft Java 1.21.1)
+- A procedural FeatureRenderer attaches original cuboid cape, wing, headwear and backpack meshes to player models.
+- Cape and wing panels use Minecraft-installed wool textures at runtime; Phoenix does not bundle Mojang texture files or redistribute third-party models.
+- A player-model mixin plays client-side emote poses including wave, salute, victory, clap, dance, bow, sit, meditate and more.
+- Server-supplied loadout packets are length-limited and cosmetic IDs are allowlisted before entering client state.
+- The add-on currently targets Fabric 1.21.1 only. Other versions/loaders need separate builds and testing.
 
-The renderer implementation must:
-1. Resolve a model/texture/animation by a stable cosmetic ID.
-2. Validate model bounds, skeleton compatibility and file size before loading.
-3. Attach capes and wings to compatible player-model bones and animate their
-   secondary motion without modifying hitboxes or gameplay.
-4. Play emotes only through supported player animation hooks, with cancellation
-   and server policy checks.
-5. Release GPU resources when the player, world or renderer is destroyed.
+## Paper server inventory and multiplayer sync
+- Paper stores wallets, owned IDs and equipped slots in a persistent SQLite database under the plugin data folder.
+- Commands: /phoenix help, /phoenix shop, /phoenix balance, /phoenix claim, /phoenix buy <id>, /phoenix equip <id>, /phoenix unequip <slot>, /phoenix wardrobe, /phoenix emote <id>, and /phoenix emote stop.
+- The server sends equipped player loadouts to connected Phoenix Fabric clients, allowing compatible clients to render other players' cosmetics.
+- This is a persistent database on the Minecraft server, not a deployed multi-server cloud service. Cross-server global inventory requires hosting and configuring a shared database/API.
 
-## Ready-made model imports
-The asset ledger is `assets/cosmetics/LICENSES.md`. No third-party model is
-currently bundled. Each model needs an exact creator source, licence, attribution,
-redistribution permission and SHA-256 record before it can be shipped.
+## Owner verification
+- Owner status is determined server-side by exact authenticated Minecraft UUID in plugins/PhoenixBranding/config.yml.
+- The owner UUID must be configured by the server operator. A username, local launcher preference, client packet or emoji prefix never grants owner access.
+- Never embed a server secret in the launcher APK.
 
-## Server authority and owner access
-The client must never decide that an account is the owner from a username,
-package flag, local preference or editable file. A trusted backend must verify
-the authenticated account and return a short-lived signed entitlement. The
-server must re-check the entitlement for privileged inventory operations.
-Never put a server secret in the APK.
-
-## Cloud inventory and coins
-`PhoenixCosmeticCloudApi` defines inventory fetch, loadout sync and owner
-entitlement verification contracts. No backend URL, authentication provider,
-database or server signing key is configured in this repository, so cloud sync
-is not active. The local wallet is development test data and is not a real
-currency balance.
-
-## Multiplayer synchronization
-The client needs a server/plugin protocol to publish a player's equipped
-cosmetic IDs and receive other players' allowed loadouts. Both server and
-receiving client must support the same cosmetic protocol. Unknown IDs must be
-ignored safely; cosmetic packets must never grant gameplay advantages.
+## Assets and limitations
+- Cape, wing, headwear and backpack meshes in the first renderer are procedural geometry authored in source code.
+- No third-party model files are currently imported. The asset ledger is assets/cosmetics/LICENSES.md.
+- This first pass is a simple geometric renderer, not a full custom Blockbench/GeckoLib-grade rig. Detailed licensed models and item-specific rigs remain future work.
 
 ## Payment
-The coin bundle screen remains a non-purchasable placeholder. No payment SDK,
-checkout, billing endpoint or real-money transaction is enabled.
+- Real-money checkout is intentionally disabled. Server coins are free demo/test points with a daily claim. No payment SDK, billing endpoint or real-money transaction is enabled.
