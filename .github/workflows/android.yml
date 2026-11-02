@@ -27,7 +27,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
       - name: Install Android SDK packages
-        run: sdkmanager --install "platforms;android-36" "platforms;android-36-ext1" "build-tools;36.0.0"
+        run: sdkmanager --install "platforms;android-36" "platforms;android-36-ext18" "build-tools;36.0.0"
       - name: Checkout Amethyst Java engine source
         run: |
           git config --global url."https://github.com/".insteadOf git@github.com:
