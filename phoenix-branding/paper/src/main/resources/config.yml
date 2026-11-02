@@ -1,0 +1,11 @@
+# Phoenix server branding
+branding-enabled: true
+
+# Launcher-to-server cosmetics sync. Keep this API on a trusted private LAN.
+# Do not expose this port to the public internet: requests use HTTP, not TLS.
+api-enabled: true
+api-bind: "0.0.0.0"
+api-port: 8765
+
+# Exact authenticated Minecraft UUID of the Phoenix owner. Blank disables owner access.
+owner-uuid: ""

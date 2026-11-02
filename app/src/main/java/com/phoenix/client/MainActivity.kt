@@ -168,7 +168,7 @@ private fun PhoenixApp() {
             containerColor = Night,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFF121219), contentColor = theme.accent) {
-                    listOf("Home", "Versions", "Profiles", "Themes", "Settings").forEach { item ->
+                    listOf("Home", "Versions", "Profiles", "Cosmetics", "Social", "Themes", "Settings").forEach { item ->
                         NavigationBarItem(
                             selected = page == item,
                             onClick = { page = item },
@@ -178,6 +178,7 @@ private fun PhoenixApp() {
                                         "Home" -> "⌂"
                                         "Versions" -> "▤"
                                         "Profiles" -> "◉"
+                                        "Social" -> "◎"
                                         "Themes" -> "✦"
                                         else -> "⚙"
                                     },
@@ -360,6 +361,10 @@ private fun PhoenixApp() {
                                 fontSize = 12.sp
                             )
                         }
+
+                        "Cosmetics" -> CosmeticsScreen(context = context, accent = theme.accent, onNotice = { notice = it })
+
+                        "Social" -> PhoenixSocialScreen(context = context, accent = theme.accent)
 
                         "Themes" -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             SectionTitle(
