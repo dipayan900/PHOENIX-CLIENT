@@ -263,3 +263,24 @@ activity_layout.write_text(a)
 PY
 
 echo "Phoenix branding, Inferno engine theme, custom engine controls and Compose dashboard integration applied."
+
+# Phoenix offline/local accounts: upstream accidentally hides Local Login until an
+# authenticated account already exists, making the first local account impossible.
+python3 - "$APP/src/main/java/net/kdt/pojavlaunch/fragments/LocalLoginFragment.java" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+guard = '''        if (!hasOnlineProfile()){
+            Tools.swapFragment(requireActivity(), MainMenuFragment.class, MainMenuFragment.TAG, null);
+        }
+'''
+if guard in s:
+    s = s.replace(guard, '''        // Phoenix permits device-local offline profiles without a prior Microsoft login.
+        // The engine still labels them as local accounts and online-mode servers
+        // continue to enforce their own authenticated account requirements.
+''')
+elif 'if (!hasOnlineProfile())' in s:
+    raise SystemExit("LocalLoginFragment guard changed; refusing an unsafe partial patch.")
+p.write_text(s)
+PY
