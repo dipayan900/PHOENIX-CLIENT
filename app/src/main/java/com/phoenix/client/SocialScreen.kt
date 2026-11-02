@@ -5,9 +5,7 @@ import android.util.Base64
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -93,7 +91,7 @@ fun PhoenixSocialScreen(context: Context, accent: Color) {
         status = "Friends and requests refreshed."
     }
 
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
         Text("PHOENIX SOCIAL", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
         Text("Friend network · requests · private launcher messages", color = Color(0xFFAAA8B2), fontSize = 12.sp)
         OutlinedTextField(api, { api = it; prefs.edit().putString("api", it).apply() }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Deployed Worker HTTPS URL") })
