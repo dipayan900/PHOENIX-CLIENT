@@ -24,16 +24,29 @@ This is backend source code, not a live hosted service yet. It becomes reachable
 - Friend requests are private; no public room or global broadcast chat exists.
 - Do not put Microsoft client secrets, Cloudflare API tokens, or the Worker session secret in the Android APK or public repository.
 
-## Cloudflare deployment
+## Cloudflare deployment (GitHub Actions)
 
-1. Install Node.js and Wrangler on a computer, or use Cloudflare's web dashboard where possible.
-2. Create a Cloudflare D1 database named `phoenix-social`.
-3. Copy its database ID into `wrangler.toml`.
-4. Apply `schema.sql` to the D1 database.
-5. Set a long random `SESSION_SECRET` Worker secret.
-6. Deploy the Worker with Wrangler.
-7. Register a Microsoft identity application as a public/native client and configure the Android redirect URI and Xbox Live sign-in permission. The resulting public client ID is an app identifier, not a secret. The Android app will use the official sign-in flow and pass the resulting Microsoft access token to this Worker.
-8. Set the public API base URL in the Android client after deployment.
+The repository includes **Deploy Phoenix Social API** at `.github/workflows/deploy-phoenix-social.yml`. It deploys the Worker over HTTPS when manually triggered.
+
+### One-time account setup
+
+1. Have the Cloudflare account owner create a D1 database named `phoenix-social` in the same account that will host the Worker.
+2. Copy the D1 database ID and the Cloudflare account ID from the dashboard.
+3. Create an account API token restricted to this account with **D1 Edit** and **Workers Scripts Edit**. The first deployment creates the Worker, so the token may need **Workers Admin** for the initial creation; after the Worker exists, reduce it to the minimum permissions needed.
+4. In the GitHub repository, open **Settings → Secrets and variables → Actions → New repository secret** and add:
+   - `CF_API_TOKEN` — the Cloudflare API token.
+   - `CF_ACCOUNT_ID` — the Cloudflare account ID.
+   - `CF_D1_DATABASE_ID` — the D1 database ID for `phoenix-social`.
+   - `PHOENIX_SOCIAL_SESSION_SECRET` — a long, randomly generated secret (at least 32 random bytes).
+5. Open **Actions → Deploy Phoenix Social API → Run workflow**. The workflow applies `schema.sql`, sets the Worker session secret, and deploys the Worker.
+6. Copy the exact `https://phoenix-social.<workers-subdomain>.workers.dev` URL shown in the deployment log. Check that adding `/health` returns JSON with `"ok":true`.
+7. Enter that base URL in Phoenix Client → Friends. Do not add `/health` or an API route to the saved base URL.
+
+If the Cloudflare account owner is under the provider's minimum age, an eligible parent/guardian or adult account owner must handle the account and credentials. Never paste secrets into chat, commit them to Git, or put them in the Android APK.
+
+### Microsoft account sign-in
+
+The current launcher screen supports guest account creation. Verified Minecraft Java account sign-in still needs its separate official Microsoft native-app OAuth flow and client ID integration; deploying this Worker alone does not enable that UI. The Worker verifies Java entitlement server-side when that endpoint is called.
 
 Never share Cloudflare API tokens or Microsoft credentials in chat or commit them to GitHub.
 
