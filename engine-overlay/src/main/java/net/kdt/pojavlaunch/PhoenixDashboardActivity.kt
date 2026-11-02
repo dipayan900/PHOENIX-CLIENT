@@ -6,6 +6,8 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.kdt.pojavlaunch.prefs.LauncherPreferences
+import net.kdt.pojavlaunch.customcontrols.LayoutConverter
 import net.kdt.pojavlaunch.value.launcherprofiles.LauncherProfiles
 import net.kdt.pojavlaunch.value.launcherprofiles.MinecraftProfile
 import org.json.JSONArray
@@ -72,6 +75,41 @@ private data class PhoenixServer(val label: String, val host: String, val port: 
 private data class PhoenixModCheck(val name: String, val state: String, val detail: String, val warning: Boolean)
 private data class PhoenixExtension(val id: String, val name: String, val description: String)
 
+
+private fun importPhoenixControlMap(context: Context, uri: Uri, engineProfileId: String): String {
+    val input = context.contentResolver.openInputStream(uri)
+        ?: throw java.io.IOException("Phoenix could not open the selected control file.")
+    val json = input.bufferedReader().use { it.readText() }
+    if (json.length > 5_000_000) throw java.io.IOException("Control map is larger than the 5 MB safety limit.")
+    val root = JSONObject(json)
+    if (!root.has("mControlDataList")) {
+        throw java.io.IOException("This file is not a supported Mojo/Amethyst control-map JSON.")
+    }
+    val temp = File(context.cacheDir, "phoenix-control-${UUID.randomUUID()}.json")
+    temp.writeText(json)
+    try {
+        val converted = LayoutConverter.loadAndConvertIfNecessary(temp.absolutePath)
+            ?: throw java.io.IOException("This control-map version is not supported by Phoenix.")
+        val directory = File(Tools.CTRLMAP_PATH)
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw java.io.IOException("Phoenix could not create its control-map folder.")
+        }
+        val destination = File(directory, "Phoenix-Mojo-${System.currentTimeMillis()}.json")
+        converted.save(destination.absolutePath)
+        if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+        val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
+            ?: throw java.io.IOException("The active Minecraft profile could not be found.")
+        profile.controlFile = destination.name
+        LauncherProfiles.write()
+        LauncherPreferences.PREF_DEFAULTCTRL_PATH = destination.absolutePath
+        LauncherPreferences.DEFAULT_PREF.edit()
+            .putString("defaultCtrl", destination.absolutePath)
+            .apply()
+        return destination.name
+    } finally {
+        temp.delete()
+    }
+}
 
 private fun phoenixGameDirectory(engineProfileId: String): File {
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
@@ -594,6 +632,17 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val profiles = remember { mutableStateListOf<PhoenixSavedProfile>().apply { addAll(readPhoenixProfiles(context)) } }
     var activeId by remember { mutableStateOf(prefs.getString("active_profile_id", profiles.first().id) ?: profiles.first().id) }
     var page by remember { mutableStateOf("Home") }
+    val controlMapPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try {
+                val importedName = importPhoenixControlMap(context, uri, activeId)
+                notice = "Imported $importedName and set it as this profile's active touch-control map. Open the game again to use it."
+                recordPhoenixEvent(prefs, "Control map imported", importedName)
+            } catch (error: Exception) {
+                notice = error.message ?: "Phoenix could not import that control map."
+            }
+        }
+    }
     var dialogOpen by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf("") }
     var draftNickname by remember { mutableStateOf("") }
@@ -756,11 +805,52 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         item { PhoenixInfo("CONNECTED ENGINE PROFILE", active.name, "Saved directly to the engine's launcher_profiles.json", animatedAccent) }
                         item { PhoenixInfo("LOCAL PHOENIX PROFILES", profiles.size.toString(), "These save launcher settings and a local nickname only. They do not sign in to Minecraft or grant game ownership.", animatedAccent) }
                         item {
+                            Column(
+                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(16.dp)).padding(15.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("MOJO CONTROL MAP IMPORT", color = animatedAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text("Bring a Mojo Launcher / MJLauncher JSON touch layout into Phoenix. Phoenix converts supported legacy layouts, saves a separate copy and selects it for the active profile without overwriting your existing maps.", color = PhoenixMuted, fontSize = 12.sp)
+                                Button(
+                                    onClick = { controlMapPicker.launch(arrayOf("application/json", "text/json", "text/plain", "*/*")) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
+                                ) { Text("CHOOSE & IMPORT CONTROL MAP", color = Color.Black, fontWeight = FontWeight.Bold) }
+                            }
+                        }
+                        item {
                             Button(
                                 onClick = { page = "Profiles" },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
                             ) { Text("MANAGE LOCAL PROFILES", color = Color.Black, fontWeight = FontWeight.Bold) }
+                        }
+                        if (active.version.contains("26.3", ignoreCase = true) || active.version.contains("26.2", ignoreCase = true)) {
+                            item {
+                                Column(
+                                    Modifier.fillMaxWidth().background(Color(0xFF241A13), RoundedCornerShape(16.dp)).padding(15.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("MALI 26.3 RENDERER COMPATIBILITY", color = Color(0xFFFFB36B), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text("Your crash log shows MobileGlues failing to create the OpenGL backend. Amethyst's 26.2+ guidance for non-Adreno GPUs recommends Kopper Zink. Apply it to this profile; it takes effect on the next launch.", color = PhoenixMuted, fontSize = 12.sp)
+                                    Button(
+                                        onClick = {
+                                            try {
+                                                if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+                                                val engineProfile = LauncherProfiles.mainProfileJson.profiles[active.engineProfileId]
+                                                    ?: throw java.io.IOException("Active engine profile not found.")
+                                                engineProfile.pojavRendererName = "vulkan_zink"
+                                                LauncherProfiles.write()
+                                                notice = "Kopper Zink selected for ${active.name}. Fully close and relaunch Minecraft 26.3 to test."
+                                            } catch (error: Exception) {
+                                                notice = error.message ?: "Could not update this profile's renderer."
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB36B))
+                                    ) { Text("APPLY KOPPER ZINK FIX", color = Color.Black, fontWeight = FontWeight.Bold) }
+                                }
+                            }
                         }
                         item {
                             PhoenixInfo(
