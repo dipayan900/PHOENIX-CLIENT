@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -117,6 +121,7 @@ private fun connectProfilesToEngine(profiles: List<PhoenixSavedProfile>, activeI
 @Composable
 private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val context = activity
+    val uriHandler = LocalUriHandler.current
     val prefs = remember { context.getSharedPreferences("phoenix_client", Context.MODE_PRIVATE) }
     val profiles = remember { mutableStateListOf<PhoenixSavedProfile>().apply { addAll(readPhoenixProfiles(context)) } }
     var activeId by remember { mutableStateOf(prefs.getString("active_profile_id", profiles.first().id) ?: profiles.first().id) }
@@ -198,7 +203,27 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         item { PhoenixInfo("CONNECTED ENGINE PROFILE", active.name, "Saved directly to the engine's launcher_profiles.json", PhoenixOrange) }
-                        item { PhoenixInfo("LOCAL PHOENIX PROFILES", profiles.size.toString(), "Each Phoenix profile maps to a real engine profile", PhoenixOrange) }
+                        item { PhoenixInfo("LOCAL PHOENIX PROFILES", profiles.size.toString(), "These save launcher settings and nicknames; they are not Minecraft authentication accounts.", PhoenixOrange) }
+                        item {
+                            PhoenixInfo(
+                                "GAME ACCOUNT REQUIRED",
+                                "Microsoft account",
+                                "Launching Minecraft Java Edition requires a Microsoft account that owns the game. Phoenix cannot create an account or grant game ownership.",
+                                PhoenixOrange
+                            )
+                        }
+                        item {
+                            Button(
+                                onClick = { uriHandler.openUri("https://discord.gg/MnxS3g8gxA") },
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5865F2)),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                DiscordMark()
+                                Spacer(Modifier.width(10.dp))
+                                Text("JOIN OUR DISCORD SERVER", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
                         item { Text(notice, color = PhoenixMuted, fontSize = 12.sp) }
                     }
                     "Profiles" -> {
@@ -354,5 +379,34 @@ private fun PhoenixInfo(title: String, value: String, detail: String, accent: Co
         Text(title, color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
         Text(value, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(detail, color = PhoenixMuted, fontSize = 12.sp)
+    }
+}
+
+
+@Composable
+private fun DiscordMark() {
+    Canvas(Modifier.size(24.dp)) {
+        val w = size.width
+        val h = size.height
+        val body = Path().apply {
+            moveTo(w * 0.22f, h * 0.22f)
+            cubicTo(w * 0.39f, h * 0.12f, w * 0.61f, h * 0.12f, w * 0.78f, h * 0.22f)
+            cubicTo(w * 0.91f, h * 0.42f, w * 0.96f, h * 0.67f, w * 0.88f, h * 0.82f)
+            cubicTo(w * 0.78f, h * 0.91f, w * 0.69f, h * 0.93f, w * 0.62f, h * 0.88f)
+            lineTo(w * 0.57f, h * 0.81f)
+            lineTo(w * 0.43f, h * 0.81f)
+            lineTo(w * 0.38f, h * 0.88f)
+            cubicTo(w * 0.29f, h * 0.93f, w * 0.20f, h * 0.91f, w * 0.12f, h * 0.82f)
+            cubicTo(w * 0.04f, h * 0.67f, w * 0.09f, h * 0.42f, w * 0.22f, h * 0.22f)
+            close()
+        }
+        drawPath(body, Color.White)
+        drawCircle(Color(0xFF5865F2), radius = w * 0.055f, center = androidx.compose.ui.geometry.Offset(w * 0.38f, h * 0.53f))
+        drawCircle(Color(0xFF5865F2), radius = w * 0.055f, center = androidx.compose.ui.geometry.Offset(w * 0.62f, h * 0.53f))
+        val smile = Path().apply {
+            moveTo(w * 0.35f, h * 0.68f)
+            cubicTo(w * 0.44f, h * 0.75f, w * 0.56f, h * 0.75f, w * 0.65f, h * 0.68f)
+        }
+        drawPath(smile, Color(0xFF5865F2), style = Stroke(width = w * 0.045f))
     }
 }
