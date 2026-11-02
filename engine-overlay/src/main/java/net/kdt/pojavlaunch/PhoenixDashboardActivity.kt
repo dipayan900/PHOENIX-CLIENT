@@ -56,6 +56,14 @@ private data class PhoenixModResult(
     val slug: String
 )
 
+private data class PhoenixPackResult(
+    val projectId: String,
+    val title: String,
+    val description: String,
+    val downloads: Long,
+    val slug: String
+)
+
 private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
 private data class PhoenixContentFile(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
 private data class PhoenixReadinessItem(val title: String, val value: String, val detail: String, val healthy: Boolean)
@@ -338,6 +346,88 @@ private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: S
     }
 }
 
+
+private fun searchPhoenixPacks(query: String, minecraftVersion: String, packType: String): List<PhoenixPackResult> {
+    if (packType !in setOf("resourcepack", "shader")) throw java.io.IOException("Unsupported pack category.")
+    val facets = JSONArray()
+        .put(JSONArray().put("project_type:$packType"))
+        .put(JSONArray().put("versions:$minecraftVersion"))
+    val encodedFacets = URLEncoder.encode(facets.toString(), "UTF-8")
+    val encodedQuery = URLEncoder.encode(query, "UTF-8")
+    val data = modrinthJson("https://api.modrinth.com/v2/search?query=$encodedQuery&facets=$encodedFacets&index=downloads&limit=20")
+    val hits = data.optJSONArray("hits") ?: return emptyList()
+    return buildList {
+        for (i in 0 until hits.length()) {
+            val hit = hits.optJSONObject(i) ?: continue
+            add(PhoenixPackResult(
+                projectId = hit.optString("project_id"),
+                title = hit.optString("title", "Untitled pack"),
+                description = hit.optString("description", ""),
+                downloads = hit.optLong("downloads", 0),
+                slug = hit.optString("slug", "")
+            ))
+        }
+    }
+}
+
+private fun installPhoenixPack(pack: PhoenixPackResult, minecraftVersion: String, folderName: String, engineProfileId: String): String {
+    if (folderName !in setOf("resourcepacks", "shaderpacks")) throw java.io.IOException("Unsupported pack folder.")
+    if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+    val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
+        ?: throw java.io.IOException("Select a valid game profile before installing packs.")
+    val versions = URLEncoder.encode(JSONArray().put(minecraftVersion).toString(), "UTF-8")
+    val versionArray = modrinthJson("https://api.modrinth.com/v2/project/${pack.projectId}/version?game_versions=$versions")
+        .let { JSONArray(it.toString()) }
+    if (versionArray.length() == 0) throw java.io.IOException("No release is available for Minecraft $minecraftVersion.")
+    val release = versionArray.getJSONObject(0)
+    val files = release.optJSONArray("files") ?: throw java.io.IOException("This project has no downloadable files.")
+    var chosen: JSONObject? = null
+    for (i in 0 until files.length()) {
+        val file = files.optJSONObject(i) ?: continue
+        if (file.optBoolean("primary", false)) { chosen = file; break }
+        if (chosen == null) chosen = file
+    }
+    val selected = chosen ?: throw java.io.IOException("This project has no downloadable files.")
+    val downloadUrl = selected.optString("url")
+    val rawName = selected.optString("filename", pack.slug + ".zip")
+    if (!downloadUrl.startsWith("https://") || !rawName.endsWith(".zip", true))
+        throw java.io.IOException("The selected release is not a valid ZIP pack.")
+    val directory = File(Tools.getGameDirPath(profile), folderName)
+    if (!directory.exists() && !directory.mkdirs()) throw java.io.IOException("Cannot create the $folderName folder.")
+    if (!directory.isDirectory) throw java.io.IOException("The $folderName path is not a folder.")
+    val safeName = rawName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+    var destination = File(directory, safeName)
+    if (destination.exists()) destination = File(directory, safeName.removeSuffix(".zip") + "-phoenix-" + System.currentTimeMillis() + ".zip")
+    val connection = URL(downloadUrl).openConnection() as HttpURLConnection
+    connection.connectTimeout = 15000
+    connection.readTimeout = 60000
+    connection.setRequestProperty("User-Agent", "PhoenixClient/1.0 (https://github.com/dipayan900/PHOENIX-CLIENT)")
+    val temporary = File(directory, destination.name + ".part")
+    try {
+        if (connection.responseCode !in 200..299) throw java.io.IOException("Pack download failed: HTTP ${connection.responseCode}")
+        connection.inputStream.use { input -> FileOutputStream(temporary).use { output -> input.copyTo(output) } }
+        if (temporary.length() <= 0L) throw java.io.IOException("The downloaded pack was empty.")
+        if (!temporary.renameTo(destination)) throw java.io.IOException("Could not move the pack into $folderName.")
+    } catch (error: Exception) {
+        temporary.delete()
+        throw error
+    } finally {
+        connection.disconnect()
+    }
+    return destination.name
+}
+
+private fun removePhoenixContentFile(engineProfileId: String, folderName: String, fileName: String) {
+    if (folderName !in setOf("resourcepacks", "shaderpacks") || File(fileName).name != fileName ||
+        !(fileName.endsWith(".zip", true) || fileName.endsWith(".zip.disabled", true))) {
+        throw java.io.IOException("Invalid pack selection.")
+    }
+    val directory = File(phoenixGameDirectory(engineProfileId), folderName).canonicalFile
+    val target = File(directory, fileName).canonicalFile
+    if (target.parentFile != directory || !target.isFile) throw java.io.IOException("That pack file could not be found.")
+    if (!target.delete()) throw java.io.IOException("Could not remove $fileName.")
+}
+
 private fun installPhoenixMod(mod: PhoenixModResult, minecraftVersion: String, loader: String, engineProfileId: String): String {
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
     val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
@@ -498,6 +588,12 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var modLoader by remember { mutableStateOf(prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric") }
     var modStatus by remember { mutableStateOf("Search Modrinth for mods compatible with your selected Minecraft version and loader.") }
     var modBusy by remember { mutableStateOf(false) }
+    var packQuery by remember { mutableStateOf("") }
+    var packType by remember { mutableStateOf("resourcepack") }
+    var packStatus by remember { mutableStateOf("Search Modrinth for resource packs or shader packs compatible with this profile.") }
+    var packBusy by remember { mutableStateOf(false) }
+    val packResults = remember { mutableStateListOf<PhoenixPackResult>() }
+    var pendingContentRemoval by remember { mutableStateOf<Pair<String, String>?>(null) }
     val totalRamMb = remember { Tools.getTotalDeviceMemory(context) }
     val freeRamMb = remember { Tools.getFreeDeviceMemory(context) }
     val maxRamMb = (totalRamMb * 0.60f).toInt().coerceAtLeast(512).coerceAtMost(6144)
@@ -639,7 +735,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         item { PhoenixInfo("CONNECTED ENGINE PROFILE", active.name, "Saved directly to the engine's launcher_profiles.json", animatedAccent) }
-                        item { PhoenixInfo("LOCAL PHOENIX PROFILES", profiles.size.toString(), "These save launcher settings and nicknames; they are not Minecraft authentication accounts.", animatedAccent) }
+                        item { PhoenixInfo("LOCAL PHOENIX PROFILES", profiles.size.toString(), "These save launcher settings and a local nickname only. They do not sign in to Minecraft or grant game ownership.", animatedAccent) }
                         item {
                             PhoenixInfo(
                                 "GAME ACCOUNT REQUIRED",
@@ -1232,6 +1328,90 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
                             PhoenixInfo("PHOENIX TOOLBOX", "Your game library", "Manage installed resource-pack and shader ZIP files, and inspect local worlds for the active profile. This screen never deletes worlds.", animatedAccent)
                             Text(toolboxStatus, color = PhoenixMuted, fontSize = 12.sp)
+
+                        item {
+                            Column(
+                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(15.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text("PHOENIX PACK HUB", color = animatedAccent, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                                Text("Discover and install version-matched resource packs and shader packs from Modrinth.", color = PhoenixMuted, fontSize = 12.sp)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilterChip(selected = packType == "resourcepack", onClick = { packType = "resourcepack"; packResults.clear() }, label = { Text("RESOURCE PACKS") })
+                                    FilterChip(selected = packType == "shader", onClick = { packType = "shader"; packResults.clear() }, label = { Text("SHADERS") })
+                                }
+                                OutlinedTextField(
+                                    value = packQuery,
+                                    onValueChange = { packQuery = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    label = { Text(if (packType == "shader") "Search shaders" else "Search resource packs") },
+                                    placeholder = { Text(if (packType == "shader") "Complementary, BSL..." else "Faithful, Fresh Animations...") }
+                                )
+                                val packVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
+                                Text("Minecraft $packVersion", color = PhoenixMuted, fontSize = 11.sp)
+                                Button(
+                                    enabled = !packBusy && packQuery.isNotBlank(),
+                                    onClick = {
+                                        packBusy = true
+                                        packStatus = "Searching Modrinth..."
+                                        Thread {
+                                            try {
+                                                val found = searchPhoenixPacks(packQuery.trim(), packVersion, packType)
+                                                activity.runOnUiThread {
+                                                    packResults.clear()
+                                                    packResults.addAll(found)
+                                                    packStatus = if (found.isEmpty()) "No matching packs found for Minecraft $packVersion." else "Found ${found.size} projects."
+                                                    packBusy = false
+                                                }
+                                            } catch (error: Exception) {
+                                                activity.runOnUiThread { packStatus = error.message ?: "Pack search failed."; packBusy = false }
+                                            }
+                                        }.start()
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
+                                ) { Text(if (packBusy) "SEARCHING..." else "SEARCH PACK HUB", color = Color.Black, fontWeight = FontWeight.Bold) }
+                                Text(packStatus, color = PhoenixMuted, fontSize = 11.sp)
+                            }
+                        }
+                        items(packResults, key = { "pack-search-" + it.projectId }) { result ->
+                            Column(
+                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(15.dp)).padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(result.title, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(result.description, color = PhoenixMuted, fontSize = 11.sp, maxLines = 3)
+                                Text("${result.downloads} downloads · ${result.slug}", color = animatedAccent, fontSize = 10.sp)
+                                Button(
+                                    enabled = !packBusy,
+                                    onClick = {
+                                        packBusy = true
+                                        packStatus = "Downloading ${result.title}..."
+                                        Thread {
+                                            try {
+                                                val folder = if (packType == "shader") "shaderpacks" else "resourcepacks"
+                                                val installed = installPhoenixPack(result, packVersion, folder, active.engineProfileId)
+                                                activity.runOnUiThread {
+                                                    if (folder == "shaderpacks") {
+                                                        shaderPacks.clear()
+                                                        shaderPacks.addAll(listPhoenixContentFiles(active.engineProfileId, folder))
+                                                    } else {
+                                                        resourcePacks.clear()
+                                                        resourcePacks.addAll(listPhoenixContentFiles(active.engineProfileId, folder))
+                                                    }
+                                                    packStatus = "Installed $installed. Open the in-game pack menu to enable it."
+                                                    packBusy = false
+                                                }
+                                            } catch (error: Exception) {
+                                                activity.runOnUiThread { packStatus = error.message ?: "Pack installation failed."; packBusy = false }
+                                            }
+                                        }.start()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
+                                ) { Text(if (packBusy) "INSTALLING..." else "DOWNLOAD & INSTALL", color = Color.Black, fontWeight = FontWeight.Bold) }
+                            }
+                        }
                         }
                         item {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1263,6 +1443,9 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         toolboxStatus = "Resource pack state changed. Reopen the in-game resource-pack menu."
                                     } catch (error: Exception) { toolboxStatus = error.message ?: "Could not change pack state." }
                                 }) { Text(if (pack.enabled) "DISABLE" else "ENABLE", color = animatedAccent) }
+                                TextButton(onClick = { pendingContentRemoval = "resourcepacks" to pack.fileName }) {
+                                    Text("REMOVE", color = Color(0xFFFF8A80))
+                                }
                             }
                         }
                         item {
@@ -1295,6 +1478,9 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         toolboxStatus = "Shader pack state changed. Reopen shader settings in-game."
                                     } catch (error: Exception) { toolboxStatus = error.message ?: "Could not change shader state." }
                                 }) { Text(if (pack.enabled) "DISABLE" else "ENABLE", color = animatedAccent) }
+                                TextButton(onClick = { pendingContentRemoval = "shaderpacks" to pack.fileName }) {
+                                    Text("REMOVE", color = Color(0xFFFF8A80))
+                                }
                             }
                         }
                         item {
@@ -1309,7 +1495,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         item {
-                            Text("Pack toggles rename the selected ZIP to a .disabled extension. No files are downloaded or deleted by this toolbox.", color = PhoenixMuted, fontSize = 11.sp)
+                            Text("Pack Hub downloads ZIP releases matched to the selected Minecraft version. Installed packs can be enabled, disabled or removed here; reopen the in-game menu after changes.", color = PhoenixMuted, fontSize = 11.sp)
                         }
                     }
                     "Performance" -> {
@@ -1355,6 +1541,36 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
         }
     }
 
+
+    if (pendingContentRemoval != null) {
+        val selected = pendingContentRemoval!!
+        AlertDialog(
+            onDismissRequest = { pendingContentRemoval = null },
+            title = { Text("Remove installed pack?") },
+            text = { Text("Remove ${selected.second} from this profile's ${selected.first} folder? This only deletes the selected ZIP file.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    try {
+                        removePhoenixContentFile(active.engineProfileId, selected.first, selected.second)
+                        if (selected.first == "shaderpacks") {
+                            shaderPacks.removeAll { it.fileName == selected.second }
+                        } else {
+                            resourcePacks.removeAll { it.fileName == selected.second }
+                        }
+                        toolboxStatus = "Removed ${selected.second}."
+                    } catch (error: Exception) {
+                        toolboxStatus = error.message ?: "Could not remove the pack."
+                    }
+                    pendingContentRemoval = null
+                }) { Text("REMOVE", color = Color(0xFFFF8A80)) }
+            },
+            dismissButton = { TextButton(onClick = { pendingContentRemoval = null }) { Text("CANCEL") } },
+            containerColor = PhoenixPanel,
+            titleContentColor = Color.White,
+            textContentColor = PhoenixMuted
+        )
+    }
+
     if (pendingModRemoval != null) {
         val fileName = pendingModRemoval!!
         AlertDialog(
@@ -1387,7 +1603,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(draftName, { draftName = it }, label = { Text("Profile name") }, singleLine = true)
-                    OutlinedTextField(draftNickname, { draftNickname = it }, label = { Text("Local nickname label") }, singleLine = true)
+                    OutlinedTextField(draftNickname, { draftNickname = it }, label = { Text("Local profile nickname (not account login)") }, singleLine = true)
                     OutlinedTextField(draftVersion, { draftVersion = it }, label = { Text("Minecraft version ID") }, singleLine = true)
                 }
             },
