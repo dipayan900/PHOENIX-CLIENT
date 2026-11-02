@@ -187,7 +187,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         item {
                             Column(
                                 Modifier.fillMaxWidth().background(
-                                    Brush.linearGradient(listOf(Color(0xFF542519), Color(0xFF21151F), PhoenixPanel)),
+                                    Brush.linearGradient(when (bannerChoice) { "FROST" -> listOf(Color(0xFF173044), Color(0xFF18202E), PhoenixPanel); "OBSIDIAN" -> listOf(Color(0xFF29232D), Color(0xFF17131B), PhoenixPanel); else -> listOf(Color(0xFF542519), Color(0xFF21151F), PhoenixPanel) }),
                                     RoundedCornerShape(22.dp)
                                 ).padding(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -278,7 +278,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text(profile.name, color = Color.White, fontWeight = FontWeight.Bold)
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(avatarChoice, fontSize = 20.sp); Text(profile.name, color = Color.White, fontWeight = FontWeight.Bold) }
                                     if (profile.id == activeId) Text("ACTIVE", color = PhoenixOrange, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                 }
                                 Text("@${profile.nickname}  ·  Minecraft ${profile.version}", color = PhoenixMuted, fontSize = 12.sp)
