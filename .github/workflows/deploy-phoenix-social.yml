@@ -1,5 +1,6 @@
 name: Deploy Phoenix Social API
 
+# Manual dispatch is also available from the default branch.
 on:
   push:
     branches: [integration/amethyst-phoenix]
@@ -78,5 +79,5 @@ jobs:
       - name: Print Worker endpoint
         run: |
           echo "Phoenix Social deployment finished."
-          echo "Default endpoint: https://phoenix-social.<your-workers-subdomain>.workers.dev"
-          echo "Verify health: append /health to the deployed endpoint."
+          echo "Find the exact workers.dev URL in the Wrangler deploy output above."
+          echo "Verify health by opening the deployed endpoint with /health appended."
