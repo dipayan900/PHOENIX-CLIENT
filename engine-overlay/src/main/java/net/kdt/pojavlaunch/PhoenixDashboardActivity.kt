@@ -55,12 +55,42 @@ private data class PhoenixModResult(
 
 private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
 private data class PhoenixContentFile(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
+private data class PhoenixReadinessItem(val title: String, val value: String, val detail: String, val healthy: Boolean)
+
 
 private fun phoenixGameDirectory(engineProfileId: String): File {
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
     val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
         ?: throw java.io.IOException("Select a valid game profile first.")
     return Tools.getGameDirPath(profile)
+}
+
+private fun scanPhoenixReadiness(engineProfileId: String): List<PhoenixReadinessItem> {
+    val gameDir = phoenixGameDirectory(engineProfileId)
+    if (!gameDir.exists() || !gameDir.isDirectory) {
+        return listOf(PhoenixReadinessItem("Game directory", "Not found", "Open the engine once and install a Minecraft version for this profile.", false))
+    }
+    val modsDir = File(gameDir, "mods")
+    val modFiles = modsDir.listFiles()?.filter { it.isFile && (it.name.endsWith(".jar", true) || it.name.endsWith(".jar.disabled", true)) } ?: emptyList()
+    val enabledMods = modFiles.count { it.name.endsWith(".jar", true) }
+    val disabledMods = modFiles.size - enabledMods
+    val worldsDir = File(gameDir, "saves")
+    val worlds = worldsDir.listFiles()?.count { it.isDirectory && File(it, "level.dat").isFile } ?: 0
+    val crashDir = File(gameDir, "crash-reports")
+    val crashes = crashDir.listFiles()?.count { it.isFile && it.name.endsWith(".txt", true) } ?: 0
+    val logsDir = File(gameDir, "logs")
+    val latestLog = File(logsDir, "latest.log")
+    val freeGb = gameDir.usableSpace / (1024L * 1024L * 1024L)
+    return listOf(
+        PhoenixReadinessItem("Game directory", "Available", gameDir.name, true),
+        PhoenixReadinessItem("Mod files", "$enabledMods enabled · $disabledMods disabled", "Phoenix only counts JAR files here; compatibility still depends on Minecraft version and loader.", true),
+        PhoenixReadinessItem("Resource packs", (File(gameDir, "resourcepacks").listFiles()?.count { it.isFile && it.name.endsWith(".zip", true) } ?: 0).toString(), "ZIP resource packs currently present in this profile.", true),
+        PhoenixReadinessItem("Shader packs", (File(gameDir, "shaderpacks").listFiles()?.count { it.isFile && it.name.endsWith(".zip", true) } ?: 0).toString(), "ZIP shader packs currently present in this profile.", true),
+        PhoenixReadinessItem("Saved worlds", worlds.toString(), "World folders with a valid level.dat file.", true),
+        PhoenixReadinessItem("Crash reports", crashes.toString(), if (crashes == 0) "No crash reports found in the standard crash-reports folder." else "Review recent reports before the next launch.", crashes == 0),
+        PhoenixReadinessItem("Latest log", if (latestLog.isFile) "Found" else "Not found", "The engine writes this file after a game session starts.", latestLog.isFile),
+        PhoenixReadinessItem("Free game storage", "$freeGb GB", "Available storage on the filesystem containing this game directory.", freeGb >= 2L)
+    )
 }
 
 private fun listPhoenixContentFiles(engineProfileId: String, folderName: String): List<PhoenixContentFile> {
@@ -348,6 +378,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val resourcePacks = remember { mutableStateListOf<PhoenixContentFile>() }
     val shaderPacks = remember { mutableStateListOf<PhoenixContentFile>() }
     val savedWorlds = remember { mutableStateListOf<String>() }
+    val readinessItems = remember { mutableStateListOf<PhoenixReadinessItem>() }
+    var readinessStatus by remember { mutableStateOf("Run a local scan to inspect this profile before launching.") }
     var toolboxStatus by remember { mutableStateOf("Manage resource packs, shader ZIPs and inspect saved worlds for the active profile.") }
     var editingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("Phoenix engine ready. Sign in through the official launcher flow.") }
@@ -784,11 +816,51 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
                                 Text("OPEN GAME TOOLBOX", color = PhoenixOrange, fontWeight = FontWeight.Bold)
                             }
+                            Button(onClick = { page = "Intelligence" }, modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                Text("OPEN LAUNCH INTELLIGENCE", color = PhoenixOrange, fontWeight = FontWeight.Bold)
+                            }
                             Button(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) },
                                 modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
                                 Text("OPEN ENGINE SETTINGS", color = PhoenixOrange, fontWeight = FontWeight.Bold)
                             }
                             Text("Microsoft sign-in uses the engine's official authentication screen. Phoenix does not collect or store your Microsoft password.", color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                    }
+                    "Intelligence" -> {
+                        item {
+                            TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = PhoenixOrange) }
+                            PhoenixInfo("PHOENIX LAUNCH INTELLIGENCE", "Pre-flight system scan", "A local, read-only health check for the active game profile. It does not modify or delete Minecraft files.", PhoenixOrange)
+                            Button(onClick = {
+                                try {
+                                    readinessItems.clear()
+                                    readinessItems.addAll(scanPhoenixReadiness(active.engineProfileId))
+                                    val warnings = readinessItems.count { !it.healthy }
+                                    readinessStatus = if (warnings == 0) "Scan complete. No basic profile warnings detected." else "Scan complete. $warnings item(s) need attention."
+                                } catch (error: Exception) {
+                                    readinessStatus = error.message ?: "The profile scan could not be completed."
+                                }
+                            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixOrange)) {
+                                Text("RUN PROFILE SCAN", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                            Text(readinessStatus, color = PhoenixMuted, fontSize = 12.sp)
+                        }
+                        items(readinessItems, key = { it.title }) { result ->
+                            Row(
+                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(14.dp)).padding(14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(if (result.healthy) "●" else "!", color = if (result.healthy) Color(0xFF7DDB9A) else Color(0xFFFFB36B), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(result.title, color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text(result.value, color = PhoenixOrange, fontSize = 13.sp)
+                                    Text(result.detail, color = PhoenixMuted, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                        item {
+                            Text("This is a lightweight file-system check, not a guarantee that a modpack or Minecraft version will launch. For a crash diagnosis, inspect the engine's full log and crash report.", color = PhoenixMuted, fontSize = 11.sp)
                         }
                     }
                     "Toolbox" -> {
