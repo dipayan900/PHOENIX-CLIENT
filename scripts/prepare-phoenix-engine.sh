@@ -12,6 +12,7 @@ g = gradle.read_text()
 g = g.replace("compileSdk = 37", "compileSdk = 37\n    compileSdkMinor = 1")
 replacements = {
     'applicationId "org.angelauramc.amethyst"': 'applicationId "com.phoenix.client"',
+    'minSdkVersion 21': 'minSdkVersion 26',
     "applicationIdSuffix '.debug'": "// Phoenix uses one stable application ID across build types.",
     'resValue "string", "app_name", "Amethyst (Debug)"': 'resValue "string", "app_name", "Phoenix Client"',
     'resValue "string", "app_short_name", "Amethyst (Debug)"': 'resValue "string", "app_short_name", "Phoenix"',
