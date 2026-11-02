@@ -191,11 +191,13 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  var serverBusy by remember{mutableStateOf(false)}
  var serverStatus by remember{mutableStateOf("Pair with a Paper server to sync your real server inventory and loadout.")}
  var serverOwner by remember{mutableStateOf(false)}
+ var serverSupported by remember{mutableStateOf(emptySet<String>())}
  fun applyRemote(inv:PhoenixRemoteInventory){
   coins=inv.coins
   owned.clear()
   if(inv.isOwner) owned.addAll(phoenixItems.map{it.id}) else owned.addAll(inv.owned)
   serverOwner=inv.isOwner
+  serverSupported=inv.catalog
   equipped.clear()
   equipped.putAll(inv.equipped)
   serverConnected=true
@@ -221,7 +223,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
  Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
   Column(verticalArrangement=Arrangement.spacedBy(4.dp)){Text("PHOENIX COSMETICS",color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Black);Text("Build your look. Make your entrance.",color=shopMuted,fontSize=12.sp)}
   Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(17.dp)).padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-   Column{Text("PHOENIX COINS",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text("🪙 $coins",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Black);Text("Local development wallet",color=shopMuted,fontSize=10.sp)}
+   Column{Text("PHOENIX COINS",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold);Text("🪙 $coins",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Black);Text(if(serverConnected)"Authoritative server wallet" else "Local development wallet",color=shopMuted,fontSize=10.sp)}
    Button(onClick={wallet=true},colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("COIN STORE",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=10.sp)}
   }
   Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
@@ -260,7 +262,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
   }
   Text("CATALOGUE · ${visible.size} ITEMS",color=Color.White,fontWeight=FontWeight.Bold,fontSize=13.sp)
   visible.forEach{item->
-   val has=owned.contains(item.id);val active=equipped[item.category]==item.id
+   val slot=when(item.category){"Capes"->"cape";"Wings"->"wings";"Accessories"->"head";"Emotes"->"emote";else->"back"}\n   val has=if(serverConnected)serverSupported.contains(item.id)&&(serverOwner||owned.contains(item.id)) else owned.contains(item.id);val active=equipped[slot]==item.id||equipped[item.category]==item.id
    Row(Modifier.fillMaxWidth().background(shopPanel,RoundedCornerShape(14.dp)).clickable{selected=item.id}.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)){
     PhoenixCosmeticArtwork(item,Modifier.size(45.dp))
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){Text(item.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold);Text("${item.rarity} · ${item.style}",color=shopMuted,fontSize=9.sp);Text(if(active)"EQUIPPED" else if(has)"OWNED" else if(item.price==0)"FREE" else "🪙 ${item.price}",color=accent,fontSize=9.sp,fontWeight=FontWeight.Bold)}
@@ -268,7 +270,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
      OutlinedButton(onClick={
       if(serverConnected) {
        serverBusy=true
-       Thread{try{PhoenixServerApi.equip(serverUrl,serverToken,item.id);val inv=PhoenixServerApi.inventory(serverUrl,serverToken);Handler(Looper.getMainLooper()).post{applyRemote(inv);serverBusy=false;serverStatus="Equipped on server: ${item.name}"}}
+       Thread{try{if(item.category=="Emotes")PhoenixServerApi.playEmote(serverUrl,serverToken,item.id) else PhoenixServerApi.equip(serverUrl,serverToken,item.id);val inv=PhoenixServerApi.inventory(serverUrl,serverToken);Handler(Looper.getMainLooper()).post{applyRemote(inv);serverBusy=false;serverStatus="Equipped on server: ${item.name}"}}
        catch(error:Exception){Handler(Looper.getMainLooper()).post{serverBusy=false;serverStatus=error.message?:"Equip failed."}}}.start()
       } else {equipped[when(item.category){"Capes"->"cape";"Wings"->"wings";"Accessories"->"head";"Emotes"->"emote";else->"back"}]=item.id;save();onNotice("${item.name} saved locally. Connect to a Paper server to sync it.")}
      },enabled=!serverBusy,contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp)){Text(if(active)"ON" else "EQUIP",fontSize=9.sp)}
@@ -283,7 +285,7 @@ fun PhoenixCosmeticsScreen(context:Context,accent:Color,onNotice:(String)->Unit)
       Thread{try{PhoenixServerApi.buy(serverUrl,serverToken,item.id);val inv=PhoenixServerApi.inventory(serverUrl,serverToken);Handler(Looper.getMainLooper()).post{applyRemote(inv);serverBusy=false;serverStatus="Unlocked on server: ${item.name}"}}
       catch(error:Exception){Handler(Looper.getMainLooper()).post{serverBusy=false;serverStatus=error.message?:"Purchase failed."}}}.start()
      } else if(coins>=item.price){coins-=item.price;owned.add(item.id);save();onNotice("${item.name} added to local demo inventory. Connect to a server for synced purchases.")}else onNotice("Not enough demo coins. Real-money checkout is disabled.")
-    },enabled=!serverBusy,contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(item.price==0)"CLAIM" else "UNLOCK",color=Color.Black,fontSize=9.sp,fontWeight=FontWeight.Bold)}
+    },enabled=!serverBusy&&(!serverConnected||serverSupported.contains(item.id)),contentPadding=PaddingValues(horizontal=7.dp,vertical=3.dp),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text(if(serverConnected&&!serverSupported.contains(item.id))"PREVIEW" else if(item.price==0)"CLAIM" else "UNLOCK",color=Color.Black,fontSize=9.sp,fontWeight=FontWeight.Bold)}
    }
   }
   TextButton(onClick={info=true}){Text("Compatibility and account information",color=accent)}
