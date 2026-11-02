@@ -180,4 +180,83 @@ if 'phoenix_engine_header' not in x:
 launcher.write_text(x)
 PY
 
-echo "Phoenix branding, Inferno engine theme and Compose dashboard integration applied to the Amethyst engine checkout."
+
+# Give the embedded engine controls a Phoenix-specific visual language and
+# route its community button to the owner's official Phoenix Discord invite.
+python3 - "$APP/src/main/res/values/styles.xml" "$APP/src/main/res/values/strings.xml" "$APP/src/main/java/com/kdt/mcgui/MineButton.java" "$APP/src/main/res/layout/activity_pojav_launcher.xml" <<'PY'
+from pathlib import Path
+import sys
+styles, strings, mine_button, activity_layout = map(Path, sys.argv[1:])
+s = styles.read_text()
+s = s.replace(
+    '<item name="windowActionBar">false</item>',
+    '''<item name="windowActionBar">false</item>
+        <item name="colorAccent">@color/minebutton_color</item>
+        <item name="android:colorAccent">@color/minebutton_color</item>
+        <item name="colorControlActivated">@color/minebutton_color</item>
+        <item name="colorControlHighlight">#66FF702E</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/background_app</item>'''
+) if 'name="colorAccent"' not in s else s
+s = s.replace(
+    '<style name="LauncherMenuButton" parent="Widget.AppCompat.Button">\n        <item name="android:background">?android:attr/selectableItemBackground</item>',
+    '''<style name="LauncherMenuButton" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/phoenix_menu_button</item>
+        <item name="android:textColor">@color/primary_text</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">sans</item>'''
+)
+styles.write_text(s)
+
+# A subtle dark tile with an ember border and a pressed-state glow.
+normal = Path("$APP/src/main/res/drawable/phoenix_menu_button.xml")
+normal.write_text('''<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <solid android:color="#332A1C1A" />
+            <stroke android:width="1.5dp" android:color="#FFFF702E" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <solid android:color="#FF171019" />
+            <stroke android:width="1dp" android:color="#FF38232A" />
+        </shape>
+    </item>
+</selector>
+''')
+
+st = strings.read_text()
+st = st.replace('<string name="mcl_tab_wiki">Wiki</string>', '<string name="mcl_tab_wiki">Help &amp; Guides</string>')
+st = st.replace('<string name="mcl_button_discord">Discord</string>', '<string name="mcl_button_discord">Phoenix Community</string>')
+st = st.replace('<string name="main_play">Play</string>', '<string name="main_play">Launch Game</string>')
+import re
+st = re.sub(r'(<string name="discord_invite"[^>]*>).*?(</string>)',
+            r'\g<1>https://discord.gg/MnxS3g8gxA\g<2>', st, count=1)
+strings.write_text(st)
+
+# Primary actions use Phoenix ember orange; the engine's click listeners and
+# account/game-launch logic remain unchanged.
+mb = mine_button.read_text()
+if 'setBackgroundTintList' not in mb:
+    mb = mb.replace('import android.content.*;', 'import android.content.*;\nimport android.content.res.ColorStateList;')
+    mb = mb.replace(
+        'setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.mine_button_background, null));',
+        '''setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.mine_button_background, null));
+        setBackgroundTintList(ColorStateList.valueOf(ResourcesCompat.getColor(
+                getResources(), R.color.minebutton_color, getContext().getTheme())));
+        setTextColor(android.graphics.Color.BLACK);'''
+    )
+mine_button.write_text(mb)
+
+a = activity_layout.read_text().replace(
+    'android:background="@android:color/transparent"',
+    'android:background="@color/background_app"'
+)
+activity_layout.write_text(a)
+PY
+
+echo "Phoenix branding, Inferno engine theme, custom engine controls and Compose dashboard integration applied."
