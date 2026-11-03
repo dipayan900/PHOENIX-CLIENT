@@ -22,6 +22,16 @@ processResources {
 java { withSourcesJar(); toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 
 
+// Cosmetics are intentionally not part of Phoenix builds.
+sourceSets.main.java.exclude 'net/phoenix/client/branding/PhoenixCosmeticFeatureRenderer.java'
+sourceSets.main.java.exclude 'net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java'
+sourceSets.main.java.exclude 'net/phoenix/client/branding/PhoenixLoadoutPayload.java'
+sourceSets.main.java.exclude 'net/phoenix/client/branding/PhoenixLoadoutState.java'
+sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityRendererMixin.java'
+sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java'
+sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityModelEmoteMixin.java'
+sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityModelEmoteMixinModern.java'
+
 if (project.minecraft_version != '1.21.1') {
     sourceSets.main.java.srcDir 'src/modern/java'
     sourceSets.main.java.exclude 'net/phoenix/client/branding/PhoenixCosmeticFeatureRenderer.java'
