@@ -45,14 +45,14 @@ jobs:
             MC_VERSION="1.21.$MINOR"
             echo "::group::Building Phoenix Fabric adapter for $MC_VERSION"
             DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
-            YARN_MAPPINGS="$(printf '%s\\n' "$DEPS" | sed -n '1p')"
-            FABRIC_API_VERSION="$(printf '%s\\n' "$DEPS" | sed -n '2p')"
+            YARN_MAPPINGS="$(printf '%s\n' "$DEPS" | sed -n '1p')"
+            FABRIC_API_VERSION="$(printf '%s\n' "$DEPS" | sed -n '2p')"
             test -n "$YARN_MAPPINGS"
             test -n "$FABRIC_API_VERSION"
-            gradle --no-daemon -p phoenix-branding/fabric clean build \\
-              -Pminecraft_version="$MC_VERSION" \\
-              -Pyarn_mappings="$YARN_MAPPINGS" \\
-              -Ploader_version=0.18.1 \\
+            gradle --no-daemon -p phoenix-branding/fabric clean build \
+              -Pminecraft_version="$MC_VERSION" \
+              -Pyarn_mappings="$YARN_MAPPINGS" \
+              -Ploader_version=0.18.1 \
               -Pfabric_version="$FABRIC_API_VERSION"
             JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
             test -n "$JAR"
@@ -145,7 +145,7 @@ jobs:
             unzip -l "$APK" | grep -q "assets/phoenix/phoenix-branding-fabric-$MC_VERSION.jar"
             cp "$RUNNER_TEMP/phoenix-fabric-assets/phoenix-branding-fabric-$MC_VERSION.jar" "$OUT/fabric-adapters/"
           done
-          printf '%s\\n' "Minecraft 1.21.1-1.21.11" "11 version-matched Fabric adapters included" "Vanilla selection automatically prepares an isolated Fabric-backed Phoenix runtime" "Saved Vanilla profile is not overwritten; no manual mod copying." > "$OUT/TEST-NOTES.txt"
+          printf '%s\n' "Minecraft 1.21.1-1.21.11" "11 version-matched Fabric adapters included" "Vanilla selection automatically prepares an isolated Fabric-backed Phoenix runtime" "Saved Vanilla profile is not overwritten; no manual mod copying." > "$OUT/TEST-NOTES.txt"
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           cd "$RUNNER_TEMP"
           zip -qr Phoenix-Client-Complete-Test-Package.zip phoenix-complete-test

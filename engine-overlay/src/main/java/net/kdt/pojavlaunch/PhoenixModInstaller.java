@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 public final class PhoenixModInstaller {
     private static final String TAG = "PhoenixModInstaller";
     private static final Pattern MC_VERSION =
-            Pattern.compile("(?<![0-9])1\\.21\\.(?:[1-9]|1[01])(?![0-9])");
+            Pattern.compile("(?<![0-9])1\.21\.(?:[1-9]|1[01])(?![0-9])");
     private PhoenixModInstaller() {}
 
     private static void notify(Context context, String message) {
@@ -73,8 +73,8 @@ public final class PhoenixModInstaller {
             File marker = new File(config, "phoenix-client-loaded.txt");
             if (marker.exists() && !marker.delete()) Log.w(TAG, "Could not clear previous Phoenix marker.");
             Files.writeString(new File(config, "phoenix-client-install-status.txt").toPath(),
-                    "INSTALLED\\nMinecraft: " + mcVersion + "\\nProfile: " + versionId
-                            + "\\nJAR: " + target.getAbsolutePath() + "\\n");
+                    "INSTALLED\nMinecraft: " + mcVersion + "\nProfile: " + versionId
+                            + "\nJAR: " + target.getAbsolutePath() + "\n");
             Log.i(TAG, "Installed Phoenix adapter for " + mcVersion + " at " + target);
             notify(context, "Phoenix client installed for Minecraft " + mcVersion + ".");
         } catch (Exception e) {
