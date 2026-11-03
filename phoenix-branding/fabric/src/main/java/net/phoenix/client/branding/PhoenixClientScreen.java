@@ -39,9 +39,13 @@ public final class PhoenixClientScreen extends Screen {
         addToggle(right,top+step*8,"Waypoint HUD",PhoenixHud.isWaypointEnabled(),PhoenixHud::toggleWaypoint);
         addToggle(left,top+step*9,"Inventory overlay",PhoenixHud.isInventoryOverlayEnabled(),PhoenixHud::toggleInventoryOverlay);
         addToggle(right,top+step*9,"Chat transparency",PhoenixHud.isChatTransparencyEnabled(),PhoenixHud::toggleChatTransparency);
-        addDrawableChild(ButtonWidget.builder(Text.literal("SET WAYPOINT HERE"),b->{PhoenixHud.setWaypointHere();}).dimensions(left,top+step*10,cw,20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("CLEAR WAYPOINT"),b->{PhoenixHud.clearWaypoint();}).dimensions(right,top+step*10,cw,20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("SAVE & RETURN"),b->close()).dimensions(width/2-100,top+step*11+3,200,20).build());
+        addToggle(left,top+step*10,"Light level",PhoenixHud.isLightLevelEnabled(),PhoenixHud::toggleLightLevel);
+        addToggle(right,top+step*10,"Nearby entities",PhoenixHud.isEntityOverlayEnabled(),PhoenixHud::toggleEntityOverlay);
+        addToggle(left,top+step*11,"Custom crosshair",PhoenixHud.isCustomCrosshairEnabled(),PhoenixHud::toggleCustomCrosshair);
+        addToggle(right,top+step*11,"Tool information",PhoenixHud.isToolInfoEnabled(),PhoenixHud::toggleToolInfo);
+        addDrawableChild(ButtonWidget.builder(Text.literal("SET WAYPOINT HERE"),b->{PhoenixHud.setWaypointHere();}).dimensions(left,top+step*12,cw,20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("CLEAR WAYPOINT"),b->{PhoenixHud.clearWaypoint();}).dimensions(right,top+step*12,cw,20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("SAVE & RETURN"),b->close()).dimensions(width/2-100,top+step*13+3,200,20).build());
     }
     private void addToggle(int x,int y,String name,boolean enabled,Runnable action){
         addDrawableChild(ButtonWidget.builder(label(name,enabled),b->{action.run();b.setMessage(label(name,state(name)));})
@@ -58,6 +62,8 @@ public final class PhoenixClientScreen extends Screen {
         case "Keystrokes"->PhoenixHud.isKeystrokesEnabled();case "Session timer"->PhoenixHud.isSessionTimeEnabled();
         case "Fullbright"->PhoenixHud.isFullbrightEnabled();case "Waypoint HUD"->PhoenixHud.isWaypointEnabled();
         case "Inventory overlay"->PhoenixHud.isInventoryOverlayEnabled();case "Chat transparency"->PhoenixHud.isChatTransparencyEnabled();
+        case "Light level"->PhoenixHud.isLightLevelEnabled();case "Nearby entities"->PhoenixHud.isEntityOverlayEnabled();
+        case "Custom crosshair"->PhoenixHud.isCustomCrosshairEnabled();case "Tool information"->PhoenixHud.isToolInfoEnabled();
         default->false;};}
     private static Text label(String n,boolean on){return Text.literal(n+" ["+(on?"ON":"OFF")+"]");}
     @Override public void close(){if(client!=null)client.setScreen(parent);}

@@ -25,6 +25,7 @@ public final class PhoenixHud {
     private static boolean attackIndicatorEnabled, potionEffectsEnabled, itemCounterEnabled;
     private static boolean keystrokesEnabled, sessionTimeEnabled;
     private static boolean fullbrightEnabled, waypointEnabled, inventoryOverlayEnabled, chatTransparencyEnabled;
+    private static boolean lightLevelEnabled, entityOverlayEnabled, customCrosshairEnabled, toolInfoEnabled;
     private static long sessionTicks;
     private static BlockPos waypoint;
     private static Identifier waypointDimension;
@@ -55,6 +56,10 @@ public final class PhoenixHud {
     public static boolean isInventoryOverlayEnabled(){return inventoryOverlayEnabled;}
     public static boolean isChatTransparencyEnabled(){return chatTransparencyEnabled;}
     public static boolean hasWaypoint(){return waypoint!=null;}
+    public static boolean isLightLevelEnabled(){return lightLevelEnabled;}
+    public static boolean isEntityOverlayEnabled(){return entityOverlayEnabled;}
+    public static boolean isCustomCrosshairEnabled(){return customCrosshairEnabled;}
+    public static boolean isToolInfoEnabled(){return toolInfoEnabled;}
 
     public static void toggle(){visible=!visible;}
     public static void toggleFps(){fpsEnabled=!fpsEnabled;}
@@ -76,6 +81,10 @@ public final class PhoenixHud {
     public static void toggleWaypoint(){waypointEnabled=!waypointEnabled;}
     public static void toggleInventoryOverlay(){inventoryOverlayEnabled=!inventoryOverlayEnabled;}
     public static void toggleChatTransparency(){chatTransparencyEnabled=!chatTransparencyEnabled;}
+    public static void toggleLightLevel(){lightLevelEnabled=!lightLevelEnabled;}
+    public static void toggleEntityOverlay(){entityOverlayEnabled=!entityOverlayEnabled;}
+    public static void toggleCustomCrosshair(){customCrosshairEnabled=!customCrosshairEnabled;}
+    public static void toggleToolInfo(){toolInfoEnabled=!toolInfoEnabled;}
 
     public static void setWaypointHere(){
         MinecraftClient c=MinecraftClient.getInstance();
@@ -110,7 +119,8 @@ public final class PhoenixHud {
                     +(clockEnabled?1:0)+(pingEnabled?1:0)+(speedEnabled?1:0)+(biomeEnabled?1:0)
                     +(dimensionEnabled?1:0)+(worldTimeEnabled?1:0)+(attackIndicatorEnabled?1:0)
                     +(potionEffectsEnabled?1:0)+(itemCounterEnabled?1:0)+(keystrokesEnabled?1:0)
-                    +(sessionTimeEnabled?1:0)+(waypointEnabled&&waypoint!=null?1:0)+(inventoryOverlayEnabled?1:0);
+                    +(sessionTimeEnabled?1:0)+(waypointEnabled&&waypoint!=null?1:0)+(inventoryOverlayEnabled?1:0)
+                    +(lightLevelEnabled?1:0)+(entityOverlayEnabled?3:0)+(toolInfoEnabled?1:0);
             if(lines==0)return;
             int x=10,y=10,w=230,h=19+lines*12;
             draw.fill(x,y,x+w,y+h,0xB5100D14);draw.fill(x,y,x+2,y+h,0xFFFF702E);
@@ -132,7 +142,11 @@ public final class PhoenixHud {
             if(keystrokesEnabled){var o=c.options;line(draw,c,"KEYS",(o.forwardKey.isPressed()?"W":"·")+" "+(o.leftKey.isPressed()?"A":"·")+" "+(o.backKey.isPressed()?"S":"·")+" "+(o.rightKey.isPressed()?"D":"·")+" "+(o.jumpKey.isPressed()?"JUMP":""),row);row+=12;}
             if(sessionTimeEnabled){long s=sessionTicks/20;line(draw,c,"SESSION",String.format(java.util.Locale.ROOT,"%02d:%02d:%02d",s/3600,(s/60)%60,s%60),row);row+=12;}
             if(waypointEnabled&&waypoint!=null){if(waypointDimension.equals(c.world.getRegistryKey().getValue())){double d=Math.sqrt(c.player.squaredDistanceTo(waypoint.getX()+0.5,waypoint.getY()+0.5,waypoint.getZ()+0.5));line(draw,c,"WAYPOINT",waypoint.getX()+" "+waypoint.getY()+" "+waypoint.getZ()+" · "+Math.round(d)+"m",row);}else line(draw,c,"WAYPOINT","Other dimension",row);row+=12;}
-            if(inventoryOverlayEnabled){int occupied=0;for(ItemStack s:c.player.getInventory().main)if(!s.isEmpty())occupied++;line(draw,c,"INVENTORY",occupied+" / 36 slots used",row);}
+            if(inventoryOverlayEnabled){int occupied=0;for(ItemStack s:c.player.getInventory().main)if(!s.isEmpty())occupied++;line(draw,c,"INVENTORY",occupied+" / 36 slots used",row);row+=12;}
+            if(lightLevelEnabled){int light=c.world.getLightLevel(c.player.getBlockPos());line(draw,c,"LIGHT LEVEL",light+" / 15",row);row+=12;}
+            if(entityOverlayEnabled){int shown=0;for(var entity:c.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,c.player.getBoundingBox().expand(12),e->e!=c.player&&!e.isRemoved())){if(shown++>=3)break;double dist=Math.sqrt(c.player.squaredDistanceTo(entity));line(draw,c,"NEARBY",entity.getName().getString()+" · "+Math.round(dist)+"m",row);row+=12;}}
+            if(toolInfoEnabled){ItemStack held=c.player.getMainHandStack();String v=held.isEmpty()?"No tool held":(held.isDamageable()?Math.max(0,held.getMaxDamage()-held.getDamage())+" durability":held.getName().getString());line(draw,c,"TOOL INFO",v,row);row+=12;}
+            if(customCrosshairEnabled){int cx=c.getWindow().getScaledWidth()/2,cy=c.getWindow().getScaledHeight()/2;draw.fill(cx-7,cy,cx-2,cy+1,0xFFFF7A35);draw.fill(cx+2,cy,cx+7,cy+1,0xFFFF7A35);draw.fill(cx,cy-7,cx+1,cy-2,0xFFFF7A35);draw.fill(cx,cy+2,cx+1,cy+7,0xFFFF7A35);}
         });
     }
     private static String duration(int ticks){int s=Math.max(0,ticks)/20;return String.format(java.util.Locale.ROOT,"%d:%02d",s/60,s%60);}
