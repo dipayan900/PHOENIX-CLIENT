@@ -13,6 +13,20 @@ public final class PhoenixClientScreen extends Screen {
         this.parent = parent;
     }
 
+
+    @Override
+    public void renderBackground(net.minecraft.client.gui.DrawContext draw, int mouseX, int mouseY, float delta) {
+        // Original Phoenix background: ember gradient and restrained technical accents.
+        draw.fillGradient(0, 0, this.width, this.height, 0xFF09070D, 0xFF25111B);
+        draw.fill(0, this.height / 3, this.width, this.height / 3 + 1, 0x44FF702E);
+        draw.fill(0, this.height / 3 + 2, this.width, this.height / 3 + 3, 0x223F2B35);
+        draw.fill(this.width / 2 - 115, 22, this.width / 2 + 115, 23, 0x66FF702E);
+        draw.drawTextWithShadow(this.textRenderer, Text.literal("PHOENIX"), this.width / 2 - 37, 30, 0xFFFF8547);
+        draw.drawTextWithShadow(this.textRenderer, Text.literal("CLIENT CONTROL"), this.width / 2 - 45, 43, 0xFFB8AEBB);
+        draw.fill(this.width / 2 - 115, 58, this.width / 2 + 115, 59, 0x443F2B35);
+        super.renderBackground(draw, mouseX, mouseY, delta);
+    }
+
     @Override
     protected void init() {
         int center = this.width / 2;
