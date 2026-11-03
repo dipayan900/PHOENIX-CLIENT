@@ -826,11 +826,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             containerColor = PhoenixBg,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFF151019)) {
-                    listOf("Home", "Profiles", "Version", "Mods", "Packs", "Cosmetics", "Friends", "Settings").forEach { tab ->
+                    listOf("Home", "Profiles", "Version", "Mods", "Packs", "Friends", "Settings").forEach { tab ->
                         NavigationBarItem(
                             selected = if (tab == "Packs") page == "Toolbox" else page == tab,
                             onClick = { page = if (tab == "Packs") "Toolbox" else tab },
-                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Packs" -> "▧"; "Cosmetics" -> "✧"; "Friends" -> "◎"; else -> "⚙" }, fontSize = 18.sp) },
+                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Packs" -> "▧"; "Friends" -> "◎"; else -> "⚙" }, fontSize = 18.sp) },
                             label = { Text(if (tab == "Profiles") "Accounts" else tab, fontSize = 10.sp) }
                         )
                     }
@@ -1040,15 +1040,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     }) { Text("DELETE", color = Color(0xFFFF8A80)) }
                                 }
                             }
-                        }
-                    }
-                    "Cosmetics" -> {
-                        item {
-                            PhoenixCosmeticsScreen(
-                                context = context,
-                                accent = animatedAccent,
-                                onNotice = { notice = it }
-                            )
                         }
                     }
                     "Version" -> {
