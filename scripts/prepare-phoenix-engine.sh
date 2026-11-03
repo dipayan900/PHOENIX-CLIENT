@@ -81,6 +81,7 @@ g = g.replace("dependencies {\n", """dependencies {
     implementation 'androidx.activity:activity-compose:1.12.0'
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.animation:animation'
     implementation 'androidx.compose.material3:material3'
 """)
 gradle.write_text(g)
