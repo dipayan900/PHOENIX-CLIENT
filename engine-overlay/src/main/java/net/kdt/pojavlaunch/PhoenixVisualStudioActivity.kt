@@ -292,7 +292,7 @@ private class PhoenixCrestSurface(context: Context) : GLSurfaceView(context) {
         setEGLContextClientVersion(2)
         preserveEGLContextOnPause = true
     }
-    override fun setRenderer(renderer: Renderer) {
+    override fun setRenderer(renderer: GLSurfaceView.Renderer) {
         super.setRenderer(renderer)
         rendererRef = renderer as? PhoenixCrestRenderer
     }
