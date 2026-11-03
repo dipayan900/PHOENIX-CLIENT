@@ -5,7 +5,6 @@
   "client": [
     "PlayerListHudMixin",
     "TitleScreenMixin",
-    "PhoenixScreenThemeMixin",
     "SplashOverlayMixin",
     "GameMenuScreenMixin",
     "InGameHudCrosshairMixin",
