@@ -9,6 +9,8 @@ import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -95,18 +97,21 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
     val panel = if (dark) Color(0xFF19131D) else Color.White
     val ink = if (dark) Color(0xFFF8F3FA) else Color(0xFF211A25)
     val muted = if (dark) Color(0xFFB8AABB) else Color(0xFF6D6472)
-    val orange = when (accent) {
+    val targetAccent = when (accent) {
         "FROST" -> Color(0xFF62C9FF)
         "AMETHYST" -> Color(0xFFB58CFF)
         else -> Color(0xFFFF702E)
     }
+    val orange by animateColorAsState(targetValue = targetAccent, label = "phoenix-studio-accent")
     MaterialTheme(colorScheme = if (dark) darkColorScheme(primary = orange, background = bg, surface = panel) else lightColorScheme(primary = orange, background = bg, surface = panel)) {
         Scaffold(containerColor = bg, topBar = {
             Row(Modifier.fillMaxWidth().background(panel).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", color = orange, fontSize = 30.sp, modifier = Modifier.clickable { onBack() }.padding(end = 14.dp))
                 Column(Modifier.weight(1f)) {
                     Text("PHOENIX VISUAL STUDIO", color = ink, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                    Text("Appearance · modules · controls", color = muted, fontSize = 11.sp)
+                    AnimatedContent(targetState = selectedPanel, label = "phoenix-panel-title") { panelName ->
+                        Text("${panelName.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase() }} · Appearance & controls", color = muted, fontSize = 11.sp)
+                    }
                 }
                 Text("v1", color = orange, fontWeight = FontWeight.Bold)
             }
@@ -197,7 +202,19 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
                         item {
                             StudioCard(panel, {
                                 Text("KEYBIND PROFILES", color = orange, fontWeight = FontWeight.Bold)
-                                OutlinedTextField(activeProfile, { activeProfile = it.take(40); prefs.edit().putString("active_profile_id", activeProfile).apply() }, label = { Text("Active Phoenix profile ID") }, singleLine = true)
+                                OutlinedTextField(activeProfile, { activeProfile = it.take(40); prefs.edit().putString("active_profile_id", activeProfile).apply() }, label = { Text("Active keybind profile ID") }, singleLine = true)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = {
+                                        activeProfile = "profile-" + java.util.UUID.randomUUID().toString().take(8)
+                                        prefs.edit().putString("active_profile_id", activeProfile).apply()
+                                        notice = "Created a new independent keybind profile."
+                                    }) { Text("NEW PROFILE") }
+                                    OutlinedButton(onClick = {
+                                        activeProfile = "main"
+                                        prefs.edit().putString("active_profile_id", activeProfile).apply()
+                                        notice = "Switched to the main keybind profile."
+                                    }) { Text("MAIN PROFILE") }
+                                }
                                 Text("Bindings are saved per Phoenix profile. Tap a binding to edit its key name.", color = muted, fontSize = 11.sp)
                             })
                         }
@@ -221,7 +238,9 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
                                 Text("PROFILE PRESETS", color = orange, fontWeight = FontWeight.Bold)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(onClick = {
-                                        binds.forEach { prefs.edit().remove("bind_${activeProfile}_${it.id}") }
+                                        val editor = prefs.edit()
+                                        binds.forEach { editor.remove("bind_${activeProfile}_${it.id}") }
+                                        editor.apply()
                                         notice = "Default keybinds restored for this profile."
                                     }) { Text("RESET PROFILE") }
                                     Button(onClick = {
