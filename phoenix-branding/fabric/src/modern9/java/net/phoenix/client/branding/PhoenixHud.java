@@ -173,7 +173,7 @@ public final class PhoenixHud {
 
     private PhoenixHud() {}
     public static String getUiTheme(){return uiTheme;}
-    public static boolean isLightUiTheme(){return "LIGHT".equals(uiTheme);}
+    public static boolean isLightUiTheme(){return "LIGHT".equals(uiTheme)||("SYSTEM".equals(uiTheme)&&"light".equalsIgnoreCase(System.getProperty("phoenix.ui.theme","dark")));}
     public static void cycleUiTheme(){uiTheme=switch(uiTheme){case "SYSTEM"->"DARK";case "DARK"->"LIGHT";default->"SYSTEM";};saveConfig();}
     public static boolean isVisible(){return visible;}
     public static boolean isFpsEnabled(){return fpsEnabled;}

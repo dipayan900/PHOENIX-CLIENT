@@ -774,10 +774,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val studioAccent = when (themeChoice) { "FROST" -> Color(0xFF63C9FF); "VIOLET" -> Color(0xFFB38CFF); "MATRIX" -> Color(0xFF69E59A); else -> PhoenixOrange }
     val animatedAccent by animateColorAsState(targetValue = studioAccent, label = "phoenix-theme-accent")
     val useDarkAppearance = when (appearanceChoice) { "DARK" -> true; "LIGHT" -> false; else -> systemDark }
-    val appearanceBg = if (useDarkAppearance) appearanceBg else Color(0xFFF3F4F7)
-    val appearancePanel = if (useDarkAppearance) appearancePanel else Color(0xFFFFFFFF)
-    val appearanceMuted = if (useDarkAppearance) appearanceMuted else Color(0xFF62616B)
-    val appearanceText = if (useDarkAppearance) appearanceText else Color(0xFF24232A)
+    val appearanceBg = if (useDarkAppearance) PhoenixBg else Color(0xFFF3F4F7)
+    val appearancePanel = if (useDarkAppearance) PhoenixPanel else Color(0xFFFFFFFF)
+    val appearanceMuted = if (useDarkAppearance) PhoenixMuted else Color(0xFF62616B)
+    val appearanceText = if (useDarkAppearance) Color.White else Color(0xFF24232A)
     SideEffect { runCatching { System.setProperty("phoenix.ui.theme", if (useDarkAppearance) "dark" else "light") } }
 
     fun persist() {
