@@ -247,8 +247,8 @@ styles.write_text(s)
 # the same SYSTEM/LIGHT/DARK preference as the Compose dashboard.
 st = styles.read_text()
 import re
-st = re.sub(r'Theme\\.AppCompat\\.Light\\.NoActionBar', 'Theme.AppCompat.DayNight.NoActionBar', st)
-st = re.sub(r'Theme\\.MaterialComponents\\.Light\\.NoActionBar', 'Theme.MaterialComponents.DayNight.NoActionBar', st)
+st = re.sub(r'Theme\.AppCompat\.Light\.NoActionBar', 'Theme.AppCompat.DayNight.NoActionBar', st)
+st = re.sub(r'Theme\.MaterialComponents\.Light\.NoActionBar', 'Theme.MaterialComponents.DayNight.NoActionBar', st)
 splash_items = '''
         <item name="android:windowSplashScreenBackground">#171018</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_phoenix_foreground</item>
