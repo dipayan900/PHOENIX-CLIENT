@@ -98,7 +98,7 @@ m = m.replace(
 )
 m = m.replace(
     '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />',
-    '<activity android:name=".PhoenixVisualStudioActivity" android:exported="false" />\\n        <activity android:name=".PhoenixDashboardActivity" android:exported="false" />'
+    '<activity android:name=".PhoenixVisualStudioActivity" android:exported="false" />\n        <activity android:name=".PhoenixDashboardActivity" android:exported="false" />'
 )
 manifest.write_text(m)
 
