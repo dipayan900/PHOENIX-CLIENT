@@ -352,8 +352,13 @@ public final class PhoenixHud {
     private static void line(net.minecraft.client.gui.DrawContext d,MinecraftClient c,String k,String v,int ignoredY){
         int x=getElementX(k),y=getElementY(k),labelWidth=c.textRenderer.getWidth(k),valueWidth=c.textRenderer.getWidth(v);
         int w=Math.min(260,Math.max(112,labelWidth+valueWidth+20));
-        d.fill(x,y,x+w,y+17,0xB5100D14);d.fill(x,y,x+2,y+17,0xFFFF702E);
-        d.drawTextWithShadow(c.textRenderer,Text.literal(k),x+7,y+4,0xFFFFA06C);
-        d.drawTextWithShadow(c.textRenderer,Text.literal(v),x+Math.min(90,Math.max(48,labelWidth+13)),y+4,0xFFF4EDF4);
+        boolean light=isLightUiTheme();
+        int panel=light?0xDFFFFFFF:0xB5100D14;
+        int accent=light?0xFFB94D1B:0xFFFF702E;
+        int label=light?0xFF8F3B18:0xFFFFA06C;
+        int value=light?0xFF25232A:0xFFF4EDF4;
+        d.fill(x,y,x+w,y+17,panel);d.fill(x,y,x+2,y+17,accent);
+        d.drawTextWithShadow(c.textRenderer,Text.literal(k),x+7,y+4,label);
+        d.drawTextWithShadow(c.textRenderer,Text.literal(v),x+Math.min(90,Math.max(48,labelWidth+13)),y+4,value);
     }
 }
