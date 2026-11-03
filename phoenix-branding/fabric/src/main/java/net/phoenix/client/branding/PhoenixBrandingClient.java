@@ -19,9 +19,6 @@ public final class PhoenixBrandingClient implements ClientModInitializer {
     public void onInitializeClient() {
         PhoenixHud.register();
         PayloadTypeRegistry.playC2S().register(PhoenixBrandPayload.ID, PhoenixBrandPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(PhoenixLoadoutPayload.ID, PhoenixLoadoutPayload.CODEC);
-        ClientPlayNetworking.registerGlobalReceiver(PhoenixLoadoutPayload.ID,
-                (payload, context) -> PhoenixLoadoutState.accept(payload.data()));
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             PhoenixLoadoutState.clear();
@@ -29,7 +26,6 @@ public final class PhoenixBrandingClient implements ClientModInitializer {
                 ClientPlayNetworking.send(new PhoenixBrandPayload());
             }
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> PhoenixLoadoutState.clear());
 
         try {
             Path marker = FabricLoader.getInstance().getConfigDir().resolve("phoenix-client-loaded.txt");
