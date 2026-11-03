@@ -7,7 +7,6 @@
     "TitleScreenMixin",
     "SplashOverlayMixin",
     "GameMenuScreenMixin",
-    "InGameHudCrosshairMixin",
     "ContainerPreviewTooltipMixin"
   ],
   "injectors": {
