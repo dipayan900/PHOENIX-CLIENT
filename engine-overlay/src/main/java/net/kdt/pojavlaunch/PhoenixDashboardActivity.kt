@@ -844,7 +844,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             ) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("PHOENIX CLIENT", color = animatedAccent, fontWeight = FontWeight.Black, letterSpacing = 3.sp, fontSize = 12.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Image(painterResource(R.drawable.ic_phoenix_foreground), contentDescription = "Phoenix crest", modifier = Modifier.size(48.dp)); Text("PHOENIX CLIENT", color = animatedAccent, fontWeight = FontWeight.Black, letterSpacing = 2.sp, fontSize = 12.sp) }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text(avatarChoice, fontSize = 27.sp); Text("JAVA EDITION", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold) }
                         Text("Your world. Your profiles. Your rules.", color = PhoenixMuted, fontSize = 13.sp)
                     }

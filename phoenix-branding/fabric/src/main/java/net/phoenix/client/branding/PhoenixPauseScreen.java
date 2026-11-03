@@ -20,7 +20,7 @@ public final class PhoenixPauseScreen extends Screen {
         int top = Math.max(44, height / 2 - 104);
         addDrawableChild(ButtonWidget.builder(Text.literal("RESUME  /  RETURN TO GAME"),
                 button -> close()).dimensions(left, top, buttonWidth, 22).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("PHOENIX MODULES"),
+        addDrawableChild(ButtonWidget.builder(Text.literal("PHOENIX CLIENT MENU"),
                 button -> client.setScreen(new PhoenixClientScreen(this)))
                 .dimensions(left, top + 28, buttonWidth, 22).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("HUD EDITOR"),
@@ -61,8 +61,11 @@ public final class PhoenixPauseScreen extends Screen {
         super.renderBackground(draw, mouseX, mouseY, delta);
         draw.fillGradient(0, 0, width, height, 0xF509070D, 0xF525111B);
         draw.fill(width / 2 - 132, 28, width / 2 + 132, 29, 0xAAFF702E);
+        draw.drawCenteredTextWithShadow(textRenderer, Text.literal("🔥"), width / 2, 20, 0xFFFFB347);
         draw.drawCenteredTextWithShadow(textRenderer, Text.literal("PHOENIX"),
-                width / 2, 39, 0xFFFF8547);
+                width / 2 + 1, 42, 0xFF6D170E);
+        draw.drawCenteredTextWithShadow(textRenderer, Text.literal("PHOENIX"),
+                width / 2, 41, 0xFFFF8547);
         draw.drawCenteredTextWithShadow(textRenderer, Text.literal("CLIENT  /  PAUSE CONTROL CENTER"),
                 width / 2, 53, 0xFFB8AEBB);
     }

@@ -34,9 +34,13 @@ abstract class SplashOverlayMixin {
         context.fill(left, centerY + 64, left + panelWidth, centerY + 65, 0x884D2930);
 
         context.drawCenteredTextWithShadow(minecraft.textRenderer,
-                Text.literal("PHOENIX"), center, centerY - 31, 0xFFFF8547);
+                Text.literal("🔥"), center, centerY - 74, 0xFFFFB347);
         context.drawCenteredTextWithShadow(minecraft.textRenderer,
-                Text.literal("CLIENT INITIALIZING"), center, centerY - 8, 0xFFE8DFEA);
+                Text.literal("PHOENIX"), center + 1, centerY - 34, 0xFF6D170E);
+        context.drawCenteredTextWithShadow(minecraft.textRenderer,
+                Text.literal("PHOENIX"), center, centerY - 35, 0xFFFF8547);
+        context.drawCenteredTextWithShadow(minecraft.textRenderer,
+                Text.literal("CLIENT INITIALIZING"), center, centerY - 10, 0xFFE8DFEA);
         context.drawCenteredTextWithShadow(minecraft.textRenderer,
                 Text.literal("PREPARING YOUR GAME ENVIRONMENT"), center, centerY + 15, 0xFFB8AEBB);
 
