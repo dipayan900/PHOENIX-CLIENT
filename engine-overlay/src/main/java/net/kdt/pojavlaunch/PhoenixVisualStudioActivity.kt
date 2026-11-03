@@ -248,6 +248,10 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
                                         prefs.edit().putString("bind_profile_snapshot_${activeProfile}", data).apply()
                                         notice = "Keybind profile snapshot saved."
                                     }) { Text("SAVE PRESET") }
+                                    Button(onClick = {
+                                        notice = runCatching { applyPhoenixKeybinds(context, prefs, activeProfile, binds) }
+                                            .getOrElse { it.message ?: "Could not apply Minecraft keybinds." }
+                                    }) { Text("APPLY TO MINECRAFT") }
                                 }
                             })
                         }
@@ -438,4 +442,81 @@ private object CrestMesh {
             triangle(a,b1,c1,r,g,b); triangle(a,c1,d,r*.82f,g*.72f,b*.55f)
         }
     }
+}
+
+
+/** Apply the active Phoenix keybind preset to the selected engine profile's options.txt. */
+private fun applyPhoenixKeybinds(
+    context: Context,
+    prefs: android.content.SharedPreferences,
+    phoenixProfileId: String,
+    binds: List<PhoenixBind>
+): String {
+    val profiles = org.json.JSONArray(prefs.getString("profiles_json", "[]") ?: "[]")
+    var engineProfileId: String? = null
+    for (index in 0 until profiles.length()) {
+        val entry = profiles.optJSONObject(index) ?: continue
+        if (entry.optString("id") == phoenixProfileId) {
+            engineProfileId = entry.optString("engineProfileId").takeIf { it.isNotBlank() }
+            break
+        }
+    }
+    val engineId = engineProfileId ?: throw java.io.IOException("Select a saved Phoenix game profile first.")
+    if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
+    val engineProfile = LauncherProfiles.mainProfileJson.profiles[engineId]
+        ?: throw java.io.IOException("The selected Amethyst engine profile could not be found.")
+    val gameDir = Tools.getGameDirPath(engineProfile).canonicalFile
+    if (!gameDir.isDirectory) throw java.io.IOException("Launch this Minecraft profile once before applying keybinds.")
+    val keyCodes = mapOf(
+        "A" to 65, "B" to 66, "C" to 67, "D" to 68, "E" to 69, "F" to 70,
+        "G" to 71, "H" to 72, "I" to 73, "J" to 74, "K" to 75, "L" to 76,
+        "M" to 77, "N" to 78, "O" to 79, "P" to 80, "Q" to 81, "R" to 82,
+        "S" to 83, "T" to 84, "U" to 85, "V" to 86, "W" to 87, "X" to 88,
+        "Y" to 89, "Z" to 90, "0" to 48, "1" to 49, "2" to 50, "3" to 51,
+        "4" to 52, "5" to 53, "6" to 54, "7" to 55, "8" to 56, "9" to 57,
+        "SPACE" to 32, "ENTER" to 257, "ESCAPE" to 256, "TAB" to 258,
+        "BACKSPACE" to 259, "LEFT_SHIFT" to 340, "RIGHT_SHIFT" to 344,
+        "LEFT_CONTROL" to 341, "RIGHT_CONTROL" to 345, "LEFT_ALT" to 342,
+        "RIGHT_ALT" to 346, "UP" to 265, "DOWN" to 264, "LEFT" to 263, "RIGHT" to 262,
+        "F1" to 290, "F2" to 291, "F3" to 292, "F4" to 293, "F5" to 294,
+        "F6" to 295, "F7" to 296, "F8" to 297, "F9" to 298, "F10" to 299,
+        "F11" to 300, "F12" to 301
+    )
+    val gameKeys = mapOf(
+        "forward" to "key_key.forward", "back" to "key_key.back",
+        "left" to "key_key.left", "right" to "key_key.right",
+        "jump" to "key_key.jump", "sneak" to "key_key.sneak",
+        "sprint" to "key_key.sprint", "inventory" to "key_key.inventory",
+        "chat" to "key_key.chat", "screenshot" to "key_key.screenshot",
+        "perspective" to "key_key.togglePerspective", "hud" to "key_key.hideGui"
+    )
+    val resolved = linkedMapOf<String, String>()
+    val used = mutableMapOf<Int, String>()
+    binds.forEach { bind ->
+        val raw = prefs.getString("bind_${phoenixProfileId}_${bind.id}", bind.defaultKey) ?: bind.defaultKey
+        val code = keyCodes[raw.uppercase(Locale.ROOT)]
+            ?: throw java.io.IOException("Unsupported key '$raw' for ${bind.title}. Use a letter, number, function key or named key.")
+        val previous = used.put(code, bind.title)
+        if (previous != null) throw java.io.IOException("Key conflict: $previous and ${bind.title} use $raw.")
+        resolved[gameKeys.getValue(bind.id)] = code.toString()
+    }
+    val options = File(gameDir, "options.txt").canonicalFile
+    if (options.parentFile != gameDir) throw java.io.IOException("Invalid Minecraft options path.")
+    val backup = File(gameDir, ".phoenix-backup-keybinds.txt")
+    if (options.isFile && !backup.exists()) options.copyTo(backup, overwrite = false)
+    val oldLines = if (options.isFile) options.readLines() else emptyList()
+    val output = mutableListOf<String>()
+    val written = mutableSetOf<String>()
+    oldLines.forEach { line ->
+        val name = line.substringBefore(':', "")
+        if (name in resolved) {
+            if (written.add(name)) output.add("$name:${resolved.getValue(name)}")
+        } else output.add(line)
+    }
+    resolved.forEach { (name, code) -> if (written.add(name)) output.add("$name:$code") }
+    val temp = File(gameDir, "options.txt.phoenix-keybind-tmp")
+    temp.writeText(output.joinToString("\n", postfix = "\n"))
+    if (options.exists() && !options.delete()) { temp.delete(); throw java.io.IOException("Could not replace options.txt. Close Minecraft and retry.") }
+    if (!temp.renameTo(options)) { temp.delete(); throw java.io.IOException("Could not save Minecraft keybinds.") }
+    return "Applied ${resolved.size} keybinds to Minecraft. Original options were backed up; restart the game to use them."
 }
