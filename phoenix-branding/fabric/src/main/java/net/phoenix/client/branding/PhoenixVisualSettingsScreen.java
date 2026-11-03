@@ -14,6 +14,7 @@ public final class PhoenixVisualSettingsScreen extends Screen {
     }
 
     @Override protected void init() {
+        PhoenixScreenStyle.beginTransition();
         int w = Math.min(270, width - 24), x = (width - w) / 2;
         int y = Math.max(52, height / 2 - 104);
         addDrawableChild(ButtonWidget.builder(Text.literal("FULLBRIGHT: " + state(PhoenixHud.isFullbrightEnabled())),
@@ -48,18 +49,17 @@ public final class PhoenixVisualSettingsScreen extends Screen {
     }
 
     @Override public void renderBackground(DrawContext d, int mx, int my, float delta) {
-        boolean light = PhoenixHud.isLightUiTheme();
-        d.fillGradient(0, 0, width, height, light ? 0xFFF3F4F7 : 0xFF09070D,
-                light ? 0xFFE4E6EC : 0xFF25111B);
+        PhoenixScreenStyle.background(d, width, height);
     }
     @Override public void render(DrawContext d, int mx, int my, float delta) {
         renderBackground(d, mx, my, delta);
-        int accent = PhoenixHud.isLightUiTheme() ? 0xFFB94D1B : 0xFFFF8547;
+        int accent = PhoenixScreenStyle.accent();
         d.drawCenteredTextWithShadow(textRenderer, title, width / 2, 25, accent);
         d.drawCenteredTextWithShadow(textRenderer,
                 Text.literal("Controls are saved to your local Minecraft profile."),
-                width / 2, height - 20, PhoenixHud.isLightUiTheme() ? 0xFF55515A : 0xFFB8AEBB);
+                width / 2, height - 20, PhoenixScreenStyle.mutedText());
         super.render(d, mx, my, delta);
+        PhoenixScreenStyle.renderChrome(this, d);
     }
     @Override public void close() { if (client != null) client.setScreen(parent); }
 }
