@@ -85,12 +85,12 @@ public final class PhoenixHud {
     public static int getCrosshairGap(){return crosshairGap;}
     public static int getCrosshairThickness(){return crosshairThickness;}
     public static boolean hasCrosshairDot(){return crosshairDot;}
-    public static void cycleCrosshairStyle(){crosshairStyle=(crosshairStyle+1)%5;}
-    public static void cycleCrosshairColor(){int[] colors={0xFFFF7A35,0xFF55D6FF,0xFF8DFF76,0xFFFF5C9A,0xFFFFFFFF,0xFFFFE45C};int next=0;for(int i=0;i<colors.length;i++)if(colors[i]==crosshairColor)next=(i+1)%colors.length;crosshairColor=colors[next];}
-    public static void adjustCrosshairSize(int delta){crosshairSize=Math.max(3,Math.min(18,crosshairSize+delta));}
-    public static void adjustCrosshairGap(int delta){crosshairGap=Math.max(0,Math.min(10,crosshairGap+delta));}
-    public static void adjustCrosshairThickness(int delta){crosshairThickness=Math.max(1,Math.min(4,crosshairThickness+delta));}
-    public static void toggleCrosshairDot(){crosshairDot=!crosshairDot;}
+    public static void cycleCrosshairStyle(){crosshairStyle=(crosshairStyle+1)%5;saveConfig();}
+    public static void cycleCrosshairColor(){int[] colors={0xFFFF7A35,0xFF55D6FF,0xFF8DFF76,0xFFFF5C9A,0xFFFFFFFF,0xFFFFE45C};int next=0;for(int i=0;i<colors.length;i++)if(colors[i]==crosshairColor)next=(i+1)%colors.length;crosshairColor=colors[next];saveConfig();}
+    public static void adjustCrosshairSize(int delta){crosshairSize=Math.max(3,Math.min(18,crosshairSize+delta));saveConfig();}
+    public static void adjustCrosshairGap(int delta){crosshairGap=Math.max(0,Math.min(10,crosshairGap+delta));saveConfig();}
+    public static void adjustCrosshairThickness(int delta){crosshairThickness=Math.max(1,Math.min(4,crosshairThickness+delta));saveConfig();}
+    public static void toggleCrosshairDot(){crosshairDot=!crosshairDot;saveConfig();}
 
     public static void toggle(){visible=!visible;}
     public static void toggleFps(){fpsEnabled=!fpsEnabled;}
@@ -114,7 +114,7 @@ public final class PhoenixHud {
     public static void toggleChatTransparency(){chatTransparencyEnabled=!chatTransparencyEnabled;}
     public static void toggleLightLevel(){lightLevelEnabled=!lightLevelEnabled;}
     public static void toggleEntityOverlay(){entityOverlayEnabled=!entityOverlayEnabled;}
-    public static void toggleCustomCrosshair(){customCrosshairEnabled=!customCrosshairEnabled;}
+    public static void toggleCustomCrosshair(){customCrosshairEnabled=!customCrosshairEnabled;saveConfig();}
     public static void toggleToolInfo(){toolInfoEnabled=!toolInfoEnabled;}
     public static void toggleCps(){cpsEnabled=!cpsEnabled;}
     public static void toggleSprint(){sprintToggled=!sprintToggled;}
@@ -161,7 +161,7 @@ public final class PhoenixHud {
                     +(potionEffectsEnabled?1:0)+(itemCounterEnabled?1:0)+(keystrokesEnabled?1:0)
                     +(sessionTimeEnabled?1:0)+(waypointEnabled&&waypoint!=null?1:0)+(inventoryOverlayEnabled?1:0)
                     +(lightLevelEnabled?1:0)+(entityOverlayEnabled?3:0)+(toolInfoEnabled?1:0)+(cpsEnabled?1:0);
-            if(lines==0)return;
+            if(lines==0&&!customCrosshairEnabled)return;
             int x=hudX,y=hudY,w=230,h=19+lines*12;
             draw.fill(x,y,x+w,y+h,0xB5100D14);draw.fill(x,y,x+2,y+h,0xFFFF702E);
             draw.drawTextWithShadow(c.textRenderer,Text.literal("PHOENIX  /  MODULES"),x+8,y+5,0xFFFF8A4C);
