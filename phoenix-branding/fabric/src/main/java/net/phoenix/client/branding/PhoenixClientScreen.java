@@ -7,7 +7,7 @@ import net.minecraft.text.Text;
 public final class PhoenixClientScreen extends Screen {
  private final Screen parent; private int page=0;
  public PhoenixClientScreen(Screen parent){super(Text.literal("Phoenix Client"));this.parent=parent;}
- @Override public void renderBackground(DrawContext d,int mx,int my,float delta){d.fillGradient(0,0,width,height,0xFF09070D,0xFF25111B);d.fill(width/2-125,22,width/2+125,23,0x66FF702E);d.drawCenteredTextWithShadow(textRenderer,Text.literal("PHOENIX"),width/2,30,0xFFFF8547);d.drawCenteredTextWithShadow(textRenderer,Text.literal("CLIENT  /  "+(page==0?"HUD & INFO":page==1?"VISUAL & UTILITY":"TOOLS & PERFORMANCE")),width/2,43,0xFFB8AEBB);super.renderBackground(d,mx,my,delta);}
+ @Override public void renderBackground(DrawContext d,int mx,int my,float delta){d.fillGradient(0,0,width,height,0xFF09070D,0xFF25111B);d.fill(width/2-125,22,width/2+125,23,0x66FF702E);d.drawCenteredTextWithShadow(textRenderer,Text.literal("PHOENIX"),width/2,30,0xFFFF8547);d.drawCenteredTextWithShadow(textRenderer,Text.literal("CLIENT  /  "+(page==0?"HUD & INFO":page==1?"VISUAL & UTILITY":"TOOLS & PERFORMANCE")),width/2,43,0xFFB8AEBB);}
  @Override protected void init(){clearChildren();int gap=6,cw=Math.min(210,(width-24-gap)/2),left=width/2-cw-gap/2,right=left+cw+gap,top=62,step=25;
   if(page==0){
    addToggle(left,top,"Master HUD",PhoenixHud.isVisible(),PhoenixHud::toggle);addToggle(right,top,"FPS counter",PhoenixHud.isFpsEnabled(),PhoenixHud::toggleFps);
