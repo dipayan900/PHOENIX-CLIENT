@@ -24,7 +24,6 @@ public final class PhoenixClientScreen extends Screen {
         draw.drawTextWithShadow(this.textRenderer, Text.literal("PHOENIX"), this.width / 2 - 37, 30, 0xFFFF8547);
         draw.drawTextWithShadow(this.textRenderer, Text.literal("CLIENT CONTROL"), this.width / 2 - 45, 43, 0xFFB8AEBB);
         draw.fill(this.width / 2 - 115, 58, this.width / 2 + 115, 59, 0x443F2B35);
-        super.renderBackground(draw, mouseX, mouseY, delta);
     }
 
     @Override
