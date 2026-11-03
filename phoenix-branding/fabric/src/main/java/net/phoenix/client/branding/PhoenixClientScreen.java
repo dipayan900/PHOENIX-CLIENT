@@ -89,6 +89,11 @@ public final class PhoenixClientScreen extends Screen {
         }
 
         if(tab.equals("MODULES")){
+            searchField = new TextFieldWidget(textRenderer, 20, 58, width - 40, 19, Text.literal("Search modules"));
+            searchField.setMaxLength(48);
+            searchField.setPlaceholder(Text.literal("Search Phoenix modules..."));
+            searchField.setChangedListener(value -> searchQuery = value);
+            addDrawableChild(searchField);
             String[] cats={"ALL","HUD","VISUAL","UTILITY","PERFORMANCE"};
             int catGap=3,catW=Math.max(48,(width-20-catGap*4)/5),catX=(width-(catW*5+catGap*4))/2;
             for(int i=0;i<cats.length;i++){
