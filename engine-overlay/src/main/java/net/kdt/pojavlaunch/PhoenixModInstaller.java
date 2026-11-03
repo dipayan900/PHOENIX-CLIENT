@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch;
 
 import android.content.Context;
+import android.widget.Toast;
 import android.util.Log;
 
 import java.io.File;
@@ -13,24 +14,56 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Installs the matching Phoenix Fabric mod in the selected game directory before launch. */
+/**
+ * Installs the bundled Phoenix client into the selected Fabric profile before
+ * the game starts. The user never has to download or copy a separate mod JAR.
+ */
 public final class PhoenixModInstaller {
     private static final String TAG = "PhoenixModInstaller";
-    private static final Pattern MC_VERSION = Pattern.compile("(?<![0-9])1\\.21(?:\\.\\d+)?(?![0-9])");
+    private static final Pattern MC_VERSION =
+            Pattern.compile("(?<![0-9])1\\.21(?:\\.\\d+)?(?![0-9])");
 
     private PhoenixModInstaller() {}
 
+    private static void notify(Context context, String message) {
+        if (context == null) return;
+        try {
+            Toast.makeText(context.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+        } catch (Exception ignored) {
+            Log.w(TAG, "Could not display Phoenix install status.");
+        }
+    }
+
     public static void install(Context context, File gameDir, String versionId) {
-        if (context == null || gameDir == null || versionId == null) return;
-        if (!versionId.toLowerCase(Locale.ROOT).contains("fabric")) return;
+        if (context == null || gameDir == null || versionId == null) {
+            Log.e(TAG, "Phoenix installer received a null launch argument.");
+            return;
+        }
+
+        String normalized = versionId.toLowerCase(Locale.ROOT);
+        if (!normalized.contains("fabric")) {
+            String message = "Phoenix in-game features need a Fabric 1.21.1 profile. Selected: " + versionId;
+            Log.w(TAG, message);
+            notify(context, message);
+            return;
+        }
 
         Matcher matcher = MC_VERSION.matcher(versionId);
         if (!matcher.find()) {
-            Log.w(TAG, "Could not detect Minecraft version from selected profile: " + versionId);
+            String message = "Phoenix supports Fabric 1.21.1 only. Selected profile: " + versionId;
+            Log.e(TAG, message);
+            notify(context, message);
             return;
         }
 
         String mcVersion = matcher.group();
+        if (!"1.21.1".equals(mcVersion)) {
+            String message = "Phoenix currently supports Fabric 1.21.1 only; " + mcVersion + " is not bundled.";
+            Log.e(TAG, message);
+            notify(context, message);
+            return;
+        }
+
         String assetName = "phoenix/phoenix-branding-fabric-" + mcVersion + ".jar";
         File modsDir = new File(gameDir, "mods");
         File target = new File(modsDir, "phoenix-branding-fabric-" + mcVersion + ".jar");
@@ -50,8 +83,11 @@ public final class PhoenixModInstaller {
             }
 
             try (JarFile jar = new JarFile(temporary)) {
-                if (jar.getEntry("fabric.mod.json") == null) {
-                    throw new IllegalStateException("Embedded file is not a Fabric mod: " + assetName);
+                if (jar.getEntry("fabric.mod.json") == null
+                        || jar.getEntry("phoenix_branding.mixins.json") == null
+                        || jar.getEntry("net/phoenix/client/branding/PhoenixBrandingClient.class") == null
+                        || jar.getEntry("net/phoenix/client/branding/mixin/TitleScreenMixin.class") == null) {
+                    throw new IllegalStateException("Bundled Phoenix JAR is missing required Fabric metadata or client classes.");
                 }
             }
 
@@ -68,12 +104,26 @@ public final class PhoenixModInstaller {
                 }
             }
 
-            File marker = new File(new File(gameDir, "config"), "phoenix-client-loaded.txt");
-            if (marker.exists() && !marker.delete()) Log.w(TAG, "Could not clear old Phoenix load marker.");
+            File configDir = new File(gameDir, "config");
+            if (!configDir.exists() && !configDir.mkdirs()) {
+                throw new IllegalStateException("Cannot create profile config directory: " + configDir);
+            }
+            File marker = new File(configDir, "phoenix-client-loaded.txt");
+            if (marker.exists() && !marker.delete()) {
+                Log.w(TAG, "Could not clear old Phoenix load marker.");
+            }
+            File status = new File(configDir, "phoenix-client-install-status.txt");
+            Files.writeString(status.toPath(),
+                    "INSTALLED\nMinecraft: " + mcVersion + "\nProfile: " + versionId
+                            + "\nJAR: " + target.getAbsolutePath() + "\n");
+
             Log.i(TAG, "Installed Phoenix Fabric mod for Minecraft " + mcVersion + " at " + target);
+            notify(context, "Phoenix client installed for Fabric 1.21.1. Starting game...");
         } catch (Exception error) {
             if (temporary.exists()) temporary.delete();
-            Log.e(TAG, "Phoenix Fabric mod installation failed for " + mcVersion, error);
+            String message = "Phoenix client installation failed: " + error.getMessage();
+            Log.e(TAG, message, error);
+            notify(context, message);
         }
     }
 }
