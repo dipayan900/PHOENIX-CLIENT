@@ -271,6 +271,26 @@ a = activity_layout.read_text().replace(
 activity_layout.write_text(a)
 PY
 
+
+# Local/offline accounts may still download public Minecraft files. The upstream
+# condition incorrectly treated every local profile as permanently offline and
+# only checked for an existing JSON file, so fresh vanilla/Fabric versions could
+# never be installed. Keep the cached-files-only path for devices with no network.
+python3 - "$APP/src/main/java/net/kdt/pojavlaunch/tasks/MinecraftDownloader.java" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "if(isLocalProfile || !isOnline) {"
+new = "if(!isOnline) {"
+if old not in s:
+    if new not in s:
+        raise SystemExit("Phoenix patch failed: MinecraftDownloader network/local-profile condition changed upstream.")
+else:
+    s = s.replace(old, new, 1)
+    p.write_text(s)
+PY
+
 echo "Phoenix branding, Inferno engine theme, custom engine controls and Compose dashboard integration applied."
 
 # Phoenix offline accounts and independent game instances.
