@@ -20,6 +20,7 @@ import java.util.Properties;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.LocalTime;
+import java.util.ArrayDeque;
 import java.time.format.DateTimeFormatter;
 
 /** Client-side Phoenix modules. Settings are kept local to the client session. */
@@ -35,7 +36,9 @@ public final class PhoenixHud {
     private static long sessionTicks;
     private static BlockPos waypoint;
     private static Identifier waypointDimension;
-    private static KeyBinding zoomKey;
+    private static KeyBinding zoomKey, sprintToggleKey;
+    private static boolean sprintToggled, cpsEnabled=true, lastLeftDown, lastRightDown;
+    private static final ArrayDeque<Long> clickTimes = new ArrayDeque<>();
     private static boolean zoomActive;
     private static int previousFov = 70;
     private static double previousGamma = 1.0, previousChatOpacity = 1.0;
@@ -74,6 +77,8 @@ public final class PhoenixHud {
     public static boolean isEntityOverlayEnabled(){return entityOverlayEnabled;}
     public static boolean isCustomCrosshairEnabled(){return customCrosshairEnabled;}
     public static boolean isToolInfoEnabled(){return toolInfoEnabled;}
+    public static boolean isCpsEnabled(){return cpsEnabled;}
+    public static boolean isSprintToggled(){return sprintToggled;}
     public static int getCrosshairStyle(){return crosshairStyle;}
     public static int getCrosshairColor(){return crosshairColor;}
     public static int getCrosshairSize(){return crosshairSize;}
@@ -111,6 +116,8 @@ public final class PhoenixHud {
     public static void toggleEntityOverlay(){entityOverlayEnabled=!entityOverlayEnabled;}
     public static void toggleCustomCrosshair(){customCrosshairEnabled=!customCrosshairEnabled;}
     public static void toggleToolInfo(){toolInfoEnabled=!toolInfoEnabled;}
+    public static void toggleCps(){cpsEnabled=!cpsEnabled;}
+    public static void toggleSprint(){sprintToggled=!sprintToggled;}
 
     public static void setWaypointHere(){
         MinecraftClient c=MinecraftClient.getInstance();
@@ -121,8 +128,14 @@ public final class PhoenixHud {
     public static void register(){
         loadConfig();
         zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,"category.phoenix"));
+        sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,"category.phoenix"));
         ClientTickEvents.END_CLIENT_TICK.register(client->{
             if(client.player!=null&&!client.isPaused())sessionTicks++;
+            while(sprintToggleKey.wasPressed())sprintToggled=!sprintToggled;
+            if(client.player!=null&&sprintToggled)client.player.setSprinting(client.options.forwardKey.isPressed()&&!client.player.isSneaking());
+            long now=System.currentTimeMillis();
+            if(client.getWindow()!=null){boolean left=org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT)==org.lwjgl.glfw.GLFW.GLFW_PRESS;boolean right=org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)==org.lwjgl.glfw.GLFW.GLFW_PRESS;if((left&&!lastLeftDown)||(right&&!lastRightDown))clickTimes.addLast(now);lastLeftDown=left;lastRightDown=right;}
+            while(!clickTimes.isEmpty()&&now-clickTimes.peekFirst()>1000)clickTimes.removeFirst();
             if(client.player==null){
                 if(zoomActive){client.options.getFov().setValue(previousFov);zoomActive=false;}
                 return;
@@ -147,7 +160,7 @@ public final class PhoenixHud {
                     +(dimensionEnabled?1:0)+(worldTimeEnabled?1:0)+(attackIndicatorEnabled?1:0)
                     +(potionEffectsEnabled?1:0)+(itemCounterEnabled?1:0)+(keystrokesEnabled?1:0)
                     +(sessionTimeEnabled?1:0)+(waypointEnabled&&waypoint!=null?1:0)+(inventoryOverlayEnabled?1:0)
-                    +(lightLevelEnabled?1:0)+(entityOverlayEnabled?3:0)+(toolInfoEnabled?1:0);
+                    +(lightLevelEnabled?1:0)+(entityOverlayEnabled?3:0)+(toolInfoEnabled?1:0)+(cpsEnabled?1:0);
             if(lines==0)return;
             int x=hudX,y=hudY,w=230,h=19+lines*12;
             draw.fill(x,y,x+w,y+h,0xB5100D14);draw.fill(x,y,x+2,y+h,0xFFFF702E);
@@ -173,6 +186,7 @@ public final class PhoenixHud {
             if(lightLevelEnabled){int light=c.world.getLightLevel(c.player.getBlockPos());line(draw,c,"LIGHT LEVEL",light+" / 15",row);row+=12;}
             if(entityOverlayEnabled){int shown=0;for(var entity:c.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,c.player.getBoundingBox().expand(12),e->e!=c.player&&!e.isRemoved())){if(shown++>=3)break;double dist=Math.sqrt(c.player.squaredDistanceTo(entity));line(draw,c,"NEARBY",entity.getName().getString()+" · "+Math.round(dist)+"m",row);row+=12;}}
             if(toolInfoEnabled){ItemStack held=c.player.getMainHandStack();String v=held.isEmpty()?"No tool held":(held.isDamageable()?Math.max(0,held.getMaxDamage()-held.getDamage())+" durability":held.getName().getString());line(draw,c,"TOOL INFO",v,row);row+=12;}
+            if(cpsEnabled){line(draw,c,"CPS",String.valueOf(clickTimes.size()),row);row+=12;}
             if(customCrosshairEnabled)renderCrosshair(draw,c.getWindow().getScaledWidth()/2,c.getWindow().getScaledHeight()/2);
         });
     }
