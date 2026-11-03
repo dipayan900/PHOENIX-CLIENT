@@ -4,8 +4,6 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "PlayerListHudMixin",
-    "PlayerEntityRendererMixin",
-    "PlayerEntityModelEmoteMixin",
     "TitleScreenMixin",
     "SplashOverlayMixin",
     "GameMenuScreenMixin",
