@@ -33,31 +33,41 @@ jobs:
         with:
           validate-wrappers: false
           gradle-version: '9.6.1'
-      - name: Build Phoenix Fabric client mods for Minecraft 1.21.x
+      - name: Build and verify Phoenix Fabric client mod for Minecraft 1.21.1
         shell: bash
         run: |
           set -euo pipefail
           OUT="$RUNNER_TEMP/phoenix-fabric-assets"
           mkdir -p "$OUT"
-          for MC_VERSION in 1.21.1; do
-            echo "::group::Build Phoenix Fabric mod for Minecraft $MC_VERSION"
-            DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
-            YARN_MAPPINGS="$(printf '%s\n' "$DEPS" | sed -n '1p')"
-            FABRIC_API_VERSION="$(printf '%s\n' "$DEPS" | sed -n '2p')"
-            test -n "$YARN_MAPPINGS"
-            test -n "$FABRIC_API_VERSION"
-            echo "Mappings: $YARN_MAPPINGS"
-            echo "Fabric API: $FABRIC_API_VERSION"
-            gradle --no-daemon -p phoenix-branding/fabric clean build \
-              -Pminecraft_version="$MC_VERSION" \
-              -Pyarn_mappings="$YARN_MAPPINGS" \
-              -Ploader_version=0.18.1 \
-              -Pfabric_version="$FABRIC_API_VERSION"
-            JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
-            test -n "$JAR"
-            cp "$JAR" "$OUT/phoenix-branding-fabric-$MC_VERSION.jar"
-            echo "::endgroup::"
+          MC_VERSION=1.21.1
+          DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
+          YARN_MAPPINGS="$(printf '%s\\n' "$DEPS" | sed -n '1p')"
+          FABRIC_API_VERSION="$(printf '%s\\n' "$DEPS" | sed -n '2p')"
+          test -n "$YARN_MAPPINGS"
+          test -n "$FABRIC_API_VERSION"
+          echo "Mappings: $YARN_MAPPINGS"
+          echo "Fabric API: $FABRIC_API_VERSION"
+          gradle --no-daemon -p phoenix-branding/fabric clean build \\
+            -Pminecraft_version="$MC_VERSION" \\
+            -Pyarn_mappings="$YARN_MAPPINGS" \\
+            -Ploader_version=0.18.1 \\
+            -Pfabric_version="$FABRIC_API_VERSION"
+          JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
+          test -n "$JAR"
+          jar tf "$JAR" > "$RUNNER_TEMP/phoenix-jar-contents.txt"
+          for REQUIRED in \\
+            fabric.mod.json \\
+            phoenix_branding.mixins.json \\
+            net/phoenix/client/branding/PhoenixBrandingClient.class \\
+            net/phoenix/client/branding/PhoenixTitleScreen.class \\
+            net/phoenix/client/branding/mixin/TitleScreenMixin.class \\
+            net/phoenix/client/branding/mixin/SplashOverlayMixin.class; do
+            grep -Fxq "$REQUIRED" "$RUNNER_TEMP/phoenix-jar-contents.txt"
           done
+          unzip -p "$JAR" fabric.mod.json | grep -q '"id"[[:space:]]*:[[:space:]]*"phoenix_branding"'
+          unzip -p "$JAR" phoenix_branding.mixins.json | grep -q '"SplashOverlayMixin"'
+          cp "$JAR" "$OUT/phoenix-branding-fabric-$MC_VERSION.jar"
+          echo "Verified Phoenix entrypoint, title-screen mixin and custom loading-screen mixin in the built JAR."
       - name: Checkout Amethyst Java engine source
         run: |
           git config --global url."https://github.com/".insteadOf git@github.com:
@@ -98,14 +108,18 @@ jobs:
           name: jre8-pojav
       - name: Apply Phoenix branding and cosmetics UI
         run: bash scripts/prepare-phoenix-engine.sh "$GITHUB_WORKSPACE" "$RUNNER_TEMP/phoenix-engine"
-      - name: Embed all version-specific Phoenix Fabric mods into the Android launcher
+      - name: Embed and verify Phoenix Fabric client inside launcher assets
         shell: bash
         run: |
           set -euo pipefail
           ASSETS="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/src/main/assets/phoenix"
           mkdir -p "$ASSETS"
           cp "$RUNNER_TEMP"/phoenix-fabric-assets/phoenix-branding-fabric-*.jar "$ASSETS/"
-          test "$(find "$ASSETS" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 1
+          EMBEDDED="$ASSETS/phoenix-branding-fabric-1.21.1.jar"
+          test -s "$EMBEDDED"
+          jar tf "$EMBEDDED" | grep -Fxq "net/phoenix/client/branding/mixin/SplashOverlayMixin.class"
+          jar tf "$EMBEDDED" | grep -Fxq "net/phoenix/client/branding/mixin/TitleScreenMixin.class"
+          echo "Verified embedded Phoenix 1.21.1 Fabric mod and both screen mixins."
       - name: Generate upstream language resources
         working-directory: ${{ runner.temp }}/phoenix-engine
         run: bash scripts/languagelist_updater.sh
@@ -117,7 +131,6 @@ jobs:
       - name: Build Phoenix Android APK
         working-directory: ${{ runner.temp }}/phoenix-engine
         run: gradle --no-daemon --stacktrace :app_pojavlauncher:assembleDebug
-
       - name: Assemble one complete Phoenix test ZIP
         shell: bash
         run: |
@@ -126,10 +139,8 @@ jobs:
           mkdir -p "$OUT/android"
           APK="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk"
           cp "$APK" "$OUT/android/Phoenix-Client-debug.apk"
-          for MC_VERSION in 1.21.1; do
-            unzip -l "$APK" | grep -q "assets/phoenix/phoenix-branding-fabric-$MC_VERSION.jar"
-          done
-          echo "Verified: the supported Phoenix 1.21.1 client build is bundled inside the APK."
+          unzip -l "$APK" | grep -q "assets/phoenix/phoenix-branding-fabric-1.21.1.jar"
+          echo "Verified: Phoenix 1.21.1 Fabric mod is bundled inside the APK."
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           cd "$RUNNER_TEMP"
           zip -qr Phoenix-Client-Complete-Test-Package.zip phoenix-complete-test
