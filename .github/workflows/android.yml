@@ -48,8 +48,11 @@ jobs:
             fi
             if [ "$MINOR" -eq 6 ]; then
               cp phoenix-branding/fabric/src/modern6/java/net/phoenix/client/branding/PhoenixHud.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixHud.java
-              cp phoenix-branding/fabric/src/modern6/java/net/phoenix/client/branding/PhoenixHudEditorScreen.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixHudEditorScreen.java
-              cp phoenix-branding/fabric/src/modern6/java/net/phoenix/client/branding/mixin/PlayerListHudMixin.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/PlayerListHudMixin.java
+            fi
+            if [ "$MINOR" -eq 9 ]; then
+              cp phoenix-branding/fabric/src/modern9/java/net/phoenix/client/branding/PhoenixHud.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixHud.java
+              cp phoenix-branding/fabric/src/modern9/java/net/phoenix/client/branding/PhoenixHudEditorScreen.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixHudEditorScreen.java
+              cp phoenix-branding/fabric/src/modern9/java/net/phoenix/client/branding/mixin/PlayerListHudMixin.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/PlayerListHudMixin.java
             fi
             echo "::group::Building Phoenix Fabric adapter for $MC_VERSION"
             DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
