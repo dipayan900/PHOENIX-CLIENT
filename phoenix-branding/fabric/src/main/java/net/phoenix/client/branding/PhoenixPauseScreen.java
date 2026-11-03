@@ -38,8 +38,7 @@ public final class PhoenixPauseScreen extends Screen {
     private void saveAndReturn() {
         MinecraftClient minecraft = MinecraftClient.getInstance();
         // Integrated worlds are saved by the server as the client disconnects.
-        minecraft.disconnect();
-        minecraft.setScreen(new TitleScreen());
+        minecraft.disconnect(new TitleScreen());
     }
 
     @Override
