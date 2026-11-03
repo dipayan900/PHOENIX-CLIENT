@@ -6,6 +6,7 @@ import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.Bundle
 import android.view.MotionEvent
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -113,7 +114,17 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
         else -> Color(0xFFFF702E)
     }
     val orange by animateColorAsState(targetValue = targetAccent, label = "phoenix-studio-accent")
-    SideEffect { runCatching { System.setProperty("phoenix.ui.theme", if (dark) "dark" else "light") } }
+    SideEffect {
+        runCatching {
+            System.setProperty("phoenix.ui.theme", if (dark) "dark" else "light")
+            System.setProperty("phoenix.ui.reduced_motion", reducedMotion.toString())
+            AppCompatDelegate.setDefaultNightMode(when (appearance) {
+                "DARK" -> AppCompatDelegate.MODE_NIGHT_YES
+                "LIGHT" -> AppCompatDelegate.MODE_NIGHT_NO
+                else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            })
+        }
+    }
     MaterialTheme(colorScheme = if (dark) darkColorScheme(primary = orange, background = bg, surface = panel) else lightColorScheme(primary = orange, background = bg, surface = panel)) {
         Scaffold(containerColor = bg, topBar = {
             Row(Modifier.fillMaxWidth().background(panel).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
