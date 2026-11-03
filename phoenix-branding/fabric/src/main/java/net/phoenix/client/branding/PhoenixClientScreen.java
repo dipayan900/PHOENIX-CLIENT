@@ -45,7 +45,8 @@ public final class PhoenixClientScreen extends Screen {
         addToggle(right,top+step*11,"Tool information",PhoenixHud.isToolInfoEnabled(),PhoenixHud::toggleToolInfo);
         addDrawableChild(ButtonWidget.builder(Text.literal("SET WAYPOINT HERE"),b->{PhoenixHud.setWaypointHere();}).dimensions(left,top+step*12,cw,20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("CLEAR WAYPOINT"),b->{PhoenixHud.clearWaypoint();}).dimensions(right,top+step*12,cw,20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("SAVE & RETURN"),b->close()).dimensions(width/2-100,top+step*13+3,200,20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("HUD EDITOR"),b->client.setScreen(new PhoenixHudEditorScreen(this))).dimensions(left,top+step*13+3,cw,20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("SAVE & RETURN"),b->close()).dimensions(right,top+step*13+3,cw,20).build());
     }
     private void addToggle(int x,int y,String name,boolean enabled,Runnable action){
         addDrawableChild(ButtonWidget.builder(label(name,enabled),b->{action.run();b.setMessage(label(name,state(name)));})

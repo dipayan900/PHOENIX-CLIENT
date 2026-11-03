@@ -1,6 +1,7 @@
 package net.phoenix.client.branding;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -13,6 +14,11 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Properties;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
@@ -35,6 +41,12 @@ public final class PhoenixHud {
     private static double previousGamma = 1.0, previousChatOpacity = 1.0;
     private static int crosshairStyle=0, crosshairColor=0xFFFF7A35, crosshairSize=7, crosshairGap=3, crosshairThickness=1;
     private static boolean crosshairDot=false;
+    private static int hudX=10,hudY=10;
+    private static Path configFile(){return FabricLoader.getInstance().getConfigDir().resolve("phoenix-client.properties");}
+    public static int getHudX(){return hudX;} public static int getHudY(){return hudY;}
+    public static void setHudPosition(int x,int y){hudX=Math.max(0,x);hudY=Math.max(0,y);saveConfig();}
+    private static void loadConfig(){try{Path p=configFile();if(Files.exists(p)){Properties v=new Properties();try(InputStream in=Files.newInputStream(p)){v.load(in);}hudX=Math.max(0,Integer.parseInt(v.getProperty("hud.x","10")));hudY=Math.max(0,Integer.parseInt(v.getProperty("hud.y","10")));crosshairStyle=Math.max(0,Math.min(4,Integer.parseInt(v.getProperty("crosshair.style","0"))));crosshairColor=(int)Long.parseLong(v.getProperty("crosshair.color","4294937141"));crosshairSize=Math.max(3,Math.min(18,Integer.parseInt(v.getProperty("crosshair.size","7"))));crosshairGap=Math.max(0,Math.min(10,Integer.parseInt(v.getProperty("crosshair.gap","3"))));crosshairThickness=Math.max(1,Math.min(4,Integer.parseInt(v.getProperty("crosshair.thickness","1"))));crosshairDot=Boolean.parseBoolean(v.getProperty("crosshair.dot","false"));customCrosshairEnabled=Boolean.parseBoolean(v.getProperty("crosshair.enabled","false"));}}catch(Exception ignored){}}
+    public static void saveConfig(){try{Path p=configFile();Files.createDirectories(p.getParent());Properties v=new Properties();v.setProperty("hud.x",String.valueOf(hudX));v.setProperty("hud.y",String.valueOf(hudY));v.setProperty("crosshair.style",String.valueOf(crosshairStyle));v.setProperty("crosshair.color",Long.toString(Integer.toUnsignedLong(crosshairColor)));v.setProperty("crosshair.size",String.valueOf(crosshairSize));v.setProperty("crosshair.gap",String.valueOf(crosshairGap));v.setProperty("crosshair.thickness",String.valueOf(crosshairThickness));v.setProperty("crosshair.dot",String.valueOf(crosshairDot));v.setProperty("crosshair.enabled",String.valueOf(customCrosshairEnabled));try(OutputStream out=Files.newOutputStream(p)){v.store(out,"Phoenix Client settings");}}catch(Exception ignored){}}
 
     private PhoenixHud() {}
     public static boolean isVisible(){return visible;}
@@ -107,6 +119,7 @@ public final class PhoenixHud {
     public static void clearWaypoint(){waypoint=null;waypointDimension=null;}
 
     public static void register(){
+        loadConfig();
         zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,"category.phoenix"));
         ClientTickEvents.END_CLIENT_TICK.register(client->{
             if(client.player!=null&&!client.isPaused())sessionTicks++;
@@ -136,7 +149,7 @@ public final class PhoenixHud {
                     +(sessionTimeEnabled?1:0)+(waypointEnabled&&waypoint!=null?1:0)+(inventoryOverlayEnabled?1:0)
                     +(lightLevelEnabled?1:0)+(entityOverlayEnabled?3:0)+(toolInfoEnabled?1:0);
             if(lines==0)return;
-            int x=10,y=10,w=230,h=19+lines*12;
+            int x=hudX,y=hudY,w=230,h=19+lines*12;
             draw.fill(x,y,x+w,y+h,0xB5100D14);draw.fill(x,y,x+2,y+h,0xFFFF702E);
             draw.drawTextWithShadow(c.textRenderer,Text.literal("PHOENIX  /  MODULES"),x+8,y+5,0xFFFF8A4C);
             int row=y+19;
@@ -175,5 +188,5 @@ public final class PhoenixHud {
         if(crosshairDot)d.fill(cx-1,cy-1,cx+2,cy+2,col);
     }
     private static String duration(int ticks){int s=Math.max(0,ticks)/20;return String.format(java.util.Locale.ROOT,"%d:%02d",s/60,s%60);}
-    private static void line(net.minecraft.client.gui.DrawContext d,MinecraftClient c,String k,String v,int y){d.drawTextWithShadow(c.textRenderer,Text.literal(k),18,y,0xFFFFA06C);d.drawTextWithShadow(c.textRenderer,Text.literal(v),96,y,0xFFF4EDF4);}
+    private static void line(net.minecraft.client.gui.DrawContext d,MinecraftClient c,String k,String v,int y){d.drawTextWithShadow(c.textRenderer,Text.literal(k),hudX+8,y,0xFFFFA06C);d.drawTextWithShadow(c.textRenderer,Text.literal(v),hudX+86,y,0xFFF4EDF4);}
 }
