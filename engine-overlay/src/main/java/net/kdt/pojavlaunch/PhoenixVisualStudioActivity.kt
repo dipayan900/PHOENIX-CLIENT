@@ -44,6 +44,15 @@ import kotlin.math.sin
  * animation preferences and profile-scoped keybind presets.
  */
 class PhoenixVisualStudioActivity : ComponentActivity() {
+    private var crestSurface: PhoenixCrestSurface? = null
+    override fun onResume() {
+        super.onResume()
+        crestSurface?.onResume()
+    }
+    override fun onPause() {
+        crestSurface?.onPause()
+        super.onPause()
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { PhoenixVisualStudioScreen { finish() } }
@@ -137,7 +146,11 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
                                 Text("RENDERED PHOENIX CREST", color = orange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 Text("A real OpenGL ES 2.0 mesh, rendered with depth and perspective. Drag across the crest to rotate it.", color = muted, fontSize = 12.sp)
                                 AndroidView(
-                                    factory = { ctx -> PhoenixCrestSurface(ctx).apply { setRenderer(PhoenixCrestRenderer()); renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY } },
+                                    factory = { ctx -> PhoenixCrestSurface(ctx).also { surface ->
+                                        crestSurface = surface
+                                        surface.setRenderer(PhoenixCrestRenderer())
+                                        surface.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+                                    } },
                                     modifier = Modifier.fillMaxWidth().height(250.dp)
                                 )
                                 Text("Live 3D · GPU rendered · touch rotation", color = muted, fontSize = 10.sp)
@@ -380,8 +393,6 @@ private class PhoenixCrestRenderer : GLSurfaceView.Renderer {
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount)
         GLES20.glDisableVertexAttribArray(position)
         GLES20.glDisableVertexAttribArray(color)
-        // Cap the continuously rendered preview to roughly 30 fps.
-        try { Thread.sleep(33) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
     }
     private fun linkProgram(vs: String, fs: String): Int {
         fun compile(type: Int, source: String): Int {
