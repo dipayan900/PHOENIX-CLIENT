@@ -60,12 +60,111 @@ public final class PhoenixHud {
     private static Path configFile(){return FabricLoader.getInstance().getConfigDir().resolve("phoenix-client.properties");}
     public static int getHudX(){return hudX;} public static int getHudY(){return hudY;}
     public static void setHudPosition(int x,int y){hudX=Math.max(0,x);hudY=Math.max(0,y);saveConfig();}
-    private static void loadConfig(){try{Path p=configFile();if(Files.exists(p)){Properties v=new Properties();try(InputStream in=Files.newInputStream(p)){v.load(in);}hudX=Math.max(0,Integer.parseInt(v.getProperty("hud.x","10")));hudY=Math.max(0,Integer.parseInt(v.getProperty("hud.y","10")));crosshairStyle=Math.max(0,Math.min(4,Integer.parseInt(v.getProperty("crosshair.style","0"))));crosshairColor=(int)Long.parseLong(v.getProperty("crosshair.color","4294937141"));crosshairSize=Math.max(3,Math.min(18,Integer.parseInt(v.getProperty("crosshair.size","7"))));crosshairGap=Math.max(0,Math.min(10,Integer.parseInt(v.getProperty("crosshair.gap","3"))));crosshairThickness=Math.max(1,Math.min(4,Integer.parseInt(v.getProperty("crosshair.thickness","1"))));crosshairDot=Boolean.parseBoolean(v.getProperty("crosshair.dot","false"));customCrosshairEnabled=Boolean.parseBoolean(v.getProperty("crosshair.enabled","false"));
-        for(String k:v.stringPropertyNames())if(k.startsWith("element.")&&k.endsWith(".x")){String id=k.substring(8,k.length()-2);try{int ex=Integer.parseInt(v.getProperty(k));int ey=Integer.parseInt(v.getProperty("element."+id+".y","10"));elementPositions.put(id,new int[]{Math.max(0,ex),Math.max(0,ey)});}catch(Exception ignored){}}
-        }}catch(Exception ignored){}}
-    public static void saveConfig(){try{Path p=configFile();Files.createDirectories(p.getParent());Properties v=new Properties();v.setProperty("hud.x",String.valueOf(hudX));v.setProperty("hud.y",String.valueOf(hudY));v.setProperty("crosshair.style",String.valueOf(crosshairStyle));v.setProperty("crosshair.color",Long.toString(Integer.toUnsignedLong(crosshairColor)));v.setProperty("crosshair.size",String.valueOf(crosshairSize));v.setProperty("crosshair.gap",String.valueOf(crosshairGap));v.setProperty("crosshair.thickness",String.valueOf(crosshairThickness));v.setProperty("crosshair.dot",String.valueOf(crosshairDot));v.setProperty("crosshair.enabled",String.valueOf(customCrosshairEnabled));
-        for(var e:elementPositions.entrySet()){v.setProperty("element."+e.getKey()+".x",String.valueOf(e.getValue()[0]));v.setProperty("element."+e.getKey()+".y",String.valueOf(e.getValue()[1]));}
-        try(OutputStream out=Files.newOutputStream(p)){v.store(out,"Phoenix Client settings");}}catch(Exception ignored){}}
+    private static void loadConfig() {
+        try {
+            Path path = configFile();
+            if (!Files.exists(path)) return;
+            Properties values = new Properties();
+            try (InputStream in = Files.newInputStream(path)) { values.load(in); }
+            hudX = Math.max(0, Integer.parseInt(values.getProperty("hud.x", "10")));
+            hudY = Math.max(0, Integer.parseInt(values.getProperty("hud.y", "10")));
+            crosshairStyle = Math.max(0, Math.min(4, Integer.parseInt(values.getProperty("crosshair.style", "0"))));
+            crosshairColor = (int) Long.parseLong(values.getProperty("crosshair.color", "4294937141"));
+            crosshairSize = Math.max(3, Math.min(18, Integer.parseInt(values.getProperty("crosshair.size", "7"))));
+            crosshairGap = Math.max(0, Math.min(10, Integer.parseInt(values.getProperty("crosshair.gap", "3"))));
+            crosshairThickness = Math.max(1, Math.min(4, Integer.parseInt(values.getProperty("crosshair.thickness", "1"))));
+            crosshairDot = Boolean.parseBoolean(values.getProperty("crosshair.dot", "false"));
+            customCrosshairEnabled = Boolean.parseBoolean(values.getProperty("crosshair.enabled", "false"));
+            visible = setting(values, "hud.visible", visible);
+            fpsEnabled = setting(values, "hud.fps", fpsEnabled);
+            coordinatesEnabled = setting(values, "hud.coordinates", coordinatesEnabled);
+            directionEnabled = setting(values, "hud.direction", directionEnabled);
+            armorEnabled = setting(values, "hud.armor", armorEnabled);
+            clockEnabled = setting(values, "hud.clock", clockEnabled);
+            pingEnabled = setting(values, "hud.ping", pingEnabled);
+            speedEnabled = setting(values, "hud.speed", speedEnabled);
+            biomeEnabled = setting(values, "hud.biome", biomeEnabled);
+            dimensionEnabled = setting(values, "hud.dimension", dimensionEnabled);
+            worldTimeEnabled = setting(values, "hud.world_time", worldTimeEnabled);
+            attackIndicatorEnabled = setting(values, "hud.attack", attackIndicatorEnabled);
+            potionEffectsEnabled = setting(values, "hud.potions", potionEffectsEnabled);
+            itemCounterEnabled = setting(values, "hud.item_counter", itemCounterEnabled);
+            keystrokesEnabled = setting(values, "hud.keystrokes", keystrokesEnabled);
+            sessionTimeEnabled = setting(values, "hud.session", sessionTimeEnabled);
+            fullbrightEnabled = setting(values, "hud.fullbright", fullbrightEnabled);
+            waypointEnabled = setting(values, "hud.waypoint", waypointEnabled);
+            inventoryOverlayEnabled = setting(values, "hud.inventory", inventoryOverlayEnabled);
+            chatTransparencyEnabled = setting(values, "hud.chat_transparency", chatTransparencyEnabled);
+            lightLevelEnabled = setting(values, "hud.light_level", lightLevelEnabled);
+            entityOverlayEnabled = setting(values, "hud.nearby_entities", entityOverlayEnabled);
+            toolInfoEnabled = setting(values, "hud.tool_info", toolInfoEnabled);
+            cpsEnabled = setting(values, "hud.cps", cpsEnabled);
+            sprintToggled = setting(values, "module.toggle_sprint", sprintToggled);
+            for (String key : values.stringPropertyNames()) {
+                if (key.startsWith("element.") && key.endsWith(".x")) {
+                    String id = key.substring(8, key.length() - 2);
+                    try {
+                        int x = Integer.parseInt(values.getProperty(key));
+                        int y = Integer.parseInt(values.getProperty("element." + id + ".y", "10"));
+                        elementPositions.put(id, new int[]{Math.max(0, x), Math.max(0, y)});
+                    } catch (NumberFormatException ignored) { }
+                }
+            }
+        } catch (Exception ignored) { }
+    }
+
+    private static boolean setting(Properties values, String key, boolean fallback) {
+        return Boolean.parseBoolean(values.getProperty(key, String.valueOf(fallback)));
+    }
+
+    public static void saveConfig() {
+        try {
+            Path path = configFile();
+            Files.createDirectories(path.getParent());
+            Properties values = new Properties();
+            values.setProperty("hud.x", String.valueOf(hudX));
+            values.setProperty("hud.y", String.valueOf(hudY));
+            values.setProperty("crosshair.style", String.valueOf(crosshairStyle));
+            values.setProperty("crosshair.color", Long.toString(Integer.toUnsignedLong(crosshairColor)));
+            values.setProperty("crosshair.size", String.valueOf(crosshairSize));
+            values.setProperty("crosshair.gap", String.valueOf(crosshairGap));
+            values.setProperty("crosshair.thickness", String.valueOf(crosshairThickness));
+            values.setProperty("crosshair.dot", String.valueOf(crosshairDot));
+            values.setProperty("crosshair.enabled", String.valueOf(customCrosshairEnabled));
+            values.setProperty("hud.visible", String.valueOf(visible));
+            values.setProperty("hud.fps", String.valueOf(fpsEnabled));
+            values.setProperty("hud.coordinates", String.valueOf(coordinatesEnabled));
+            values.setProperty("hud.direction", String.valueOf(directionEnabled));
+            values.setProperty("hud.armor", String.valueOf(armorEnabled));
+            values.setProperty("hud.clock", String.valueOf(clockEnabled));
+            values.setProperty("hud.ping", String.valueOf(pingEnabled));
+            values.setProperty("hud.speed", String.valueOf(speedEnabled));
+            values.setProperty("hud.biome", String.valueOf(biomeEnabled));
+            values.setProperty("hud.dimension", String.valueOf(dimensionEnabled));
+            values.setProperty("hud.world_time", String.valueOf(worldTimeEnabled));
+            values.setProperty("hud.attack", String.valueOf(attackIndicatorEnabled));
+            values.setProperty("hud.potions", String.valueOf(potionEffectsEnabled));
+            values.setProperty("hud.item_counter", String.valueOf(itemCounterEnabled));
+            values.setProperty("hud.keystrokes", String.valueOf(keystrokesEnabled));
+            values.setProperty("hud.session", String.valueOf(sessionTimeEnabled));
+            values.setProperty("hud.fullbright", String.valueOf(fullbrightEnabled));
+            values.setProperty("hud.waypoint", String.valueOf(waypointEnabled));
+            values.setProperty("hud.inventory", String.valueOf(inventoryOverlayEnabled));
+            values.setProperty("hud.chat_transparency", String.valueOf(chatTransparencyEnabled));
+            values.setProperty("hud.light_level", String.valueOf(lightLevelEnabled));
+            values.setProperty("hud.nearby_entities", String.valueOf(entityOverlayEnabled));
+            values.setProperty("hud.tool_info", String.valueOf(toolInfoEnabled));
+            values.setProperty("hud.cps", String.valueOf(cpsEnabled));
+            values.setProperty("module.toggle_sprint", String.valueOf(sprintToggled));
+            for (var entry : elementPositions.entrySet()) {
+                values.setProperty("element." + entry.getKey() + ".x", String.valueOf(entry.getValue()[0]));
+                values.setProperty("element." + entry.getKey() + ".y", String.valueOf(entry.getValue()[1]));
+            }
+            try (OutputStream out = Files.newOutputStream(path)) {
+                values.store(out, "Phoenix Client settings");
+            }
+        } catch (Exception ignored) { }
+    }
 
     private PhoenixHud() {}
     public static boolean isVisible(){return visible;}
@@ -108,32 +207,32 @@ public final class PhoenixHud {
     public static void adjustCrosshairThickness(int delta){crosshairThickness=Math.max(1,Math.min(4,crosshairThickness+delta));saveConfig();}
     public static void toggleCrosshairDot(){crosshairDot=!crosshairDot;saveConfig();}
 
-    public static void toggle(){visible=!visible;}
-    public static void toggleFps(){fpsEnabled=!fpsEnabled;}
-    public static void toggleCoordinates(){coordinatesEnabled=!coordinatesEnabled;}
-    public static void toggleDirection(){directionEnabled=!directionEnabled;}
-    public static void toggleArmor(){armorEnabled=!armorEnabled;}
-    public static void toggleClock(){clockEnabled=!clockEnabled;}
-    public static void togglePing(){pingEnabled=!pingEnabled;}
-    public static void toggleSpeed(){speedEnabled=!speedEnabled;}
-    public static void toggleBiome(){biomeEnabled=!biomeEnabled;}
-    public static void toggleDimension(){dimensionEnabled=!dimensionEnabled;}
-    public static void toggleWorldTime(){worldTimeEnabled=!worldTimeEnabled;}
-    public static void toggleAttackIndicator(){attackIndicatorEnabled=!attackIndicatorEnabled;}
-    public static void togglePotionEffects(){potionEffectsEnabled=!potionEffectsEnabled;}
-    public static void toggleItemCounter(){itemCounterEnabled=!itemCounterEnabled;}
-    public static void toggleKeystrokes(){keystrokesEnabled=!keystrokesEnabled;}
-    public static void toggleSessionTime(){sessionTimeEnabled=!sessionTimeEnabled;}
-    public static void toggleFullbright(){fullbrightEnabled=!fullbrightEnabled;}
-    public static void toggleWaypoint(){waypointEnabled=!waypointEnabled;}
-    public static void toggleInventoryOverlay(){inventoryOverlayEnabled=!inventoryOverlayEnabled;}
-    public static void toggleChatTransparency(){chatTransparencyEnabled=!chatTransparencyEnabled;}
-    public static void toggleLightLevel(){lightLevelEnabled=!lightLevelEnabled;}
-    public static void toggleEntityOverlay(){entityOverlayEnabled=!entityOverlayEnabled;}
+    public static void toggle(){visible=!visible;saveConfig();}
+    public static void toggleFps(){fpsEnabled=!fpsEnabled;saveConfig();}
+    public static void toggleCoordinates(){coordinatesEnabled=!coordinatesEnabled;saveConfig();}
+    public static void toggleDirection(){directionEnabled=!directionEnabled;saveConfig();}
+    public static void toggleArmor(){armorEnabled=!armorEnabled;saveConfig();}
+    public static void toggleClock(){clockEnabled=!clockEnabled;saveConfig();}
+    public static void togglePing(){pingEnabled=!pingEnabled;saveConfig();}
+    public static void toggleSpeed(){speedEnabled=!speedEnabled;saveConfig();}
+    public static void toggleBiome(){biomeEnabled=!biomeEnabled;saveConfig();}
+    public static void toggleDimension(){dimensionEnabled=!dimensionEnabled;saveConfig();}
+    public static void toggleWorldTime(){worldTimeEnabled=!worldTimeEnabled;saveConfig();}
+    public static void toggleAttackIndicator(){attackIndicatorEnabled=!attackIndicatorEnabled;saveConfig();}
+    public static void togglePotionEffects(){potionEffectsEnabled=!potionEffectsEnabled;saveConfig();}
+    public static void toggleItemCounter(){itemCounterEnabled=!itemCounterEnabled;saveConfig();}
+    public static void toggleKeystrokes(){keystrokesEnabled=!keystrokesEnabled;saveConfig();}
+    public static void toggleSessionTime(){sessionTimeEnabled=!sessionTimeEnabled;saveConfig();}
+    public static void toggleFullbright(){fullbrightEnabled=!fullbrightEnabled;saveConfig();}
+    public static void toggleWaypoint(){waypointEnabled=!waypointEnabled;saveConfig();}
+    public static void toggleInventoryOverlay(){inventoryOverlayEnabled=!inventoryOverlayEnabled;saveConfig();}
+    public static void toggleChatTransparency(){chatTransparencyEnabled=!chatTransparencyEnabled;saveConfig();}
+    public static void toggleLightLevel(){lightLevelEnabled=!lightLevelEnabled;saveConfig();}
+    public static void toggleEntityOverlay(){entityOverlayEnabled=!entityOverlayEnabled;saveConfig();}
     public static void toggleCustomCrosshair(){customCrosshairEnabled=!customCrosshairEnabled;saveConfig();}
-    public static void toggleToolInfo(){toolInfoEnabled=!toolInfoEnabled;}
-    public static void toggleCps(){cpsEnabled=!cpsEnabled;}
-    public static void toggleSprint(){sprintToggled=!sprintToggled;}
+    public static void toggleToolInfo(){toolInfoEnabled=!toolInfoEnabled;saveConfig();}
+    public static void toggleCps(){cpsEnabled=!cpsEnabled;saveConfig();}
+    public static void toggleSprint(){sprintToggled=!sprintToggled;saveConfig();}
 
     public static void setWaypointHere(){
         MinecraftClient c=MinecraftClient.getInstance();
@@ -147,7 +246,7 @@ public final class PhoenixHud {
         sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,"category.phoenix"));
         ClientTickEvents.END_CLIENT_TICK.register(client->{
             if(client.player!=null&&!client.isPaused())sessionTicks++;
-            while(sprintToggleKey.wasPressed())sprintToggled=!sprintToggled;
+            while(sprintToggleKey.wasPressed()){sprintToggled=!sprintToggled;saveConfig();}
             if(client.player!=null&&sprintToggled)client.player.setSprinting(client.options.forwardKey.isPressed()&&!client.player.isSneaking());
             long now=System.currentTimeMillis();
             if(client.getWindow()!=null){boolean left=org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT)==org.lwjgl.glfw.GLFW.GLFW_PRESS;boolean right=org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)==org.lwjgl.glfw.GLFW.GLFW_PRESS;if((left&&!lastLeftDown)||(right&&!lastRightDown))clickTimes.addLast(now);lastLeftDown=left;lastRightDown=right;}
