@@ -132,6 +132,7 @@ public final class PhoenixClientScreen extends Screen {
             addAction("VISUAL MODULE SETTINGS",x,y+102,w,()->client.setScreen(new PhoenixVisualSettingsScreen(this)));
             addAction("APPEARANCE: "+PhoenixHud.getUiTheme()+"  ·  CHANGE",x,y+136,w,()->{PhoenixHud.cycleUiTheme();switchTo("SETTINGS",category,0);});
             addAction("RESET HUD POSITIONS",x,y+170,w,PhoenixHud::resetElementPositions);
+            addAction("INDIVIDUAL MODULE CONFIG",x,y+204,w,()->client.setScreen(new PhoenixModuleSettingsScreen(this)));
         } else if(tab.equals("KEYBINDS")){
             int x=width/2-125,y=105;
             String[][] keys={{"OPEN PHOENIX MENU","RIGHT SHIFT"},{"HOLD TO ZOOM","C"},{"TOGGLE SPRINT","G"}};
@@ -173,6 +174,7 @@ public final class PhoenixClientScreen extends Screen {
     @Override public void render(DrawContext draw,int mouseX,int mouseY,float delta){
         renderBackground(draw,mouseX,mouseY,delta);
         super.render(draw,mouseX,mouseY,delta);
+        PhoenixScreenStyle.renderChrome(this, draw);
     }
     @Override public void close(){if(client!=null)client.setScreen(parent);}
 }
