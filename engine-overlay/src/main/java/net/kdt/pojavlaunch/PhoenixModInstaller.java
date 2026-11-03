@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 public final class PhoenixModInstaller {
     private static final String TAG = "PhoenixModInstaller";
     private static final Pattern MC_VERSION =
-            Pattern.compile("(?<![0-9])1\.21\.(?:[1-9]|1[01])(?![0-9])");
+            Pattern.compile("(?<![0-9])1\\.21\\.(?:[1-9]|1[01])(?![0-9])");
     private PhoenixModInstaller() {}
 
     private static void notify(Context context, String message) {
