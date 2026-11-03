@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "product": "Phoenix Client",
+  "target": {
+    "minecraft": {
+      "minimum": "1.8.9",
+      "maximum": "latest",
+      "channel": "release"
+    },
+    "loaders": ["vanilla", "fabric"],
+    "manualModInstallation": false
+  },
+  "architecture": {
+    "sharedCore": "phoenix-core",
+    "versionAdapters": [
+      {
+        "id": "legacy",
+        "range": "1.8.9-1.12.2",
+        "status": "planned",
+        "notes": "Legacy rendering, GUI, HUD and input APIs require a dedicated adapter."
+      },
+      {
+        "id": "transition",
+        "range": "1.13-1.16.5",
+        "status": "planned",
+        "notes": "Dedicated adapter for the rendering and resource-system transition."
+      },
+      {
+        "id": "modern",
+        "range": "1.17-latest",
+        "status": "planned",
+        "notes": "Modern rendering and screen APIs; version-specific mappings and tests required."
+      }
+    ],
+    "loaderAdapters": {
+      "vanilla": {
+        "status": "planned",
+        "integration": "Phoenix-managed isolated runtime/bootstrap; never load a Fabric mod in a Vanilla profile."
+      },
+      "fabric": {
+        "status": "partial",
+        "integration": "Fabric loader adapter",
+        "implementedMinecraftVersions": ["1.21.1"]
+      }
+    }
+  },
+  "verifiedBuilds": [
+    {
+      "minecraft": "1.21.1",
+      "loader": "fabric",
+      "status": "build-verified",
+      "runtimeVerified": false,
+      "artifact": "phoenix-branding-fabric-1.21.1.jar"
+    }
+  ],
+  "releasePolicy": {
+    "doNotAdvertiseUnverifiedCombinations": true,
+    "requireRuntimeSmokeTest": true,
+    "requireVanillaAndFabricSeparateTests": true,
+    "requireStartupMenuHudAndOptionsChecks": true
+  }
+}
