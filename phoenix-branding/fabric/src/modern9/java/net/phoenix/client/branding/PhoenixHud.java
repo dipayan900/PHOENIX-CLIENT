@@ -40,6 +40,7 @@ public final class PhoenixHud {
     private static BlockPos waypoint;
     private static Identifier waypointDimension;
     private static KeyBinding zoomKey, sprintToggleKey;
+    private static final KeyBinding.Category PHOENIX_CATEGORY = KeyBinding.Category.create(Identifier.of("phoenix", "controls"));
     private static boolean sprintToggled, cpsEnabled=true, lastLeftDown, lastRightDown;
     private static final ArrayDeque<Long> clickTimes = new ArrayDeque<>();
     private static boolean zoomActive;
@@ -242,8 +243,8 @@ public final class PhoenixHud {
 
     public static void register(){
         loadConfig();
-        zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,KeyBinding.Category.create(Identifier.of("phoenix","controls"))));
-        sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,KeyBinding.Category.create(Identifier.of("phoenix","controls"))));
+        zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,PHOENIX_CATEGORY));
+        sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,PHOENIX_CATEGORY));
         ClientTickEvents.END_CLIENT_TICK.register(client->{
             if(client.player!=null&&!client.isPaused())sessionTicks++;
             while(sprintToggleKey.wasPressed()){sprintToggled=!sprintToggled;saveConfig();}
