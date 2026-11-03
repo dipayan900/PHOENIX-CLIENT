@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -795,7 +796,17 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val appearancePanel = if (useDarkAppearance) PhoenixPanel else Color(0xFFFFFFFF)
     val appearanceMuted = if (useDarkAppearance) PhoenixMuted else Color(0xFF62616B)
     val appearanceText = if (useDarkAppearance) Color.White else Color(0xFF24232A)
-    SideEffect { runCatching { System.setProperty("phoenix.ui.theme", if (useDarkAppearance) "dark" else "light") } }
+    SideEffect {
+        runCatching {
+            System.setProperty("phoenix.ui.theme", if (useDarkAppearance) "dark" else "light")
+            System.setProperty("phoenix.ui.reduced_motion", reducedMotion.toString())
+            AppCompatDelegate.setDefaultNightMode(when (appearanceChoice) {
+                "DARK" -> AppCompatDelegate.MODE_NIGHT_YES
+                "LIGHT" -> AppCompatDelegate.MODE_NIGHT_NO
+                else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            })
+        }
+    }
 
     fun persist() {
         val synced = connectProfilesToEngine(profiles.toList(), activeId)
