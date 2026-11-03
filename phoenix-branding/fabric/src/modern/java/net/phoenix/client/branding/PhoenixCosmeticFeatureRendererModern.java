@@ -37,19 +37,19 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
 
         root.addChild("cape", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-5,0,0,10,15,1).cuboid(-4.5F,1,1,9,13,0.5F),
-                ModelTransform.of(0,0,2.2F));
+                ModelTransform.of(0,0,2.2F, 0, 0, 0));
         root.addChild("cape_trim", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-5.5F,0,0,1,16,1.5F).cuboid(4.5F,0,0,1,16,1.5F)
-                .cuboid(-5,15,0,10,1,1.5F), ModelTransform.of(0,0,2.2F));
+                .cuboid(-5,15,0,10,1,1.5F), ModelTransform.of(0,0,2.2F, 0, 0, 0));
         root.addChild("cape_lining", ModelPartBuilder.create().uv(0,0)
-                .cuboid(-3.5F,2,1.1F,7,11,0.35F), ModelTransform.of(0,0,2.2F));
+                .cuboid(-3.5F,2,1.1F,7,11,0.35F), ModelTransform.of(0,0,2.2F, 0, 0, 0));
 
         root.addChild("left_wing", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-1,-2,-1,4,7,2).cuboid(0,1,-0.7F,5,8,1.4F)
-                .cuboid(2,5,-0.5F,5,7,1), ModelTransform.of(-4.5F,0,2));
+                .cuboid(2,5,-0.5F,5,7,1), ModelTransform.of(-4.5F,0,2, 0, 0, 0));
         root.addChild("right_wing", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-3,-2,-1,4,7,2).cuboid(-5,1,-0.7F,5,8,1.4F)
-                .cuboid(-7,5,-0.5F,5,7,1), ModelTransform.of(4.5F,0,2));
+                .cuboid(-7,5,-0.5F,5,7,1), ModelTransform.of(4.5F,0,2, 0, 0, 0));
         // Individually layered feather vanes create a visibly dimensional fan,
         // rather than a single flat wing silhouette. Each feather has its own
         // volume and sits at a slightly different depth.
@@ -60,7 +60,7 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
                 .cuboid(3,10,-1.2F,2,7,1.7F).cuboid(5,11,-1.0F,2,6,1.6F)
                 .cuboid(7,12,-0.8F,2,5,1.5F).cuboid(9,13,-0.6F,2,4,1.4F)
                 .cuboid(-1,5,-0.8F,2,6,1.5F),
-                ModelTransform.of(-4.5F,0,2));
+                ModelTransform.of(-4.5F,0,2, 0, 0, 0));
         root.addChild("right_feathers", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-2,2,-1.2F,2,8,1.8F).cuboid(-4,3,-1.0F,2,9,1.7F)
                 .cuboid(-6,4,-0.8F,2,9,1.6F).cuboid(-8,5,-0.6F,2,8,1.5F)
@@ -68,16 +68,16 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
                 .cuboid(-5,10,-1.2F,2,7,1.7F).cuboid(-7,11,-1.0F,2,6,1.6F)
                 .cuboid(-9,12,-0.8F,2,5,1.5F).cuboid(-11,13,-0.6F,2,4,1.4F)
                 .cuboid(-1,5,-0.8F,2,6,1.5F),
-                ModelTransform.of(4.5F,0,2));
+                ModelTransform.of(4.5F,0,2, 0, 0, 0));
 
         root.addChild("headwear", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-4.5F,-9,-4.5F,9,1,9).cuboid(-2,-11,-2,4,2,4),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
         root.addChild("crown", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-4.5F,-9,-4.5F,9,1,9)
                 .cuboid(-4,-12,-1,1.5F,3,1.5F).cuboid(-1,-13,-1,2,4,2)
                 .cuboid(2.5F,-12,-1,1.5F,3,1.5F),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
         root.addChild("halo", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-4.5F,-12,-0.5F,9,0.8F,1)
                 .cuboid(-0.5F,-12,-4.5F,1,0.8F,9)
@@ -85,43 +85,43 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
                 .cuboid(2.5F,-12,-3.5F,1,0.8F,1)
                 .cuboid(-3.5F,-12,2.5F,1,0.8F,1)
                 .cuboid(2.5F,-12,2.5F,1,0.8F,1),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
         root.addChild("visor", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-4,-6,-4.7F,8,2,1).cuboid(-3.5F,-5,-4.8F,7,1,0.8F),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
         root.addChild("face_mask", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-3,-4,-4.65F,6,3,1).cuboid(-2.5F,-3.5F,-4.9F,5,1,0.6F),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
         root.addChild("horns", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-4,-8,-1,2,3,2).cuboid(-4.5F,-11,-1,1.5F,3,1.5F)
                 .cuboid(2,-8,-1,2,3,2).cuboid(3,-11,-1,1.5F,3,1.5F),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
 
         root.addChild("backpack", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-4,-3,2.5F,8,8,3).cuboid(-2,-5,3,4,2,2),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
         root.addChild("pack_details", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-3.5F,-2,5.6F,7,1,0.6F).cuboid(-3.5F,2,5.6F,7,1,0.6F)
                 .cuboid(-1,-1,5.7F,2,3,0.7F),
-                ModelTransform.of(0,0,0));
+                ModelTransform.of(0,0,0, 0, 0, 0));
 
         ModelPartData tail = root.addChild("tail_base", ModelPartBuilder.create().uv(0,0)
-                .cuboid(-1,0,0,2,5,2), ModelTransform.of(0,0,3));
+                .cuboid(-1,0,0,2,5,2), ModelTransform.of(0,0,3, 0, 0, 0));
         ModelPartData mid = tail.addChild("tail_mid", ModelPartBuilder.create().uv(0,0)
-                .cuboid(-1,0,0,2,5,2), ModelTransform.of(0,5,0));
+                .cuboid(-1,0,0,2,5,2), ModelTransform.of(0,5,0, 0, 0, 0));
         mid.addChild("tail_tip", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-1,0,0,2,4,2).cuboid(-1.5F,3,0,3,2,3),
-                ModelTransform.of(0,5,0));
+                ModelTransform.of(0,5,0, 0, 0, 0));
         root.addChild("left_bracer", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-2,5,-2,4,3,4).cuboid(-1.5F,4.5F,-1.5F,3,1,3),
-                ModelTransform.of(-5,2,0));
+                ModelTransform.of(-5,2,0, 0, 0, 0));
         root.addChild("right_bracer", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-2,5,-2,4,3,4).cuboid(-1.5F,4.5F,-1.5F,3,1,3),
-                ModelTransform.of(5,2,0));
+                ModelTransform.of(5,2,0, 0, 0, 0));
         root.addChild("shoulder_pet", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-2,-3,-2,4,4,4).cuboid(-1,-5,-1,2,2,2)
                 .cuboid(-2.5F,0,-1,1,2,2).cuboid(1.5F,0,-1,1,2,2),
-                ModelTransform.of(5,-2,0));
+                ModelTransform.of(5,-2,0, 0, 0, 0));
 
         ModelPart model = TexturedModelData.of(data,16,16).createModel();
         cape=model.getChild("cape"); capeTrim=model.getChild("cape_trim"); capeLining=model.getChild("cape_lining");
