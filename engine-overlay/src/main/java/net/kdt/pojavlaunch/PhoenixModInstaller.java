@@ -15,8 +15,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Installs the bundled Phoenix client into the selected Fabric profile before
- * the game starts. The user never has to download or copy a separate mod JAR.
+ * Installs the currently available Phoenix Fabric adapter before game launch.
+ * Vanilla and other-version adapters are intentionally rejected until their
+ * launcher-managed integration artifacts exist; no user profile is modified.
  */
 public final class PhoenixModInstaller {
     private static final String TAG = "PhoenixModInstaller";
@@ -42,7 +43,7 @@ public final class PhoenixModInstaller {
 
         String normalized = versionId.toLowerCase(Locale.ROOT);
         if (!normalized.contains("fabric")) {
-            String message = "Phoenix in-game features need a Fabric 1.21.1 profile. Selected: " + versionId;
+            String message = "Phoenix automatic Vanilla integration is not available yet. This profile was not modified: " + versionId;
             Log.w(TAG, message);
             notify(context, message);
             return;
@@ -50,7 +51,7 @@ public final class PhoenixModInstaller {
 
         Matcher matcher = MC_VERSION.matcher(versionId);
         if (!matcher.find()) {
-            String message = "Phoenix supports Fabric 1.21.1 only. Selected profile: " + versionId;
+            String message = "Phoenix integration is not available for this profile yet. This profile was not modified: " + versionId;
             Log.e(TAG, message);
             notify(context, message);
             return;
@@ -58,7 +59,7 @@ public final class PhoenixModInstaller {
 
         String mcVersion = matcher.group();
         if (!"1.21.1".equals(mcVersion)) {
-            String message = "Phoenix currently supports Fabric 1.21.1 only; " + mcVersion + " is not bundled.";
+            String message = "Phoenix Fabric integration for Minecraft " + mcVersion + " is not available yet. This profile was not modified.";
             Log.e(TAG, message);
             notify(context, message);
             return;
