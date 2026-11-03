@@ -60,7 +60,7 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
     val accentOptions = listOf("INFERNO", "FROST", "AMETHYST")
     var appearance by remember { mutableStateOf(prefs.getString("appearance_mode", "SYSTEM") ?: "SYSTEM") }
     var accent by remember { mutableStateOf(prefs.getString("theme_choice", "EMBER") ?: "EMBER") }
-    var activeProfile by remember { mutableStateOf(prefs.getString("active_profile_id", "main") ?: "main") }
+    var activeProfile by remember { mutableStateOf(prefs.getString("keybind_profile_id", prefs.getString("active_profile_id", "main")) ?: "main") }
     var reducedMotion by remember { mutableStateOf(prefs.getBoolean("visual_reduced_motion", false)) }
     var animations by remember { mutableStateOf(prefs.getBoolean("visual_animations", true)) }
     var focusEffects by remember { mutableStateOf(prefs.getBoolean("visual_focus_effects", true)) }
@@ -203,16 +203,17 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
                         item {
                             StudioCard(panel, {
                                 Text("KEYBIND PROFILES", color = orange, fontWeight = FontWeight.Bold)
-                                OutlinedTextField(activeProfile, { activeProfile = it.take(40); prefs.edit().putString("active_profile_id", activeProfile).apply() }, label = { Text("Active keybind profile ID") }, singleLine = true)
+                                OutlinedTextField(activeProfile, { activeProfile = it.take(40); prefs.edit().putString("keybind_profile_id", activeProfile).apply() }, label = { Text("Active keybind profile ID") }, singleLine = true)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(onClick = {
                                         activeProfile = "profile-" + java.util.UUID.randomUUID().toString().take(8)
-                                        prefs.edit().putString("active_profile_id", activeProfile).apply()
+                                        prefs.edit().putString("keybind_profile_id", activeProfile).apply()
                                         notice = "Created a new independent keybind profile."
                                     }) { Text("NEW PROFILE") }
                                     OutlinedButton(onClick = {
-                                        activeProfile = "main"
-                                        prefs.edit().putString("active_profile_id", activeProfile).apply()
+                                        val gameProfiles = org.json.JSONArray(prefs.getString("profiles_json", "[]") ?: "[]")
+                                        activeProfile = gameProfiles.optJSONObject(0)?.optString("id")?.takeIf { it.isNotBlank() } ?: "main"
+                                        prefs.edit().putString("keybind_profile_id", activeProfile).apply()
                                         notice = "Switched to the main keybind profile."
                                     }) { Text("MAIN PROFILE") }
                                 }
@@ -250,7 +251,7 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
                                         notice = "Keybind profile snapshot saved."
                                     }) { Text("SAVE PRESET") }
                                     Button(onClick = {
-                                        notice = runCatching { applyPhoenixKeybinds(context, prefs, activeProfile, binds) }
+                                        notice = runCatching { applyPhoenixKeybinds(context, prefs, activeProfile, prefs.getString("active_profile_id", "") ?: "", binds) }
                                             .getOrElse { it.message ?: "Could not apply Minecraft keybinds." }
                                     }) { Text("APPLY TO MINECRAFT") }
                                 }
@@ -450,14 +451,15 @@ private object CrestMesh {
 private fun applyPhoenixKeybinds(
     context: Context,
     prefs: android.content.SharedPreferences,
-    phoenixProfileId: String,
+    keybindProfileId: String,
+    activeGameProfileId: String,
     binds: List<PhoenixBind>
 ): String {
     val profiles = org.json.JSONArray(prefs.getString("profiles_json", "[]") ?: "[]")
     var engineProfileId: String? = null
     for (index in 0 until profiles.length()) {
         val entry = profiles.optJSONObject(index) ?: continue
-        if (entry.optString("id") == phoenixProfileId) {
+        if (entry.optString("id") == activeGameProfileId) {
             engineProfileId = entry.optString("engineProfileId").takeIf { it.isNotBlank() }
             break
         }
@@ -494,7 +496,7 @@ private fun applyPhoenixKeybinds(
     val resolved = linkedMapOf<String, String>()
     val used = mutableMapOf<Int, String>()
     binds.forEach { bind ->
-        val raw = prefs.getString("bind_${phoenixProfileId}_${bind.id}", bind.defaultKey) ?: bind.defaultKey
+        val raw = prefs.getString("bind_${keybindProfileId}_${bind.id}", bind.defaultKey) ?: bind.defaultKey
         val code = keyCodes[raw.uppercase(Locale.ROOT)]
             ?: throw java.io.IOException("Unsupported key '$raw' for ${bind.title}. Use a letter, number, function key or named key.")
         val previous = used.put(code, bind.title)
