@@ -113,6 +113,7 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
         else -> Color(0xFFFF702E)
     }
     val orange by animateColorAsState(targetValue = targetAccent, label = "phoenix-studio-accent")
+    SideEffect { runCatching { System.setProperty("phoenix.ui.theme", if (dark) "dark" else "light") } }
     MaterialTheme(colorScheme = if (dark) darkColorScheme(primary = orange, background = bg, surface = panel) else lightColorScheme(primary = orange, background = bg, surface = panel)) {
         Scaffold(containerColor = bg, topBar = {
             Row(Modifier.fillMaxWidth().background(panel).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
