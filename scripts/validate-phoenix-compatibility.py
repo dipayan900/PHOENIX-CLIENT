@@ -1,41 +1,51 @@
 #!/usr/bin/env python3
-"""Validate Phoenix's declared compatibility target and truthful support matrix."""
+"""Validate Phoenix's requested 1.21.1–1.21.11 target and truthful support matrix."""
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MATRIX = ROOT / "phoenix-compatibility" / "compatibility-matrix.json"
+EXPECTED = [f"1.21.{minor}" for minor in range(1, 12)]
 
 def main():
     data = json.loads(MATRIX.read_text(encoding="utf-8"))
     target = data["target"]
-    assert target["minecraft"]["minimum"] == "1.8.9"
-    assert target["minecraft"]["maximum"] == "latest"
+    mc = target["minecraft"]
+    assert mc["minimum"] == "1.21.1"
+    assert mc["maximum"] == "1.21.11"
+    assert mc["requestedVersions"] == EXPECTED
     assert set(target["loaders"]) == {"vanilla", "fabric"}
     assert target["manualModInstallation"] is False
 
     adapters = data["architecture"]["versionAdapters"]
-    assert [a["id"] for a in adapters] == ["legacy", "transition", "modern"]
-    assert adapters[0]["range"] == "1.8.9-1.12.2"
-    assert adapters[1]["range"] == "1.13-1.16.5"
-    assert adapters[2]["range"] == "1.17-latest"
+    assert len(adapters) == 1
+    assert adapters[0]["id"] == "modern-1.21"
+    assert adapters[0]["range"] == "1.21.1-1.21.11"
 
     fabric_versions = set(
         data["architecture"]["loaderAdapters"]["fabric"]["implementedMinecraftVersions"]
     )
-    vanilla_status = data["architecture"]["loaderAdapters"]["vanilla"]["status"]
     assert fabric_versions == {"1.21.1"}
-    assert vanilla_status == "planned"
+    assert data["architecture"]["loaderAdapters"]["vanilla"]["status"] == "planned"
+
+    rows = data["architecture"]["versionStatus"]
+    assert [row["minecraft"] for row in rows] == EXPECTED
+    for row in rows:
+        assert row["vanilla"] == "planned"
+        expected = "build-verified-runtime-unverified" if row["minecraft"] in fabric_versions else "planned"
+        assert row["fabric"] == expected
 
     for build in data["verifiedBuilds"]:
+        assert build["minecraft"] in EXPECTED
         assert build["loader"] in target["loaders"]
-        assert build["minecraft"] in fabric_versions if build["loader"] == "fabric" else False
         if build["status"] == "build-verified":
-            assert build["runtimeVerified"] is False or build["runtimeVerified"] is True
+            assert build["runtimeVerified"] in (False, True)
 
-    print("Phoenix compatibility matrix is valid.")
-    print("Target: Minecraft 1.8.9–latest; Vanilla + Fabric; no manual mod installation.")
-    print("Currently build-verified: Fabric 1.21.1 only. Runtime verification remains separate.")
+    print("Phoenix compatibility target: Minecraft 1.21.1–1.21.11.")
+    print("Requested loaders: Vanilla + Fabric; launcher-managed installation.")
+    print("Current build evidence: Fabric 1.21.1 only; runtime not yet verified.")
+    print("All other version/loader combinations remain explicitly unverified.")
 
 if __name__ == "__main__":
     main()

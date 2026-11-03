@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve published Yarn and Fabric API builds for a Minecraft 1.21.x target."""
+"""Resolve published Yarn and Fabric API builds for Minecraft 1.21.1–1.21.11."""
 import re
 import sys
 import urllib.request
@@ -9,8 +9,9 @@ if len(sys.argv) != 2:
     raise SystemExit("usage: resolve-fabric-versions.py <minecraft-version>")
 
 minecraft = sys.argv[1]
-if not re.fullmatch(r"1\.21(?:\.\d+)?", minecraft):
-    raise SystemExit(f"Unsupported Minecraft target: {minecraft}")
+match = re.fullmatch(r"1\.21\.(\d+)", minecraft)
+if not match or not 1 <= int(match.group(1)) <= 11:
+    raise SystemExit(f"Unsupported Phoenix Minecraft target: {minecraft} (expected 1.21.1–1.21.11)")
 
 def published_versions(url):
     request = urllib.request.Request(url, headers={"User-Agent": "PhoenixClient-CI"})

@@ -3,46 +3,109 @@
   "product": "Phoenix Client",
   "target": {
     "minecraft": {
-      "minimum": "1.8.9",
-      "maximum": "latest",
+      "minimum": "1.21.1",
+      "maximum": "1.21.11",
+      "requestedVersions": [
+        "1.21.1",
+        "1.21.2",
+        "1.21.3",
+        "1.21.4",
+        "1.21.5",
+        "1.21.6",
+        "1.21.7",
+        "1.21.8",
+        "1.21.9",
+        "1.21.10",
+        "1.21.11"
+      ],
       "channel": "release"
     },
-    "loaders": ["vanilla", "fabric"],
+    "loaders": [
+      "vanilla",
+      "fabric"
+    ],
     "manualModInstallation": false
   },
   "architecture": {
     "sharedCore": "phoenix-core",
     "versionAdapters": [
       {
-        "id": "legacy",
-        "range": "1.8.9-1.12.2",
+        "id": "modern-1.21",
+        "range": "1.21.1-1.21.11",
         "status": "planned",
-        "notes": "Legacy rendering, GUI, HUD and input APIs require a dedicated adapter."
-      },
-      {
-        "id": "transition",
-        "range": "1.13-1.16.5",
-        "status": "planned",
-        "notes": "Dedicated adapter for the rendering and resource-system transition."
-      },
-      {
-        "id": "modern",
-        "range": "1.17-latest",
-        "status": "planned",
-        "notes": "Modern rendering and screen APIs; version-specific mappings and tests required."
+        "notes": "Each release requires a version-matched compile and runtime adapter; do not reuse mappings or GUI hooks without verification."
       }
     ],
     "loaderAdapters": {
       "vanilla": {
         "status": "planned",
-        "integration": "Phoenix-managed isolated runtime/bootstrap; never load a Fabric mod in a Vanilla profile."
+        "integration": "Phoenix-managed standalone integration; never install or load Fabric code in Vanilla."
       },
       "fabric": {
         "status": "partial",
-        "integration": "Fabric loader adapter",
-        "implementedMinecraftVersions": ["1.21.1"]
+        "integration": "Version-matched Fabric adapter builds",
+        "implementedMinecraftVersions": [
+          "1.21.1"
+        ]
       }
-    }
+    },
+    "versionStatus": [
+      {
+        "minecraft": "1.21.1",
+        "vanilla": "planned",
+        "fabric": "build-verified-runtime-unverified"
+      },
+      {
+        "minecraft": "1.21.2",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.3",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.4",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.5",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.6",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.7",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.8",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.9",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.10",
+        "vanilla": "planned",
+        "fabric": "planned"
+      },
+      {
+        "minecraft": "1.21.11",
+        "vanilla": "planned",
+        "fabric": "planned"
+      }
+    ]
   },
   "verifiedBuilds": [
     {
