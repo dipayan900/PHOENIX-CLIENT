@@ -12,6 +12,7 @@ public final class PhoenixBrandingClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        PhoenixHud.register();
         PayloadTypeRegistry.playC2S().register(PhoenixBrandPayload.ID, PhoenixBrandPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(PhoenixLoadoutPayload.ID, PhoenixLoadoutPayload.CODEC);
         ClientPlayNetworking.registerGlobalReceiver(PhoenixLoadoutPayload.ID,
