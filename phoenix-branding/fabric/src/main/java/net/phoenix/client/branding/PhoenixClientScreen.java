@@ -119,7 +119,8 @@ public final class PhoenixClientScreen extends Screen {
             addAction("PERFORMANCE & FPS",x,y,w,()->client.setScreen(new PhoenixPerformanceScreen(this)));
             addAction("HUD LAYOUT EDITOR",x,y+34,w,()->client.setScreen(new PhoenixHudEditorScreen(this)));
             addAction("CROSSHAIR STUDIO",x,y+68,w,()->client.setScreen(new PhoenixCrosshairScreen(this)));
-            addAction("APPEARANCE: "+PhoenixHud.getUiTheme()+"  ·  CHANGE",x,y+102,w,()->{PhoenixHud.cycleUiTheme();switchTo("SETTINGS",category,0);});
+            addAction("VISUAL MODULE SETTINGS",x,y+102,w,()->client.setScreen(new PhoenixVisualSettingsScreen(this)));
+            addAction("APPEARANCE: "+PhoenixHud.getUiTheme()+"  ·  CHANGE",x,y+136,w,()->{PhoenixHud.cycleUiTheme();switchTo("SETTINGS",category,0);});
             addAction("RESET HUD POSITIONS",x,y+170,w,PhoenixHud::resetElementPositions);
         } else if(tab.equals("KEYBINDS")){
             int x=width/2-125,y=105;
