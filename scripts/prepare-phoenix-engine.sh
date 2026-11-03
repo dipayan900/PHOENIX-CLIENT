@@ -409,9 +409,15 @@ replacement = """    private void runCraft(String versionId, JMinecraftVersionLi
                         PhoenixVanillaBootstrap.prepare(this, versionId, minecraftProfile);
                 versionId = prepared.versionId;
                 minecraftProfile = prepared.profile;
-                version = Tools.GLOBAL_GSON.fromJson(
+                JMinecraftVersionList.JavaVersionInfo phoenixRequiredJava =
+                        version.javaVersion;
+                JMinecraftVersionList.Version managedVersion = Tools.GLOBAL_GSON.fromJson(
                         Tools.read(new java.io.File(Tools.DIR_HOME_VERSION + "/" + versionId + "/" + versionId + ".json").getAbsolutePath()),
                         JMinecraftVersionList.Version.class);
+                if (managedVersion.javaVersion == null) {
+                    managedVersion.javaVersion = phoenixRequiredJava;
+                }
+                version = managedVersion;
                 Toast.makeText(this,
                         "Phoenix managed runtime prepared for Minecraft " + versionId,
                         Toast.LENGTH_LONG).show();
