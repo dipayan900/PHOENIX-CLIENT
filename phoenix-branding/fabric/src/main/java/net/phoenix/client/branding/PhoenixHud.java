@@ -33,6 +33,8 @@ public final class PhoenixHud {
     private static boolean zoomActive;
     private static int previousFov = 70;
     private static double previousGamma = 1.0, previousChatOpacity = 1.0;
+    private static int crosshairStyle=0, crosshairColor=0xFFFF7A35, crosshairSize=7, crosshairGap=3, crosshairThickness=1;
+    private static boolean crosshairDot=false;
 
     private PhoenixHud() {}
     public static boolean isVisible(){return visible;}
@@ -60,6 +62,18 @@ public final class PhoenixHud {
     public static boolean isEntityOverlayEnabled(){return entityOverlayEnabled;}
     public static boolean isCustomCrosshairEnabled(){return customCrosshairEnabled;}
     public static boolean isToolInfoEnabled(){return toolInfoEnabled;}
+    public static int getCrosshairStyle(){return crosshairStyle;}
+    public static int getCrosshairColor(){return crosshairColor;}
+    public static int getCrosshairSize(){return crosshairSize;}
+    public static int getCrosshairGap(){return crosshairGap;}
+    public static int getCrosshairThickness(){return crosshairThickness;}
+    public static boolean hasCrosshairDot(){return crosshairDot;}
+    public static void cycleCrosshairStyle(){crosshairStyle=(crosshairStyle+1)%5;}
+    public static void cycleCrosshairColor(){int[] colors={0xFFFF7A35,0xFF55D6FF,0xFF8DFF76,0xFFFF5C9A,0xFFFFFFFF,0xFFFFE45C};int next=0;for(int i=0;i<colors.length;i++)if(colors[i]==crosshairColor)next=(i+1)%colors.length;crosshairColor=colors[next];}
+    public static void adjustCrosshairSize(int delta){crosshairSize=Math.max(3,Math.min(18,crosshairSize+delta));}
+    public static void adjustCrosshairGap(int delta){crosshairGap=Math.max(0,Math.min(10,crosshairGap+delta));}
+    public static void adjustCrosshairThickness(int delta){crosshairThickness=Math.max(1,Math.min(4,crosshairThickness+delta));}
+    public static void toggleCrosshairDot(){crosshairDot=!crosshairDot;}
 
     public static void toggle(){visible=!visible;}
     public static void toggleFps(){fpsEnabled=!fpsEnabled;}
@@ -146,8 +160,19 @@ public final class PhoenixHud {
             if(lightLevelEnabled){int light=c.world.getLightLevel(c.player.getBlockPos());line(draw,c,"LIGHT LEVEL",light+" / 15",row);row+=12;}
             if(entityOverlayEnabled){int shown=0;for(var entity:c.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,c.player.getBoundingBox().expand(12),e->e!=c.player&&!e.isRemoved())){if(shown++>=3)break;double dist=Math.sqrt(c.player.squaredDistanceTo(entity));line(draw,c,"NEARBY",entity.getName().getString()+" · "+Math.round(dist)+"m",row);row+=12;}}
             if(toolInfoEnabled){ItemStack held=c.player.getMainHandStack();String v=held.isEmpty()?"No tool held":(held.isDamageable()?Math.max(0,held.getMaxDamage()-held.getDamage())+" durability":held.getName().getString());line(draw,c,"TOOL INFO",v,row);row+=12;}
-            if(customCrosshairEnabled){int cx=c.getWindow().getScaledWidth()/2,cy=c.getWindow().getScaledHeight()/2;draw.fill(cx-7,cy,cx-2,cy+1,0xFFFF7A35);draw.fill(cx+2,cy,cx+7,cy+1,0xFFFF7A35);draw.fill(cx,cy-7,cx+1,cy-2,0xFFFF7A35);draw.fill(cx,cy+2,cx+1,cy+7,0xFFFF7A35);}
+            if(customCrosshairEnabled)renderCrosshair(draw,c.getWindow().getScaledWidth()/2,c.getWindow().getScaledHeight()/2);
         });
+    }
+    public static void renderCrosshair(net.minecraft.client.gui.DrawContext d,int cx,int cy){
+        int s=crosshairSize,g=crosshairGap,t=crosshairThickness,col=crosshairColor;
+        switch(crosshairStyle){
+            case 1 -> {d.fill(cx-s,cy-t/2,cx+s+1,cy+(t+1)/2,col);d.fill(cx-t/2,cy-s,cx+(t+1)/2,cy+s+1,col);}
+            case 2 -> {d.fill(cx-s,cy-s,cx+s+1,cy-s+t,col);d.fill(cx-s,cy+s-t+1,cx+s+1,cy+s+1,col);d.fill(cx-s,cy-s,cx-s+t,cy+s+1,col);d.fill(cx+s-t+1,cy-s,cx+s+1,cy+s+1,col);}
+            case 3 -> {d.fill(cx-s,cy-g-t,cx+s+1,cy-g,col);d.fill(cx-s,cy+g+1,cx+s+1,cy+g+t+1,col);}
+            case 4 -> {d.fill(cx-s,cy-t/2,cx+s+1,cy+(t+1)/2,col);d.fill(cx-t/2,cy-s,cx+(t+1)/2,cy+s+1,col);d.fill(cx-s,cy-s,cx-s+2,cy-s+2,col);d.fill(cx+s-1,cy-s,cx+s+1,cy-s+2,col);d.fill(cx-s,cy+s-1,cx-s+2,cy+s+1,col);d.fill(cx+s-1,cy+s-1,cx+s+1,cy+s+1,col);}
+            default -> {d.fill(cx-s,cy-g-t,cx-s+t,cy-g,col);d.fill(cx+g,cy-s,cx+g+t,cy-s+t,col);d.fill(cx+s-t+1,cy+g,cx+s+1,cy+g+t,col);d.fill(cx-g-t,cy+s-t+1,cx-g,cy+s+1,col);}
+        }
+        if(crosshairDot)d.fill(cx-1,cy-1,cx+2,cy+2,col);
     }
     private static String duration(int ticks){int s=Math.max(0,ticks)/20;return String.format(java.util.Locale.ROOT,"%d:%02d",s/60,s%60);}
     private static void line(net.minecraft.client.gui.DrawContext d,MinecraftClient c,String k,String v,int y){d.drawTextWithShadow(c.textRenderer,Text.literal(k),18,y,0xFFFFA06C);d.drawTextWithShadow(c.textRenderer,Text.literal(v),96,y,0xFFF4EDF4);}

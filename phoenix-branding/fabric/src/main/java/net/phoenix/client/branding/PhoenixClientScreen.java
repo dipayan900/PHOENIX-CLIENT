@@ -41,7 +41,7 @@ public final class PhoenixClientScreen extends Screen {
         addToggle(right,top+step*9,"Chat transparency",PhoenixHud.isChatTransparencyEnabled(),PhoenixHud::toggleChatTransparency);
         addToggle(left,top+step*10,"Light level",PhoenixHud.isLightLevelEnabled(),PhoenixHud::toggleLightLevel);
         addToggle(right,top+step*10,"Nearby entities",PhoenixHud.isEntityOverlayEnabled(),PhoenixHud::toggleEntityOverlay);
-        addToggle(left,top+step*11,"Custom crosshair",PhoenixHud.isCustomCrosshairEnabled(),PhoenixHud::toggleCustomCrosshair);
+        addDrawableChild(ButtonWidget.builder(Text.literal("CROSSHAIR STUDIO"),b->client.setScreen(new PhoenixCrosshairScreen(this))).dimensions(left,top+step*11,cw,19).build());
         addToggle(right,top+step*11,"Tool information",PhoenixHud.isToolInfoEnabled(),PhoenixHud::toggleToolInfo);
         addDrawableChild(ButtonWidget.builder(Text.literal("SET WAYPOINT HERE"),b->{PhoenixHud.setWaypointHere();}).dimensions(left,top+step*12,cw,20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("CLEAR WAYPOINT"),b->{PhoenixHud.clearWaypoint();}).dimensions(right,top+step*12,cw,20).build());

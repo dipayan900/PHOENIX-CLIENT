@@ -7,7 +7,9 @@
     "PlayerEntityRendererMixin",
     "PlayerEntityModelEmoteMixin",
     "TitleScreenMixin",
-    "GameMenuScreenMixin"
+    "GameMenuScreenMixin",
+    "InGameHudCrosshairMixin",
+    "ContainerPreviewTooltipMixin"
   ],
   "injectors": {
     "defaultRequire": 1
