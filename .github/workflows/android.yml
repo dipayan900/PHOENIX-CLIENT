@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           OUT="$RUNNER_TEMP/phoenix-fabric-assets"
           mkdir -p "$OUT"
-          for MC_VERSION in 1.21 1.21.1 1.21.2 1.21.3 1.21.4 1.21.5 1.21.6 1.21.7 1.21.8 1.21.9 1.21.10 1.21.11; do
+          for MC_VERSION in 1.21.1 1.21.11; do
             echo "::group::Build Phoenix Fabric mod for Minecraft $MC_VERSION"
             DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
             YARN_MAPPINGS="$(printf '%s\n' "$DEPS" | sed -n '1p')"
@@ -105,7 +105,7 @@ jobs:
           ASSETS="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/src/main/assets/phoenix"
           mkdir -p "$ASSETS"
           cp "$RUNNER_TEMP"/phoenix-fabric-assets/phoenix-branding-fabric-*.jar "$ASSETS/"
-          test "$(find "$ASSETS" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 12
+          test "$(find "$ASSETS" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 2
       - name: Generate upstream language resources
         working-directory: ${{ runner.temp }}/phoenix-engine
         run: bash scripts/languagelist_updater.sh
@@ -126,10 +126,10 @@ jobs:
           mkdir -p "$OUT/android"
           APK="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk"
           cp "$APK" "$OUT/android/Phoenix-Client-debug.apk"
-          for MC_VERSION in 1.21 1.21.1 1.21.2 1.21.3 1.21.4 1.21.5 1.21.6 1.21.7 1.21.8 1.21.9 1.21.10 1.21.11; do
+          for MC_VERSION in 1.21.1 1.21.11; do
             unzip -l "$APK" | grep -q "assets/phoenix/phoenix-branding-fabric-$MC_VERSION.jar"
           done
-          echo "Verified: all 12 Phoenix client builds are bundled inside the APK."
+          echo "Verified: both supported Phoenix client builds are bundled inside the APK."
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           cd "$RUNNER_TEMP"
           zip -qr Phoenix-Client-Complete-Test-Package.zip phoenix-complete-test
