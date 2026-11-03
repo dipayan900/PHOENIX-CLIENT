@@ -3,6 +3,7 @@ package net.phoenix.client.branding;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import java.util.List;
 import java.util.function.BooleanSupplier;
@@ -13,6 +14,8 @@ public final class PhoenixClientScreen extends Screen {
     private final String tab;
     private final String category;
     private final int page;
+    private String searchQuery = "";
+    private TextFieldWidget searchField;
 
     private record ModuleEntry(String name, String category, BooleanSupplier enabled, Runnable toggle, Runnable open) {}
 
@@ -55,6 +58,7 @@ public final class PhoenixClientScreen extends Screen {
             toggle("Toggle Sprint","UTILITY",PhoenixHud::isSprintToggled,PhoenixHud::toggleSprint),
             action("Performance Center","PERFORMANCE",()->client.setScreen(new PhoenixPerformanceScreen(this))),
             action("Crosshair Studio","VISUAL",()->client.setScreen(new PhoenixCrosshairScreen(this))),
+            action("Visual Settings","VISUAL",()->client.setScreen(new PhoenixVisualSettingsScreen(this))),
             action("HUD Editor","HUD",()->client.setScreen(new PhoenixHudEditorScreen(this)))
         );
     }
@@ -92,7 +96,7 @@ public final class PhoenixClientScreen extends Screen {
                 addDrawableChild(ButtonWidget.builder(Text.literal((category.equals(selected)?"• ":"")+selected),
                     b->switchTo("MODULES",selected,0)).dimensions(catX+i*(catW+catGap),82,catW,19).build());
             }
-            List<ModuleEntry> filtered=modules().stream().filter(m->category.equals("ALL")||m.category().equals(category)).toList();
+            List<ModuleEntry> filtered=modules().stream().filter(m->category.equals("ALL")||m.category().equals(category)).filter(m->searchQuery.isBlank()||m.name().toLowerCase(java.util.Locale.ROOT).contains(searchQuery.toLowerCase(java.util.Locale.ROOT))).toList();
             int rows=Math.max(2,Math.min(5,(height-158)/34));
             int perPage=rows*2;
             int pageCount=Math.max(1,(filtered.size()+perPage-1)/perPage);
@@ -154,7 +158,7 @@ public final class PhoenixClientScreen extends Screen {
         String heading=tab.equals("MODULES")?"CLIENT MODULES  /  LIVE CONTROLS":tab.equals("SETTINGS")?"CLIENT SETTINGS":tab.equals("KEYBINDS")?"KEYBIND REFERENCE":"MODULE PROFILES";
         draw.drawCenteredTextWithShadow(textRenderer,Text.literal(heading),width/2,42,muted);
         draw.fill(20,66,width-20,67,accent);
-        if(tab.equals("MODULES")) draw.drawCenteredTextWithShadow(textRenderer,Text.literal("FILTER MODULES  ·  TAP TO TOGGLE  ·  AUTO-SAVED"),width/2,103,muted);
+        if(tab.equals("MODULES")) draw.drawCenteredTextWithShadow(textRenderer,Text.literal("SEARCH · FILTER · TAP TO TOGGLE · AUTO-SAVED"),width/2,103,muted);
         else if(tab.equals("KEYBINDS")) draw.drawCenteredTextWithShadow(textRenderer,Text.literal("QUICK ACCESS CONTROLS"),width/2,78,muted);
         else if(tab.equals("PRESETS")) draw.drawCenteredTextWithShadow(textRenderer,Text.literal("READY-MADE MODULE CONFIGURATIONS"),width/2,78,muted);
         else draw.drawCenteredTextWithShadow(textRenderer,Text.literal("CUSTOMISE THE PHOENIX EXPERIENCE"),width/2,78,muted);
