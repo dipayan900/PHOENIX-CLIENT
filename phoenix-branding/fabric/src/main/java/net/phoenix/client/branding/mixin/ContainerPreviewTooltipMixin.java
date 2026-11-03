@@ -8,8 +8,8 @@ import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.item.BlockItem;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.entity.player.PlayerEntity;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ItemStack.class)
 abstract class ContainerPreviewTooltipMixin {
  @Inject(method="getTooltip",at=@At("RETURN"),cancellable=true)
- private void phoenix$addContainerPreview(Item.TooltipContext context,PlayerEntity player,net.minecraft.client.item.TooltipType type,CallbackInfoReturnable<List<Text>> cir){
+ private void phoenix$addContainerPreview(Item.TooltipContext context,PlayerEntity player,TooltipType type,CallbackInfoReturnable<List<Text>> cir){
   ItemStack stack=(ItemStack)(Object)this;List<Text> lines=new ArrayList<>(cir.getReturnValue());
   if(stack.getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock){
    lines.add(Text.literal("Phoenix Shulker Preview").formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD));
