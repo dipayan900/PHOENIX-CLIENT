@@ -10,7 +10,7 @@ import net.minecraft.text.Text;
 public final class PhoenixPerformanceScreen extends Screen {
  private final Screen parent;
  public PhoenixPerformanceScreen(Screen parent){super(Text.literal("Phoenix Performance"));this.parent=parent;}
- @Override protected void init(){
+ @Override protected void init(){PhoenixScreenStyle.beginTransition();
   int w=Math.min(270,width-24),x=(width-w)/2,y=Math.max(22,height/2-112);
   add("BALANCED · 8 CHUNKS",x,y,w,()->applyBalanced());
   add("PERFORMANCE · 6 CHUNKS",x,y+23,w,()->applyPerformance());
@@ -34,7 +34,7 @@ public final class PhoenixPerformanceScreen extends Screen {
  private void applyBalanced(){var o=client.options;o.getGraphicsMode().setValue(GraphicsMode.FANCY);setParticles("DECREASED");o.getCloudRenderMode().setValue(CloudRenderMode.FAST);o.getEntityShadows().setValue(false);o.getEntityDistanceScaling().setValue(0.8);o.getViewDistance().setValue(Math.min(8,o.getViewDistance().getValue()));o.getSimulationDistance().setValue(Math.min(5,o.getSimulationDistance().getValue()));refresh();}
  private void applyPerformance(){var o=client.options;o.getGraphicsMode().setValue(GraphicsMode.FAST);setParticles("DECREASED");o.getCloudRenderMode().setValue(CloudRenderMode.OFF);o.getEntityShadows().setValue(false);o.getEntityDistanceScaling().setValue(0.7);o.getViewDistance().setValue(Math.min(6,o.getViewDistance().getValue()));o.getSimulationDistance().setValue(Math.min(4,o.getSimulationDistance().getValue()));refresh();}
  private void applyMaximum(){var o=client.options;o.getGraphicsMode().setValue(GraphicsMode.FAST);setParticles("MINIMAL");o.getCloudRenderMode().setValue(CloudRenderMode.OFF);o.getEntityShadows().setValue(false);o.getEntityDistanceScaling().setValue(0.5);o.getViewDistance().setValue(Math.min(4,o.getViewDistance().getValue()));o.getSimulationDistance().setValue(Math.min(3,o.getSimulationDistance().getValue()));o.getBiomeBlendRadius().setValue(0);o.getMipmapLevels().setValue(0);refresh();}
- @Override public void renderBackground(DrawContext d,int mx,int my,float delta){boolean light=PhoenixHud.isLightUiTheme();d.fillGradient(0,0,width,height,light?0xFFF3F4F7:0xFF09070D,light?0xFFE4E6EC:0xFF25111B);}
- @Override public void render(DrawContext d,int mx,int my,float delta){renderBackground(d,mx,my,delta);d.drawCenteredTextWithShadow(textRenderer,Text.literal("PHOENIX  /  PERFORMANCE CONTROL"),width/2,8,PhoenixHud.isLightUiTheme()?0xFFB94D1B:0xFFFF8547);d.drawCenteredTextWithShadow(textRenderer,Text.literal("Presets are conservative starting points; tune per world."),width/2,height-10,PhoenixHud.isLightUiTheme()?0xFF55515A:0xFFB8AEBB);super.render(d,mx,my,delta);}
+ @Override public void renderBackground(DrawContext d,int mx,int my,float delta){PhoenixScreenStyle.background(d,width,height);}
+ @Override public void render(DrawContext d,int mx,int my,float delta){renderBackground(d,mx,my,delta);d.drawCenteredTextWithShadow(textRenderer,Text.literal("PHOENIX  /  PERFORMANCE CONTROL"),width/2,8,PhoenixScreenStyle.accent());d.drawCenteredTextWithShadow(textRenderer,Text.literal("Presets are conservative starting points; tune per world."),width/2,height-10,PhoenixScreenStyle.mutedText());super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);}
  @Override public void close(){if(client!=null)client.setScreen(parent);}
 }
