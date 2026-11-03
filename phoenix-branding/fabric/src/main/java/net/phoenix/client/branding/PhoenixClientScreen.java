@@ -77,6 +77,7 @@ public final class PhoenixClientScreen extends Screen {
     }
 
     @Override protected void init() {
+        PhoenixScreenStyle.beginTransition();
         clearChildren();
         int navY=height-29;
         String[] tabs={"MODULES","SETTINGS","KEYBINDS","PRESETS"};
