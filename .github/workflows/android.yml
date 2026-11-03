@@ -32,10 +32,32 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
-          gradle-version: '8.12'
-      - name: Build Phoenix Fabric cosmetics mod (Minecraft 1.21.1)
-        working-directory: phoenix-branding/fabric
-        run: gradle --no-daemon clean build
+          gradle-version: '8.14.3'
+      - name: Build Phoenix Fabric client mods for Minecraft 1.21.x
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/phoenix-fabric-assets"
+          mkdir -p "$OUT"
+          for MC_VERSION in 1.21 1.21.1 1.21.2 1.21.3 1.21.4 1.21.5 1.21.6 1.21.7 1.21.8 1.21.9 1.21.10 1.21.11; do
+            echo "::group::Build Phoenix Fabric mod for Minecraft $MC_VERSION"
+            DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
+            YARN_MAPPINGS="$(printf '%s\n' "$DEPS" | sed -n '1p')"
+            FABRIC_API_VERSION="$(printf '%s\n' "$DEPS" | sed -n '2p')"
+            test -n "$YARN_MAPPINGS"
+            test -n "$FABRIC_API_VERSION"
+            echo "Mappings: $YARN_MAPPINGS"
+            echo "Fabric API: $FABRIC_API_VERSION"
+            gradle --no-daemon clean build \
+              -Pminecraft_version="$MC_VERSION" \
+              -Pyarn_mappings="$YARN_MAPPINGS" \
+              -Ploader_version=0.18.1 \
+              -Pfabric_version="$FABRIC_API_VERSION"
+            JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
+            test -n "$JAR"
+            cp "$JAR" "$OUT/phoenix-branding-fabric-$MC_VERSION.jar"
+            echo "::endgroup::"
+          done
       - name: Build Phoenix Paper server plugin (Minecraft 1.21.1)
         working-directory: phoenix-branding/paper
         run: mvn --batch-mode clean package
@@ -79,14 +101,14 @@ jobs:
           name: jre8-pojav
       - name: Apply Phoenix branding and cosmetics UI
         run: bash scripts/prepare-phoenix-engine.sh "$GITHUB_WORKSPACE" "$RUNNER_TEMP/phoenix-engine"
-      - name: Embed Phoenix Fabric add-on into the Android launcher
+      - name: Embed all version-specific Phoenix Fabric mods into the Android launcher
         shell: bash
         run: |
           set -euo pipefail
-          FABRIC_JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
-          test -n "$FABRIC_JAR"
-          mkdir -p "$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/src/main/assets/phoenix"
-          cp "$FABRIC_JAR" "$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/src/main/assets/phoenix/phoenix-branding-fabric.jar"
+          ASSETS="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/src/main/assets/phoenix"
+          mkdir -p "$ASSETS"
+          cp "$RUNNER_TEMP"/phoenix-fabric-assets/phoenix-branding-fabric-*.jar "$ASSETS/"
+          test "$(find "$ASSETS" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 12
       - name: Generate upstream language resources
         working-directory: ${{ runner.temp }}/phoenix-engine
         run: bash scripts/languagelist_updater.sh
@@ -104,8 +126,9 @@ jobs:
         run: |
           set -euo pipefail
           OUT="$RUNNER_TEMP/phoenix-complete-test"
-          mkdir -p "$OUT/android" "$OUT/server"
+          mkdir -p "$OUT/android" "$OUT/server" "$OUT/mods/fabric"
           cp "$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk" "$OUT/android/Phoenix-Client-debug.apk"
+          cp "$RUNNER_TEMP/phoenix-fabric-assets"/phoenix-branding-fabric-*.jar "$OUT/mods/fabric/"
           cp phoenix-branding/paper/target/phoenix-branding-paper-0.2.0.jar "$OUT/server/PhoenixBranding-Paper-1.21.1.jar"
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           cd "$RUNNER_TEMP"

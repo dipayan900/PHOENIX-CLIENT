@@ -343,3 +343,21 @@ if old not in s:
     raise SystemExit("Phoenix patch failed: ProfileTypeSelectFragment installer gate changed upstream.")
 profile_types.write_text(s.replace(old, new, 1))
 PY
+
+# Install the Phoenix Fabric client mod into the selected Amethyst profile at game launch.
+mkdir -p "$APP/src/main/java/net/kdt/pojavlaunch"
+cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixModInstaller.java" \
+   "$APP/src/main/java/net/kdt/pojavlaunch/PhoenixModInstaller.java"
+python3 - "$APP/src/main/java/net/kdt/pojavlaunch/Tools.java" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "File gamedir = Tools.getGameDirPath(minecraftProfile);"
+new = old + "\n        PhoenixModInstaller.install(activity, gamedir, versionId);"
+if "PhoenixModInstaller.install(activity, gamedir, versionId);" not in s:
+    if old not in s:
+        raise SystemExit("Phoenix patch failed: selected-profile launch hook changed upstream.")
+    s = s.replace(old, new, 1)
+p.write_text(s)
+PY

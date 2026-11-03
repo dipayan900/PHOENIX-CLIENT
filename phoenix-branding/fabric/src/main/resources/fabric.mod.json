@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "phoenix_branding",
   "version": "${version}",
-  "name": "Phoenix Branding",
-  "description": "Phoenix Client identity marker for supported Fabric servers and the local player list.",
+  "name": "Phoenix Client",
+  "description": "Phoenix Client in-game menus, HUD and client modules.",
   "environment": "client",
   "entrypoints": { "client": ["net.phoenix.client.branding.PhoenixBrandingClient"] },
   "mixins": ["phoenix_branding.mixins.json"],
   "depends": {
     "fabricloader": ">=0.16.0",
-    "minecraft": "1.21.1",
+    "minecraft": "=${minecraft_version}",
     "java": ">=21",
     "fabric-api": "*"
   }
