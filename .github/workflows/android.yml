@@ -66,12 +66,6 @@ jobs:
             for REQUIRED in fabric.mod.json phoenix_branding.mixins.json net/phoenix/client/branding/PhoenixBrandingClient.class net/phoenix/client/branding/PhoenixTitleScreen.class net/phoenix/client/branding/mixin/TitleScreenMixin.class net/phoenix/client/branding/mixin/SplashOverlayMixin.class; do
               grep -Fxq "$REQUIRED" "$RUNNER_TEMP/phoenix-jar-contents.txt"
             done
-            if [ "$MINOR" -eq 1 ]; then
-              grep -Fxq "net/phoenix/client/branding/PhoenixCosmeticFeatureRenderer.class" "$RUNNER_TEMP/phoenix-jar-contents.txt"
-            else
-              grep -Fxq "net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.class" "$RUNNER_TEMP/phoenix-jar-contents.txt"
-              unzip -p "$JAR" phoenix_branding.mixins.json | grep -q '"PlayerEntityModelEmoteMixinModern"'
-            fi
             unzip -p "$JAR" fabric.mod.json | grep -q '"id"[[:space:]]*:[[:space:]]*"phoenix_branding"'
             cp "$JAR" "$OUT/phoenix-branding-fabric-$MC_VERSION.jar"
             echo "Built Phoenix Fabric adapter: $MC_VERSION"
@@ -116,7 +110,7 @@ jobs:
           repo: AngelAuraMC/angelauramc-openjdk-build
           branch: buildjre8
           name: jre8-pojav
-      - name: Apply Phoenix branding and cosmetics UI
+      - name: Apply Phoenix branding and launcher UI
         run: bash scripts/prepare-phoenix-engine.sh "$GITHUB_WORKSPACE" "$RUNNER_TEMP/phoenix-engine"
       - name: Embed and verify all Phoenix Fabric adapters inside launcher assets
         shell: bash
