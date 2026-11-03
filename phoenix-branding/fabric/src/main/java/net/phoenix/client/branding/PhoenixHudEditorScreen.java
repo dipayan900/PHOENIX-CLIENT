@@ -51,7 +51,7 @@ public final class PhoenixHudEditorScreen extends Screen {
     }
     @Override public boolean mouseReleased(double mouseX,double mouseY,int button){
         if(button==0&&dragging){dragging=false;PhoenixHud.saveConfig();return true;}
-        return super.mouseReleased(mouseX,my,button);
+        return super.mouseReleased(mouseX,mouseY,button);
     }
     @Override public void close(){if(client!=null)client.setScreen(parent);}
 }
