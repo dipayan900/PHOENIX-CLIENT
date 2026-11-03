@@ -105,7 +105,7 @@ jobs:
           ASSETS="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/src/main/assets/phoenix"
           mkdir -p "$ASSETS"
           cp "$RUNNER_TEMP"/phoenix-fabric-assets/phoenix-branding-fabric-*.jar "$ASSETS/"
-          test "$(find "$ASSETS" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 2
+          test "$(find "$ASSETS" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 1
       - name: Generate upstream language resources
         working-directory: ${{ runner.temp }}/phoenix-engine
         run: bash scripts/languagelist_updater.sh
@@ -129,7 +129,7 @@ jobs:
           for MC_VERSION in 1.21.1; do
             unzip -l "$APK" | grep -q "assets/phoenix/phoenix-branding-fabric-$MC_VERSION.jar"
           done
-          echo "Verified: the supported Phoenix 1.21.1 client build are bundled inside the APK."
+          echo "Verified: the supported Phoenix 1.21.1 client build is bundled inside the APK."
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           cd "$RUNNER_TEMP"
           zip -qr Phoenix-Client-Complete-Test-Package.zip phoenix-complete-test
