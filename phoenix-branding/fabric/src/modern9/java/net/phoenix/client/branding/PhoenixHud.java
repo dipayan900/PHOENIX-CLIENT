@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 /** Client-side Phoenix modules. Settings are kept local to the client session. */
 public final class PhoenixHud {
     private static boolean visible = true;
+    private static boolean registered;
     private static boolean fpsEnabled = true, coordinatesEnabled = true, directionEnabled = true;
     private static boolean armorEnabled = true, clockEnabled, pingEnabled = true;
     private static boolean speedEnabled, biomeEnabled, dimensionEnabled, worldTimeEnabled;
@@ -242,6 +243,8 @@ public final class PhoenixHud {
     public static void clearWaypoint(){waypoint=null;waypointDimension=null;}
 
     public static void register(){
+        if (registered) return;
+        registered = true;
         loadConfig();
         zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,PHOENIX_CATEGORY));
         sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,PHOENIX_CATEGORY));
