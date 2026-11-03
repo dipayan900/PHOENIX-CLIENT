@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -751,6 +752,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var serverStatus by remember { mutableStateOf("Save a server address, then test TCP reachability.") }
     var serverBusy by remember { mutableStateOf(false) }
     var themeChoice by remember { mutableStateOf(prefs.getString("theme_choice", "EMBER") ?: "EMBER") }
+    var appearanceChoice by remember { mutableStateOf(prefs.getString("appearance_mode", "SYSTEM") ?: "SYSTEM") }
+    val systemDark = isSystemInDarkTheme()
     var dashboardLayout by remember { mutableStateOf(prefs.getString("dashboard_layout", "EXPANDED") ?: "EXPANDED") }
     val snapshotFiles = remember { mutableStateListOf<File>() }
     var advancedStatus by remember { mutableStateOf("Phoenix Advanced Studio ready.") }
@@ -770,6 +773,12 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
     val studioAccent = when (themeChoice) { "FROST" -> Color(0xFF63C9FF); "VIOLET" -> Color(0xFFB38CFF); "MATRIX" -> Color(0xFF69E59A); else -> PhoenixOrange }
     val animatedAccent by animateColorAsState(targetValue = studioAccent, label = "phoenix-theme-accent")
+    val useDarkAppearance = when (appearanceChoice) { "DARK" -> true; "LIGHT" -> false; else -> systemDark }
+    val appearanceBg = if (useDarkAppearance) appearanceBg else Color(0xFFF3F4F7)
+    val appearancePanel = if (useDarkAppearance) appearancePanel else Color(0xFFFFFFFF)
+    val appearanceMuted = if (useDarkAppearance) appearanceMuted else Color(0xFF62616B)
+    val appearanceText = if (useDarkAppearance) appearanceText else Color(0xFF24232A)
+    SideEffect { runCatching { System.setProperty("phoenix.ui.theme", if (useDarkAppearance) "dark" else "light") } }
 
     fun persist() {
         val synced = connectProfilesToEngine(profiles.toList(), activeId)
@@ -819,11 +828,12 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     MaterialTheme(colorScheme = darkColorScheme(
         primary = animatedAccent,
         secondary = animatedAccent,
-        background = PhoenixBg,
-        surface = PhoenixPanel
+        background = appearanceBg,
+        surface = appearancePanel
     )) {
-        Scaffold(
-            containerColor = PhoenixBg,
+        MaterialTheme(colorScheme = if (useDarkAppearance) darkColorScheme(primary = animatedAccent, secondary = animatedAccent, background = appearanceBg, surface = appearancePanel, onSurface = appearanceText, onSurfaceVariant = appearanceMuted) else lightColorScheme(primary = animatedAccent, secondary = animatedAccent, background = appearanceBg, surface = appearancePanel, onSurface = appearanceText, onSurfaceVariant = appearanceMuted)) {
+    Scaffold(
+            containerColor = appearanceBg,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFF151019)) {
                     listOf("Home", "Profiles", "Version", "Mods", "Packs", "Friends", "Settings").forEach { tab ->
@@ -838,15 +848,15 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             }
         ) { padding ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize().background(PhoenixBg).padding(padding),
+                modifier = Modifier.fillMaxSize().background(appearanceBg).padding(padding),
                 contentPadding = PaddingValues(if (dashboardLayout == "COMPACT") 12.dp else 18.dp),
                 verticalArrangement = Arrangement.spacedBy(if (dashboardLayout == "COMPACT") 9.dp else 14.dp)
             ) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Image(painterResource(R.drawable.ic_phoenix_foreground), contentDescription = "Phoenix crest", modifier = Modifier.size(48.dp)); Text("PHOENIX CLIENT", color = animatedAccent, fontWeight = FontWeight.Black, letterSpacing = 2.sp, fontSize = 12.sp) }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text(avatarChoice, fontSize = 27.sp); Text("JAVA EDITION", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold) }
-                        Text("Your world. Your profiles. Your rules.", color = PhoenixMuted, fontSize = 13.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text(avatarChoice, fontSize = 27.sp); Text("JAVA EDITION", color = appearanceText, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold) }
+                        Text("Your world. Your profiles. Your rules.", color = appearanceMuted, fontSize = 13.sp)
                     }
                 }
                 when (page) {
@@ -854,15 +864,15 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         item {
                             Column(
                                 Modifier.fillMaxWidth().background(
-                                    Brush.linearGradient(listOf(animatedAccent.copy(alpha = 0.32f), when (bannerChoice) { "FROST" -> Color(0xFF173044); "OBSIDIAN" -> Color(0xFF29232D); else -> Color(0xFF542519) }, PhoenixPanel)),
+                                    Brush.linearGradient(listOf(animatedAccent.copy(alpha = 0.32f), when (bannerChoice) { "FROST" -> Color(0xFF173044); "OBSIDIAN" -> Color(0xFF29232D); else -> Color(0xFF542519) }, appearancePanel)),
                                     RoundedCornerShape(22.dp)
                                 ).padding(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text("RISE FROM THE ASHES", color = animatedAccent, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontSize = 11.sp)
-                                Text("Ready for your\nnext adventure?", color = Color.White, fontSize = 29.sp, lineHeight = 33.sp, fontWeight = FontWeight.ExtraBold)
-                                Text("Active profile: ${active.name}", color = PhoenixMuted)
-                                Text("Target version: ${active.version}", color = PhoenixMuted)
+                                Text("Ready for your\nnext adventure?", color = appearanceText, fontSize = 29.sp, lineHeight = 33.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("Active profile: ${active.name}", color = appearanceMuted)
+                                Text("Target version: ${active.version}", color = appearanceMuted)
                                 Button(
                                     onClick = {
                                         persist()
@@ -885,11 +895,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         item { PhoenixInfo("LOCAL PHOENIX PROFILES", profiles.size.toString(), "These save launcher settings and a local nickname only. They do not sign in to Minecraft or grant game ownership.", animatedAccent) }
                         item {
                             Column(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(16.dp)).padding(15.dp),
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(16.dp)).padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text("MOJO CONTROL MAP IMPORT", color = animatedAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                Text("Bring a Mojo Launcher / MJLauncher JSON touch layout into Phoenix. Phoenix converts supported legacy layouts, saves a separate copy and selects it for the active profile without overwriting your existing maps.", color = PhoenixMuted, fontSize = 12.sp)
+                                Text("Bring a Mojo Launcher / MJLauncher JSON touch layout into Phoenix. Phoenix converts supported legacy layouts, saves a separate copy and selects it for the active profile without overwriting your existing maps.", color = appearanceMuted, fontSize = 12.sp)
                                 Button(
                                     onClick = { controlMapPicker.launch(arrayOf("application/json", "text/json", "text/plain", "*/*")) },
                                     modifier = Modifier.fillMaxWidth(),
@@ -911,7 +921,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text("MALI 26.3 RENDERER COMPATIBILITY", color = Color(0xFFFFB36B), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    Text("Your crash log shows MobileGlues failing to create the OpenGL backend. Amethyst's 26.2+ guidance for non-Adreno GPUs recommends Kopper Zink. Apply it to this profile; it takes effect on the next launch.", color = PhoenixMuted, fontSize = 12.sp)
+                                    Text("Your crash log shows MobileGlues failing to create the OpenGL backend. Amethyst's 26.2+ guidance for non-Adreno GPUs recommends Kopper Zink. Apply it to this profile; it takes effect on the next launch.", color = appearanceMuted, fontSize = 12.sp)
                                     Button(
                                         onClick = {
                                             try {
@@ -948,7 +958,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             ) {
                                 DiscordMark()
                                 Spacer(Modifier.width(10.dp))
-                                Text("JOIN OUR DISCORD SERVER", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("JOIN OUR DISCORD SERVER", color = appearanceText, fontWeight = FontWeight.Bold)
                             }
                         }
                         item {
@@ -964,11 +974,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("ABOUT PHOENIX & CREATOR CREDITS", color = animatedAccent, fontWeight = FontWeight.Bold) }
                         }
-                        item { Text(notice, color = PhoenixMuted, fontSize = 12.sp) }
+                        item { Text(notice, color = appearanceMuted, fontSize = 12.sp) }
                         item {
                             Row(
                                 Modifier.fillMaxWidth()
-                                    .background(PhoenixPanel, RoundedCornerShape(18.dp))
+                                    .background(appearancePanel, RoundedCornerShape(18.dp))
                                     .clickable {
                                         activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.gg/MnxS3g8gxA")))
                                     }
@@ -982,8 +992,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     modifier = Modifier.size(42.dp)
                                 )
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text("PHOENIX COMMUNITY", color = Color.White, fontWeight = FontWeight.Bold)
-                                    Text("Join our Discord server", color = PhoenixMuted, fontSize = 12.sp)
+                                    Text("PHOENIX COMMUNITY", color = appearanceText, fontWeight = FontWeight.Bold)
+                                    Text("Join our Discord server", color = appearanceMuted, fontSize = 12.sp)
                                 }
                                 Text("JOIN  →", color = animatedAccent, fontSize = 12.sp, fontWeight = FontWeight.Black)
                             }
@@ -998,8 +1008,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         item {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("Player profiles", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                                    Text("Each profile is synchronized with the engine.", color = PhoenixMuted, fontSize = 12.sp)
+                                    Text("Player profiles", color = appearanceText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                    Text("Each profile is synchronized with the engine.", color = appearanceMuted, fontSize = 12.sp)
                                 }
                                 Button(onClick = {
                                     editingId = null
@@ -1013,17 +1023,17 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         }
                         items(profiles, key = { it.id }) { profile ->
                             Column(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(16.dp))
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(16.dp))
                                     .clickable { activeId = profile.id; persist(); notice = "${profile.name} is now the active engine profile." }
                                     .padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(profile.avatar, fontSize = 20.sp); Text(profile.name, color = Color.White, fontWeight = FontWeight.Bold) }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(profile.avatar, fontSize = 20.sp); Text(profile.name, color = appearanceText, fontWeight = FontWeight.Bold) }
                                     if (profile.id == activeId) Text("ACTIVE", color = animatedAccent, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                 }
-                                Text("@${profile.nickname}  ·  Minecraft ${profile.version}", color = PhoenixMuted, fontSize = 12.sp)
-                                Text("Engine profile: ${profile.engineProfileId.take(8)}…", color = PhoenixMuted, fontSize = 10.sp)
+                                Text("@${profile.nickname}  ·  Minecraft ${profile.version}", color = appearanceMuted, fontSize = 12.sp)
+                                Text("Engine profile: ${profile.engineProfileId.take(8)}…", color = appearanceMuted, fontSize = 10.sp)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     TextButton(onClick = {
                                         editingId = profile.id
@@ -1044,8 +1054,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                     }
                     "Version" -> {
                         item {
-                            Text("Game version", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Text("This writes the selected version to the active engine profile. The game files still need to be installed from the game launcher.", color = PhoenixMuted, fontSize = 12.sp)
+                            Text("Game version", color = appearanceText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text("This writes the selected version to the active engine profile. The game files still need to be installed from the game launcher.", color = appearanceMuted, fontSize = 12.sp)
                         }
                         item {
                             OutlinedTextField(
@@ -1067,14 +1077,14 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 Text("SAVE VERSION TO ENGINE PROFILE", color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                         }
-                        item { Text("Popular version IDs", color = PhoenixMuted, fontWeight = FontWeight.Bold) }
+                        item { Text("Popular version IDs", color = appearanceMuted, fontWeight = FontWeight.Bold) }
                         items(listOf("1.21.4", "1.20.4", "1.19.4", "1.16.5", "1.12.2", "1.8.9", "latest-release", "latest-snapshot")) { version ->
                             Row(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(12.dp))
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(12.dp))
                                     .clickable { draftVersion = version }.padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Minecraft $version", color = Color.White)
+                                Text("Minecraft $version", color = appearanceText)
                                 Text("SELECT", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -1087,7 +1097,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Text("INSTALLED MODS", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                                    Text("${installedMods.size} JAR file(s) in ${active.name}", color = PhoenixMuted, fontSize = 12.sp)
+                                    Text("${installedMods.size} JAR file(s) in ${active.name}", color = appearanceMuted, fontSize = 12.sp)
                                 }
                                 OutlinedButton(enabled = !modBusy, onClick = {
                                     try {
@@ -1101,17 +1111,17 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         if (installedMods.isEmpty()) {
-                            item { Text("No .jar mods found in this profile's mods folder yet.", color = PhoenixMuted, fontSize = 12.sp) }
+                            item { Text("No .jar mods found in this profile's mods folder yet.", color = appearanceMuted, fontSize = 12.sp) }
                         }
                         items(installedMods, key = { it.fileName }) { installed ->
                             Row(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(14.dp)).padding(13.dp),
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(14.dp)).padding(13.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(installed.fileName, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                    Text("${installed.sizeBytes / 1024} KB  ·  ${if (installed.enabled) "Enabled" else "Disabled"}", color = PhoenixMuted, fontSize = 10.sp)
+                                    Text(installed.fileName, color = appearanceText, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Text("${installed.sizeBytes / 1024} KB  ·  ${if (installed.enabled) "Enabled" else "Disabled"}", color = appearanceMuted, fontSize = 10.sp)
                                 }
                                 TextButton(onClick = {
                                     try {
@@ -1155,7 +1165,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 }
                             }
                             val gameVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
-                            Text("Minecraft $gameVersion", color = PhoenixMuted, fontSize = 12.sp)
+                            Text("Minecraft $gameVersion", color = appearanceMuted, fontSize = 12.sp)
                             Button(
                                 enabled = !modBusy && modQuery.isNotBlank(),
                                 onClick = {
@@ -1179,15 +1189,15 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
                             ) { Text(if (modBusy) "SEARCHING..." else "SEARCH MODRINTH", color = Color.Black, fontWeight = FontWeight.Bold) }
-                            Text(modStatus, color = PhoenixMuted, fontSize = 12.sp)
+                            Text(modStatus, color = appearanceMuted, fontSize = 12.sp)
                         }
                         items(modResults, key = { it.projectId }) { mod ->
                             Column(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(16.dp)).padding(15.dp),
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(16.dp)).padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(7.dp)
                             ) {
-                                Text(mod.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                Text(mod.description, color = PhoenixMuted, fontSize = 12.sp, maxLines = 3)
+                                Text(mod.title, color = appearanceText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text(mod.description, color = appearanceMuted, fontSize = 12.sp, maxLines = 3)
                                 Text("${mod.downloads} downloads  ·  ${mod.slug}", color = animatedAccent, fontSize = 10.sp)
                                 Button(
                                     enabled = !modBusy,
@@ -1214,7 +1224,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         item {
-                            Text("Mod compatibility depends on the installed loader and Minecraft version. Phoenix does not guarantee third-party mod safety; only install projects you trust.", color = PhoenixMuted, fontSize = 11.sp)
+                            Text("Mod compatibility depends on the installed loader and Minecraft version. Phoenix does not guarantee third-party mod safety; only install projects you trust.", color = appearanceMuted, fontSize = 11.sp)
                             TextButton(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) }) {
                                 Text("OPEN ENGINE MODPACK / LOADER MANAGER", color = animatedAccent)
                             }
@@ -1223,31 +1233,41 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                     "Settings" -> {
                         item {
                             PhoenixInfo("ENGINE SETTINGS", "Device & controls", "Open the original engine settings for renderer, Java runtime, controls and account management. These remain connected to the real engine.", animatedAccent)
+                            Text("APP APPEARANCE", color = animatedAccent, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.3.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                listOf("SYSTEM", "DARK", "LIGHT").forEach { mode ->
+                                    FilterChip(selected = appearanceChoice == mode, onClick = {
+                                        appearanceChoice = mode
+                                        prefs.edit().putString("appearance_mode", mode).apply()
+                                    }, label = { Text(mode, fontSize = 10.sp) })
+                                }
+                            }
+                            Text(if (appearanceChoice == "SYSTEM") "Follows your Android light/dark setting." else "Appearance is set to " + appearanceChoice.lowercase() + ".", color = appearanceMuted, fontSize = 11.sp)
                             Button(onClick = { page = "Performance" }, modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)) {
                                 Text("OPEN PERFORMANCE TUNING", color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                             Button(onClick = { page = "Toolbox" }, modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
                                 Text("OPEN GAME TOOLBOX", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
                             Button(onClick = { page = "Intelligence" }, modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
                                 Text("OPEN LAUNCH INTELLIGENCE", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
                             Button(onClick = { page = "Advanced" }, modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
                                 Text("OPEN PHOENIX ADVANCED STUDIO", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
                             Button(onClick = { page = "Credits" }, modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
                                 Text("ABOUT PHOENIX & CREATOR CREDITS", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
                             Button(onClick = { persist(); activity.startActivity(Intent(activity, LauncherActivity::class.java)) },
-                                modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PhoenixPanel)) {
+                                modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
                                 Text("OPEN ENGINE SETTINGS", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
-                            Text("Microsoft sign-in uses the engine's official authentication screen. Phoenix does not collect or store your Microsoft password.", color = PhoenixMuted, fontSize = 12.sp)
+                            Text("Microsoft sign-in uses the engine's official authentication screen. Phoenix does not collect or store your Microsoft password.", color = appearanceMuted, fontSize = 12.sp)
                         }
                     }
                     "Credits" -> {
@@ -1255,37 +1275,37 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                              TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
                              Column(
                                  Modifier.fillMaxWidth().background(
-                                     Brush.linearGradient(listOf(Color(0xFF48251B), Color(0xFF241823), PhoenixPanel)),
+                                     Brush.linearGradient(listOf(Color(0xFF48251B), Color(0xFF241823), appearancePanel)),
                                      RoundedCornerShape(22.dp)
                                  ).padding(20.dp),
                                  verticalArrangement = Arrangement.spacedBy(9.dp)
                              ) {
                                  Text("PHOENIX CLIENT", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                                 Text("Built to bring Java Edition closer to mobile.", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
-                                 Text("An independent Minecraft Java launcher project focused on performance, customization and a better mobile experience.", color = PhoenixMuted, fontSize = 13.sp)
+                                 Text("Built to bring Java Edition closer to mobile.", color = appearanceText, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                                 Text("An independent Minecraft Java launcher project focused on performance, customization and a better mobile experience.", color = appearanceMuted, fontSize = 13.sp)
                              }
                          }
                          item {
-                             Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                             Column(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(18.dp)).padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                                  Text("FOUNDER & DEVELOPER", color = animatedAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                                 Text("Dipayan Roy", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                                 Text("Dipayan Roy", color = appearanceText, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
                                  Text("Developer · Community Builder · Creator", color = animatedAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                 Text("Phoenix Client is created and developed by Dipayan Roy, an independent Android-first developer building Minecraft, hosting and web projects with a focus on practical tools, community and futuristic experiences.", color = PhoenixMuted, fontSize = 13.sp)
-                                 Text("Project: Phoenix Client · Android launcher with an integrated Java Edition engine", color = Color.White, fontSize = 12.sp)
+                                 Text("Phoenix Client is created and developed by Dipayan Roy, an independent Android-first developer building Minecraft, hosting and web projects with a focus on practical tools, community and futuristic experiences.", color = appearanceMuted, fontSize = 13.sp)
+                                 Text("Project: Phoenix Client · Android launcher with an integrated Java Edition engine", color = appearanceText, fontSize = 12.sp)
                              }
                          }
                          item {
-                             Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                             Column(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                  Text("DEVELOPER LINKS", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
-                                 Text("GitHub · @dipayan900", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://github.com/dipayan900") }.padding(vertical = 5.dp))
-                                 Text("Portfolio · dipayanportfolios.netlify.app", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://dipayanportfolios.netlify.app/") }.padding(vertical = 5.dp))
+                                 Text("GitHub · @dipayan900", color = appearanceText, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://github.com/dipayan900") }.padding(vertical = 5.dp))
+                                 Text("Portfolio · dipayanportfolios.netlify.app", color = appearanceText, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri("https://dipayanportfolios.netlify.app/") }.padding(vertical = 5.dp))
                              }
                          }
                          item {
-                             Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                             Column(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                  Text("CREDITS & ACKNOWLEDGEMENTS", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
-                                 Text("Built on the open-source Amethyst / PojavLauncher ecosystem. Minecraft and Java Edition are trademarks of their respective owners. Phoenix Client is an independent community project and is not an official Mojang or Microsoft product.", color = PhoenixMuted, fontSize = 12.sp)
-                                 Text("Thank you to the open-source maintainers, contributors, testers and Phoenix community members who make projects like this possible.", color = PhoenixMuted, fontSize = 12.sp)
+                                 Text("Built on the open-source Amethyst / PojavLauncher ecosystem. Minecraft and Java Edition are trademarks of their respective owners. Phoenix Client is an independent community project and is not an official Mojang or Microsoft product.", color = appearanceMuted, fontSize = 12.sp)
+                                 Text("Thank you to the open-source maintainers, contributors, testers and Phoenix community members who make projects like this possible.", color = appearanceMuted, fontSize = 12.sp)
                              }
                          }
                      }
@@ -1305,31 +1325,31 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)) {
                                 Text("RUN PROFILE SCAN", color = Color.Black, fontWeight = FontWeight.Bold)
                             }
-                            Text(readinessStatus, color = PhoenixMuted, fontSize = 12.sp)
+                            Text(readinessStatus, color = appearanceMuted, fontSize = 12.sp)
                         }
                         items(readinessItems, key = { it.title }) { result ->
                             Row(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(14.dp)).padding(14.dp),
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(14.dp)).padding(14.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(if (result.healthy) "●" else "!", color = if (result.healthy) Color(0xFF7DDB9A) else Color(0xFFFFB36B), fontSize = 18.sp, fontWeight = FontWeight.Black)
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(result.title, color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text(result.title, color = appearanceText, fontWeight = FontWeight.Bold)
                                     Text(result.value, color = animatedAccent, fontSize = 13.sp)
-                                    Text(result.detail, color = PhoenixMuted, fontSize = 11.sp)
+                                    Text(result.detail, color = appearanceMuted, fontSize = 11.sp)
                                 }
                             }
                         }
                         item {
-                            Text("This is a lightweight file-system check, not a guarantee that a modpack or Minecraft version will launch. For a crash diagnosis, inspect the engine's full log and crash report.", color = PhoenixMuted, fontSize = 11.sp)
+                            Text("This is a lightweight file-system check, not a guarantee that a modpack or Minecraft version will launch. For a crash diagnosis, inspect the engine's full log and crash report.", color = appearanceMuted, fontSize = 11.sp)
                         }
                     }
                     "Advanced" -> {
                         item {
                             TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
                             PhoenixInfo("PHOENIX ADVANCED STUDIO", "Eight connected systems", "Diagnostics, compatibility checks, server tools, performance recommendations, themes, snapshots, activity history and a safe extension registry.", animatedAccent)
-                            Text(advancedStatus, color = PhoenixMuted, fontSize = 12.sp)
+                            Text(advancedStatus, color = appearanceMuted, fontSize = 12.sp)
                         }
                         item {
                             PhoenixInfo("CRASH LAB", "Local log diagnostics", "Reads this profile's latest.log and recent crash reports. Findings are heuristic suggestions, not guaranteed root-cause analysis.", animatedAccent)
@@ -1344,10 +1364,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         items(diagnostics, key = { it.title }) { finding ->
-                            Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(14.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Column(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(14.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                 Text(finding.title, color = animatedAccent, fontWeight = FontWeight.Bold)
-                                Text(finding.cause, color = Color.White, fontSize = 12.sp)
-                                Text("Suggested fix: " + finding.fix, color = PhoenixMuted, fontSize = 11.sp)
+                                Text(finding.cause, color = appearanceText, fontSize = 12.sp)
+                                Text("Suggested fix: " + finding.fix, color = appearanceMuted, fontSize = 11.sp)
                             }
                         }
                         item {
@@ -1363,10 +1383,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         items(modChecks, key = { it.name }) { check ->
-                            Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(12.dp)).padding(13.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(check.name, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            Column(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(12.dp)).padding(13.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(check.name, color = appearanceText, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                                 Text(check.state, color = if (check.warning) Color(0xFFFFB36B) else animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text(check.detail, color = PhoenixMuted, fontSize = 11.sp)
+                                Text(check.detail, color = appearanceMuted, fontSize = 11.sp)
                             }
                         }
                         item {
@@ -1390,12 +1410,12 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)) {
                                 Text("SAVE SERVER FAVOURITE", color = Color.Black, fontWeight = FontWeight.Bold)
                             }
-                            Text(serverStatus, color = PhoenixMuted, fontSize = 12.sp)
+                            Text(serverStatus, color = appearanceMuted, fontSize = 12.sp)
                         }
                         items(favouriteServers, key = { it.host + ":" + it.port }) { server ->
-                            Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(13.dp)).padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text(server.label, color = Color.White, fontWeight = FontWeight.Bold)
-                                Text(server.host + ":" + server.port, color = PhoenixMuted, fontSize = 11.sp)
+                            Column(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(13.dp)).padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(server.label, color = appearanceText, fontWeight = FontWeight.Bold)
+                                Text(server.host + ":" + server.port, color = appearanceMuted, fontSize = 11.sp)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     TextButton(enabled = !serverBusy, onClick = {
                                         serverBusy = true
@@ -1422,8 +1442,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             val detectedMods = runCatching { listPhoenixInstalledMods(active.engineProfileId).count { it.enabled } }.getOrDefault(0)
                             val hasShaders = runCatching { listPhoenixContentFiles(active.engineProfileId, "shaderpacks").any { it.enabled } }.getOrDefault(false)
                             val recommendedRam = minOf(maxRamMb, (freeRamMb * 0.55f).toInt().coerceAtLeast(512), (totalRamMb * if (detectedMods > 30 || hasShaders) 0.42f else 0.50f).toInt()).coerceAtLeast(512)
-                            Text("Device RAM: " + totalRamMb + " MB · currently free: " + freeRamMb + " MB", color = PhoenixMuted, fontSize = 12.sp)
-                            Text("Enabled mods: " + detectedMods + " · shaders present: " + if (hasShaders) "yes" else "no", color = PhoenixMuted, fontSize = 12.sp)
+                            Text("Device RAM: " + totalRamMb + " MB · currently free: " + freeRamMb + " MB", color = appearanceMuted, fontSize = 12.sp)
+                            Text("Enabled mods: " + detectedMods + " · shaders present: " + if (hasShaders) "yes" else "no", color = appearanceMuted, fontSize = 12.sp)
                             Text("Suggested Minecraft allocation: " + recommendedRam + " MB", color = animatedAccent, fontWeight = FontWeight.Bold)
                             Button(onClick = {
                                 ramAllocation = recommendedRam.toFloat()
@@ -1449,7 +1469,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 "ULTRA" -> "4 chunks render · 3 simulation · low particles · clouds off · 60 FPS cap"
                                 "BALANCED" -> "8 chunks render · 5 simulation · reduced effects · 60 FPS cap"
                                 else -> "6 chunks render · 4 simulation · low effects · 60 FPS cap"
-                            }, color = PhoenixMuted, fontSize = 12.sp)
+                            }, color = appearanceMuted, fontSize = 12.sp)
                             Button(onClick = {
                                 try {
                                     fpsStatus = applyPhoenixFpsProfile(active.engineProfileId, fpsPreset)
@@ -1464,9 +1484,9 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     recordPhoenixEvent(prefs, "Video settings restored", active.name)
                                 } catch (error: Exception) { fpsStatus = error.message ?: "Could not restore the backup." }
                             }, modifier = Modifier.fillMaxWidth()) { Text("RESTORE ORIGINAL VIDEO SETTINGS", color = animatedAccent) }
-                            Text(fpsStatus, color = PhoenixMuted, fontSize = 12.sp)
+                            Text(fpsStatus, color = appearanceMuted, fontSize = 12.sp)
                             Text("MORE FPS TIPS", color = animatedAccent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                            Text("• Disable shader packs on mobile when chasing stable FPS.\n• Prefer lightweight Fabric performance mods that match your exact Minecraft version.\n• Keep render distance modest; simulation distance also affects CPU load.\n• Close background apps and leave thermal headroom; overheating can reduce performance.\n• Keep enough free storage for game files and Java runtime.\n• If a renderer fails, use a compatible renderer rather than forcing unsupported Vulkan features.", color = PhoenixMuted, fontSize = 12.sp, lineHeight = 18.sp)
+                            Text("• Disable shader packs on mobile when chasing stable FPS.\n• Prefer lightweight Fabric performance mods that match your exact Minecraft version.\n• Keep render distance modest; simulation distance also affects CPU load.\n• Close background apps and leave thermal headroom; overheating can reduce performance.\n• Keep enough free storage for game files and Java runtime.\n• If a renderer fails, use a compatible renderer rather than forcing unsupported Vulkan features.", color = appearanceMuted, fontSize = 12.sp, lineHeight = 18.sp)
                         }
                         item {
                             PhoenixInfo("PHOENIX THEME STUDIO", "Personalise the dashboard", "Choose a Phoenix colour identity, banner and compact or expanded layout. Theme gradients transition with the selected preset.", animatedAccent)
@@ -1488,7 +1508,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     dashboardLayout = "EXPANDED"; prefs.edit().putString("dashboard_layout", dashboardLayout).apply()
                                 }, label = { Text("EXPANDED") })
                             }
-                            Text("Active preset: " + themeChoice + " · " + dashboardLayout, color = PhoenixMuted, fontSize = 12.sp)
+                            Text("Active preset: " + themeChoice + " · " + dashboardLayout, color = appearanceMuted, fontSize = 12.sp)
                         }
                         item {
                             PhoenixInfo("PROFILE SNAPSHOTS", "Restore points for this profile", "Snapshots preserve Phoenix profile version, selected loader, RAM allocation, theme, banner, avatar and layout. They do not copy worlds, accounts or mod files.", animatedAccent)
@@ -1507,10 +1527,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         items(snapshotFiles, key = { it.name }) { snapshot ->
-                            Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(12.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(12.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(snapshot.name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    Text(snapshot.length().toString() + " bytes", color = PhoenixMuted, fontSize = 10.sp)
+                                    Text(snapshot.name, color = appearanceText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(snapshot.length().toString() + " bytes", color = appearanceMuted, fontSize = 10.sp)
                                 }
                                 TextButton(onClick = {
                                     try {
@@ -1540,39 +1560,39 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             PhoenixInfo("SESSION TIMELINE", "Recent launcher events", "Tracks launcher launch requests, server tests and profile snapshots. Android does not expose reliable Minecraft play duration to this dashboard.", animatedAccent)
                         }
                         items(phoenixTimeline(prefs), key = { it.first + it.second }) { event ->
-                            Column(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(10.dp)).padding(12.dp)) {
+                            Column(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(10.dp)).padding(12.dp)) {
                                 Text(event.first, color = animatedAccent, fontSize = 10.sp)
-                                Text(event.second, color = Color.White, fontSize = 12.sp)
+                                Text(event.second, color = appearanceText, fontSize = 12.sp)
                             }
                         }
                         item {
                             PhoenixInfo("PHOENIX EXTENSION SYSTEM", "Controlled module registry", "This foundation enables built-in Phoenix modules. It does not execute arbitrary downloaded code or load untrusted APKs.", animatedAccent)
                             extensionModules.forEach { module ->
                                 val enabled = prefs.getBoolean("extension_" + module.id, true)
-                                Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(10.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(10.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
-                                        Text(module.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        Text(module.description, color = PhoenixMuted, fontSize = 10.sp)
+                                        Text(module.name, color = appearanceText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text(module.description, color = appearanceMuted, fontSize = 10.sp)
                                     }
                                     Switch(checked = enabled, onCheckedChange = { prefs.edit().putBoolean("extension_" + module.id, it).apply() })
                                 }
                             }
-                            Text("External extension SDK, sandboxing, signing and permissions remain future work. This registry is the safe base, not third-party code execution.", color = PhoenixMuted, fontSize = 11.sp)
+                            Text("External extension SDK, sandboxing, signing and permissions remain future work. This registry is the safe base, not third-party code execution.", color = appearanceMuted, fontSize = 11.sp)
                         }
                     }
                     "Toolbox" -> {
                         item {
                             TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
                             PhoenixInfo("PHOENIX TOOLBOX", "Your game library", "Manage installed resource-pack and shader ZIP files, and inspect local worlds for the active profile. This screen never deletes worlds.", animatedAccent)
-                            Text(toolboxStatus, color = PhoenixMuted, fontSize = 12.sp)
+                            Text(toolboxStatus, color = appearanceMuted, fontSize = 12.sp)
                         }
                         item {
                             Column(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(18.dp)).padding(15.dp),
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(18.dp)).padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text("PHOENIX PACK HUB", color = animatedAccent, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                                Text("Discover and install version-matched resource packs and shader packs from Modrinth.", color = PhoenixMuted, fontSize = 12.sp)
+                                Text("Discover and install version-matched resource packs and shader packs from Modrinth.", color = appearanceMuted, fontSize = 12.sp)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     FilterChip(selected = packType == "resourcepack", onClick = { packType = "resourcepack"; packResults.clear() }, label = { Text("RESOURCE PACKS") })
                                     FilterChip(selected = packType == "shader", onClick = { packType = "shader"; packResults.clear() }, label = { Text("SHADERS") })
@@ -1586,7 +1606,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     placeholder = { Text(if (packType == "shader") "Complementary, BSL..." else "Faithful, Fresh Animations...") }
                                 )
                                 val packVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
-                                Text("Minecraft $packVersion", color = PhoenixMuted, fontSize = 11.sp)
+                                Text("Minecraft $packVersion", color = appearanceMuted, fontSize = 11.sp)
                                 Button(
                                     enabled = !packBusy && packQuery.isNotBlank(),
                                     onClick = {
@@ -1609,17 +1629,17 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
                                 ) { Text(if (packBusy) "SEARCHING..." else "SEARCH PACK HUB", color = Color.Black, fontWeight = FontWeight.Bold) }
-                                Text(packStatus, color = PhoenixMuted, fontSize = 11.sp)
+                                Text(packStatus, color = appearanceMuted, fontSize = 11.sp)
                             }
                         }
                         items(packResults, key = { "pack-search-" + it.projectId }) { result ->
                             val selectedPackVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
                             Column(
-                                Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(15.dp)).padding(14.dp),
+                                Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(15.dp)).padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(result.title, color = Color.White, fontWeight = FontWeight.Bold)
-                                Text(result.description, color = PhoenixMuted, fontSize = 11.sp, maxLines = 3)
+                                Text(result.title, color = appearanceText, fontWeight = FontWeight.Bold)
+                                Text(result.description, color = appearanceMuted, fontSize = 11.sp, maxLines = 3)
                                 Text("${result.downloads} downloads · ${result.slug}", color = animatedAccent, fontSize = 10.sp)
                                 Button(
                                     enabled = !packBusy,
@@ -1654,7 +1674,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("RESOURCE PACKS", color = animatedAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    Text("${resourcePacks.size} ZIP file(s)", color = PhoenixMuted, fontSize = 11.sp)
+                                    Text("${resourcePacks.size} ZIP file(s)", color = appearanceMuted, fontSize = 11.sp)
                                 }
                                 TextButton(onClick = {
                                     try {
@@ -1666,11 +1686,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         items(resourcePacks, key = { "resource-" + it.fileName }) { pack ->
-                            Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(13.dp)).padding(13.dp),
+                            Row(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(13.dp)).padding(13.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(pack.fileName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("${pack.sizeBytes / 1024} KB · ${if (pack.enabled) "Enabled" else "Disabled"}", color = PhoenixMuted, fontSize = 10.sp)
+                                    Text(pack.fileName, color = appearanceText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("${pack.sizeBytes / 1024} KB · ${if (pack.enabled) "Enabled" else "Disabled"}", color = appearanceMuted, fontSize = 10.sp)
                                 }
                                 TextButton(onClick = {
                                     try {
@@ -1689,7 +1709,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("SHADER PACKS", color = animatedAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    Text("${shaderPacks.size} ZIP file(s)", color = PhoenixMuted, fontSize = 11.sp)
+                                    Text("${shaderPacks.size} ZIP file(s)", color = appearanceMuted, fontSize = 11.sp)
                                 }
                                 TextButton(onClick = {
                                     try {
@@ -1701,11 +1721,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         items(shaderPacks, key = { "shader-" + it.fileName }) { pack ->
-                            Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(13.dp)).padding(13.dp),
+                            Row(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(13.dp)).padding(13.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(pack.fileName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("${pack.sizeBytes / 1024} KB · ${if (pack.enabled) "Enabled" else "Disabled"}", color = PhoenixMuted, fontSize = 10.sp)
+                                    Text(pack.fileName, color = appearanceText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("${pack.sizeBytes / 1024} KB · ${if (pack.enabled) "Enabled" else "Disabled"}", color = appearanceMuted, fontSize = 10.sp)
                                 }
                                 TextButton(onClick = {
                                     try {
@@ -1724,15 +1744,15 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             PhoenixInfo("SAVED WORLDS", savedWorlds.size.toString(), "World folders with a valid level.dat file in this profile's saves directory. World files are shown read-only here.", animatedAccent)
                         }
                         items(savedWorlds, key = { "world-" + it }) { world ->
-                            Row(Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(12.dp)).padding(14.dp),
+                            Row(Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(12.dp)).padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 Text("🌍", fontSize = 19.sp)
                                 Spacer(Modifier.width(10.dp))
-                                Text(world, color = Color.White, fontWeight = FontWeight.SemiBold)
+                                Text(world, color = appearanceText, fontWeight = FontWeight.SemiBold)
                             }
                         }
                         item {
-                            Text("Pack Hub downloads ZIP releases matched to the selected Minecraft version. Installed packs can be enabled, disabled or removed here; reopen the in-game menu after changes.", color = PhoenixMuted, fontSize = 11.sp)
+                            Text("Pack Hub downloads ZIP releases matched to the selected Minecraft version. Installed packs can be enabled, disabled or removed here; reopen the in-game menu after changes.", color = appearanceMuted, fontSize = 11.sp)
                         }
                     }
                     "Performance" -> {
@@ -1742,14 +1762,14 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         }
                         item {
                             Text("DEVICE MEMORY", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                            Text("$totalRamMb MB total  ·  $freeRamMb MB currently available", color = PhoenixMuted, fontSize = 12.sp)
-                            Text("Minecraft allocation: ${ramAllocation.toInt()} MB", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("$totalRamMb MB total  ·  $freeRamMb MB currently available", color = appearanceMuted, fontSize = 12.sp)
+                            Text("Minecraft allocation: ${ramAllocation.toInt()} MB", color = appearanceText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                             Slider(
                                 value = ramAllocation.coerceIn(256f, maxRamMb.toFloat()),
                                 onValueChange = { ramAllocation = it },
                                 valueRange = 256f..maxRamMb.toFloat()
                             )
-                            Text("Recommended maximum: $maxRamMb MB (60% of device RAM, capped at 6 GB).", color = PhoenixMuted, fontSize = 11.sp)
+                            Text("Recommended maximum: $maxRamMb MB (60% of device RAM, capped at 6 GB).", color = appearanceMuted, fontSize = 11.sp)
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1770,7 +1790,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
                             ) { Text("SAVE PERFORMANCE SETTINGS", color = Color.Black, fontWeight = FontWeight.Bold) }
-                            Text("These settings affect the next game launch. Renderer and Java runtime choices are available in the engine settings.", color = PhoenixMuted, fontSize = 11.sp)
+                            Text("These settings affect the next game launch. Renderer and Java runtime choices are available in the engine settings.", color = appearanceMuted, fontSize = 11.sp)
                         }
                     }
                 }
@@ -1802,9 +1822,9 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                 }) { Text("REMOVE", color = Color(0xFFFF8A80)) }
             },
             dismissButton = { TextButton(onClick = { pendingContentRemoval = null }) { Text("CANCEL") } },
-            containerColor = PhoenixPanel,
-            titleContentColor = Color.White,
-            textContentColor = PhoenixMuted
+            containerColor = appearancePanel,
+            titleContentColor = appearanceText,
+            textContentColor = appearanceMuted
         )
     }
 
@@ -1827,9 +1847,9 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                 }) { Text("REMOVE", color = Color(0xFFFF8A80)) }
             },
             dismissButton = { TextButton(onClick = { pendingModRemoval = null }) { Text("CANCEL") } },
-            containerColor = PhoenixPanel,
-            titleContentColor = Color.White,
-            textContentColor = PhoenixMuted
+            containerColor = appearancePanel,
+            titleContentColor = appearanceText,
+            textContentColor = appearanceMuted
         )
     }
 
@@ -1846,14 +1866,14 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                         listOf("🔥", "🐉", "⚡", "🌌", "🛡️", "🦅", "☄️", "🌋").forEach { emblem ->
                             Text(
                                 emblem,
-                                modifier = Modifier.background(if (draftAvatar == emblem) Color(0xFF382019) else PhoenixPanel, RoundedCornerShape(10.dp))
+                                modifier = Modifier.background(if (draftAvatar == emblem) Color(0xFF382019) else appearancePanel, RoundedCornerShape(10.dp))
                                     .clickable { draftAvatar = emblem }.padding(7.dp),
                                 fontSize = 20.sp
                             )
                         }
                     }
                     OutlinedTextField(draftVersion, { draftVersion = it }, label = { Text("Minecraft version ID") }, singleLine = true)
-                    Text("Local identity only — official Minecraft sign-in is still required for authenticated online play.", color = PhoenixMuted, fontSize = 11.sp)
+                    Text("Local identity only — official Minecraft sign-in is still required for authenticated online play.", color = appearanceMuted, fontSize = 11.sp)
                 }
             },
             confirmButton = {
@@ -1877,22 +1897,23 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                 }) { Text("SAVE", color = animatedAccent) }
             },
             dismissButton = { TextButton(onClick = { dialogOpen = false }) { Text("CANCEL") } },
-            containerColor = PhoenixPanel,
-            titleContentColor = Color.White,
-            textContentColor = PhoenixMuted
+            containerColor = appearancePanel,
+            titleContentColor = appearanceText,
+            textContentColor = appearanceMuted
         )
+    }
     }
 }
 
 @Composable
 private fun PhoenixInfo(title: String, value: String, detail: String, accent: Color) {
     Column(
-        Modifier.fillMaxWidth().background(PhoenixPanel, RoundedCornerShape(16.dp)).padding(16.dp),
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Text(title, color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-        Text(value, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Text(detail, color = PhoenixMuted, fontSize = 12.sp)
+        Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
     }
 }
 
