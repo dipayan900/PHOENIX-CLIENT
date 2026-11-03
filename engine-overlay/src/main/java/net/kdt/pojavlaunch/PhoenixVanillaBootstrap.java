@@ -1,7 +1,6 @@
 package net.kdt.pojavlaunch;
 
 import android.content.Context;
-import android.util.Log;
 import net.kdt.pojavlaunch.modloaders.FabricVersion;
 import net.kdt.pojavlaunch.modloaders.FabriclikeUtils;
 import net.kdt.pojavlaunch.utils.DownloadUtils;
