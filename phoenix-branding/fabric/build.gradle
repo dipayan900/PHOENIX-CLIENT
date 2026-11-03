@@ -21,17 +21,3 @@ processResources {
 }
 java { withSourcesJar(); toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 
-
-// Minecraft 1.21.11 uses render-state feature renderers and queued model-part drawing.
-if (project.minecraft_version == '1.21.11') {
-    sourceSets.main.java {
-        exclude 'net/phoenix/client/branding/PhoenixCosmeticFeatureRenderer.java'
-        exclude 'net/phoenix/client/branding/mixin/PlayerEntityRendererMixin.java'
-        srcDir 'src/modern/java'
-    }
-    processResources {
-        filesMatching('phoenix_branding.mixins.json') {
-            filter { String line -> line.replace('"PlayerEntityRendererMixin"', '"PlayerEntityRendererMixinModern"') }
-        }
-    }
-}

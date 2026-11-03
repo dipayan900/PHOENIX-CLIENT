@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           OUT="$RUNNER_TEMP/phoenix-fabric-assets"
           mkdir -p "$OUT"
-          for MC_VERSION in 1.21.1 1.21.11; do
+          for MC_VERSION in 1.21.1; do
             echo "::group::Build Phoenix Fabric mod for Minecraft $MC_VERSION"
             DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
             YARN_MAPPINGS="$(printf '%s\n' "$DEPS" | sed -n '1p')"
@@ -126,10 +126,10 @@ jobs:
           mkdir -p "$OUT/android"
           APK="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk"
           cp "$APK" "$OUT/android/Phoenix-Client-debug.apk"
-          for MC_VERSION in 1.21.1 1.21.11; do
+          for MC_VERSION in 1.21.1; do
             unzip -l "$APK" | grep -q "assets/phoenix/phoenix-branding-fabric-$MC_VERSION.jar"
           done
-          echo "Verified: both supported Phoenix client builds are bundled inside the APK."
+          echo "Verified: the supported Phoenix 1.21.1 client build are bundled inside the APK."
           (cd "$OUT" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           cd "$RUNNER_TEMP"
           zip -qr Phoenix-Client-Complete-Test-Package.zip phoenix-complete-test
