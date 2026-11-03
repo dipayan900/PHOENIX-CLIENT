@@ -32,19 +32,32 @@
       {
         "id": "modern-1.21",
         "range": "1.21.1-1.21.11",
-        "status": "planned",
-        "notes": "Each release requires a version-matched compile and runtime adapter; do not reuse mappings or GUI hooks without verification."
+        "status": "in-progress",
+        "notes": "The build pipeline compiles one adapter per patch release; runtime verification is required per version."
       }
     ],
     "loaderAdapters": {
       "vanilla": {
-        "status": "planned",
-        "integration": "Phoenix-managed standalone integration; never install or load Fabric code in Vanilla."
+        "status": "managed-bootstrap",
+        "integration": "A Vanilla selection is cloned into an isolated Phoenix-managed Fabric profile using published Fabric loader metadata. The saved Vanilla profile is not modified. The runtime is Fabric-backed, not unmodified Vanilla, and is intended to join ordinary Vanilla-compatible servers."
       },
       "fabric": {
-        "status": "partial",
-        "integration": "Version-matched Fabric adapter builds",
-        "implementedMinecraftVersions": [
+        "status": "multi-version-build-pipeline",
+        "integration": "CI resolves version-specific mappings and Fabric API and builds a matching Phoenix JAR for every requested release.",
+        "configuredMinecraftVersions": [
+          "1.21.1",
+          "1.21.2",
+          "1.21.3",
+          "1.21.4",
+          "1.21.5",
+          "1.21.6",
+          "1.21.7",
+          "1.21.8",
+          "1.21.9",
+          "1.21.10",
+          "1.21.11"
+        ],
+        "buildVerifiedMinecraftVersions": [
           "1.21.1"
         ]
       }
@@ -52,58 +65,58 @@
     "versionStatus": [
       {
         "minecraft": "1.21.1",
-        "vanilla": "planned",
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
         "fabric": "build-verified-runtime-unverified"
       },
       {
         "minecraft": "1.21.2",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.3",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.4",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.5",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.6",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.7",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.8",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.9",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.10",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       },
       {
         "minecraft": "1.21.11",
-        "vanilla": "planned",
-        "fabric": "planned"
+        "vanilla": "managed-fabric-bootstrap-pending-runtime-test",
+        "fabric": "build-pending"
       }
     ]
   },
