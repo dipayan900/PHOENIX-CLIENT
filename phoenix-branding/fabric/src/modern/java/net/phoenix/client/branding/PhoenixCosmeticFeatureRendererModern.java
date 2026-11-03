@@ -6,13 +6,12 @@ import net.minecraft.client.model.ModelPartBuilder;
 import net.minecraft.client.model.ModelPartData;
 import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.model.TexturedModelData;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.entity.Entity;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
@@ -183,77 +182,79 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
         };
     }
 
-    private static void submit(ModelPart part, MatrixStack matrices, OrderedRenderCommandQueue queue, int light, Identifier texture) {
-        queue.submitModelPart(part, matrices, RenderLayer.getEntityCutoutNoCull(texture), light, OverlayTexture.DEFAULT_UV, null);
-    }
-
-    @Override public void render(MatrixStack matrices, OrderedRenderCommandQueue queue, int light,
+    @Override public void render(MatrixStack matrices, VertexConsumerProvider vertices, int light,
             PlayerEntityRenderState state, float limbAngle, float limbDistance) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (state.invisible || client.world == null) return;
-        Entity entity = client.world.getEntityById(state.id);
+        var world = MinecraftClient.getInstance().world;
+        if (world == null || state.invisible) return;
+        var entity = world.getEntityById(state.id);
         if (!(entity instanceof AbstractClientPlayerEntity player)) return;
-        PhoenixLoadoutState.Loadout l = PhoenixLoadoutState.get(player.getUuid());
-        if (l == null) return;
-        float age = state.age;
-        if (!l.cape().isEmpty()) {
+        PhoenixLoadoutState.Loadout l=PhoenixLoadoutState.get(player.getUuid());
+        if(l==null) return;
+
+        if(!l.cape().isEmpty()) {
             matrices.push();
-            float sway=(float)Math.sin(age*0.08F);
+            float sway=(float)Math.sin((player.age+tickDelta)*0.08F);
             cape.pitch=0.08F+sway*0.035F+Math.min(0.5F,limbDistance*0.12F);
             cape.yaw=0; cape.roll=sway*0.025F;
-            submit(cape,matrices,queue,light,capeTexture(l.cape()));
-            submit(capeTrim,matrices,queue,light,detailTexture(l.cape()));
-            submit(capeLining,matrices,queue,light,texture("white"));
+            var base=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(capeTexture(l.cape())));
+            cape.render(matrices,base,light,OverlayTexture.DEFAULT_UV);
+            capeTrim.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(detailTexture(l.cape()))),light,OverlayTexture.DEFAULT_UV);
+            capeLining.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("white"))),light,OverlayTexture.DEFAULT_UV);
             matrices.pop();
         }
-        if (!l.wings().isEmpty()) {
+        if(!l.wings().isEmpty()) {
             matrices.push();
-            float flap=(float)Math.sin(age*0.18F)*0.32F;
+            float flap=(float)Math.sin((player.age+tickDelta)*0.18F)*0.32F;
             leftWing.roll=-0.18F-flap; rightWing.roll=0.18F+flap;
             leftFeathers.roll=leftWing.roll*0.82F; rightFeathers.roll=rightWing.roll*0.82F;
             leftWing.pitch=0.04F; rightWing.pitch=0.04F;
-            submit(leftWing,matrices,queue,light,wingTexture(l.wings()));
-            submit(rightWing,matrices,queue,light,wingTexture(l.wings()));
-            submit(leftFeathers,matrices,queue,light,detailTexture(l.wings()));
-            submit(rightFeathers,matrices,queue,light,detailTexture(l.wings()));
+            var base=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(wingTexture(l.wings())));
+            var detail=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(detailTexture(l.wings())));
+            leftWing.render(matrices,base,light,OverlayTexture.DEFAULT_UV);
+            rightWing.render(matrices,base,light,OverlayTexture.DEFAULT_UV);
+            leftFeathers.render(matrices,detail,light,OverlayTexture.DEFAULT_UV);
+            rightFeathers.render(matrices,detail,light,OverlayTexture.DEFAULT_UV);
             matrices.pop();
         }
-        if (!l.head().isEmpty()) {
+        if(!l.head().isEmpty()) {
             matrices.push();
             String id=l.head();
-            Identifier material=headTexture(id);
+            var main=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(headTexture(id)));
             if(id.contains("halo")) {
-                halo.yaw=age*0.035F;
-                submit(halo,matrices,queue,light,material);
-            } else if(id.contains("crown")) submit(crown,matrices,queue,light,material);
-            else if(id.contains("horn")) submit(horns,matrices,queue,light,material);
-            else if(id.contains("visor") || id.contains("shades")) submit(visor,matrices,queue,light,material);
-            else if(id.contains("mask") || id.contains("respirator")) submit(faceMask,matrices,queue,light,material);
-            else submit(headwear,matrices,queue,light,material);
+                halo.yaw=(player.age+tickDelta)*0.035F;
+                halo.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
+            } else if(id.contains("crown")) {
+                crown.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
+            } else if(id.contains("horn")) {
+                horns.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
+            } else if(id.contains("visor") || id.contains("shades")) {
+                visor.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
+            } else if(id.contains("mask") || id.contains("respirator")) {
+                faceMask.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
+            } else {
+                headwear.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
+            }
             matrices.pop();
         }
-        if (!l.back().isEmpty()) {
+        if(!l.back().isEmpty()) {
             matrices.push();
             String id=l.back();
             if(id.endsWith("_tail")) {
-                float sway=(float)Math.sin(age*0.16F);
+                float sway=(float)Math.sin((player.age+tickDelta)*0.16F);
                 tailBase.roll=sway*0.18F; tailMid.roll=sway*0.28F+0.12F; tailTip.roll=sway*0.38F+0.2F;
-                Identifier material=id.equals("fox_tail")?texture("orange"):texture("red");
-                submit(tailBase,matrices,queue,light,material);
-                submit(tailMid,matrices,queue,light,material);
-                submit(tailTip,matrices,queue,light,material);
+                var b=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(id.equals("fox_tail")?texture("orange"):texture("red")));
+                tailBase.render(matrices,b,light,OverlayTexture.DEFAULT_UV);
             } else if(id.equals("robot_arm") || id.equals("crystal_bracers")) {
-                Identifier material=id.equals("robot_arm")?texture("gray"):texture("light_blue");
-                submit(leftBracer,matrices,queue,light,material);
-                submit(rightBracer,matrices,queue,light,material);
+                var b=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(id.equals("robot_arm")?texture("gray"):texture("light_blue")));
+                leftBracer.render(matrices,b,light,OverlayTexture.DEFAULT_UV);
+                rightBracer.render(matrices,b,light,OverlayTexture.DEFAULT_UV);
             } else if(id.startsWith("shoulder_")) {
-                submit(shoulderPet,matrices,queue,light,texture("orange"));
+                shoulderPet.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("orange"))),light,OverlayTexture.DEFAULT_UV);
             } else {
-                submit(backpack,matrices,queue,light,texture("brown"));
-                submit(packDetails,matrices,queue,light,texture("yellow"));
+                backpack.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("brown"))),light,OverlayTexture.DEFAULT_UV);
+                packDetails.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("yellow"))),light,OverlayTexture.DEFAULT_UV);
             }
             matrices.pop();
         }
     }
-
 }

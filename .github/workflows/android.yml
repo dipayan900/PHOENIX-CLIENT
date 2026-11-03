@@ -43,6 +43,9 @@ jobs:
           mkdir -p "$OUT"
           for MINOR in {1..11}; do
             MC_VERSION="1.21.$MINOR"
+            if [ "$MINOR" -eq 2 ]; then
+              cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
+            fi
             echo "::group::Building Phoenix Fabric adapter for $MC_VERSION"
             DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
             YARN_MAPPINGS="$(printf '%s\n' "$DEPS" | sed -n '1p')"

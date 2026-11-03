@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "net.phoenix.client.branding.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "PlayerListHudMixin",
+    "PlayerEntityRendererMixinModern",
+    "PlayerEntityModelEmoteMixinModern",
+    "TitleScreenMixin",
+    "SplashOverlayMixin",
+    "GameMenuScreenMixin",
+    "InGameHudCrosshairMixin",
+    "ContainerPreviewTooltipMixin"
+  ],
+  "injectors": { "defaultRequire": 1 }
+}
