@@ -48,13 +48,24 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
         root.addChild("right_wing", ModelPartBuilder.create().uv(0,0)
                 .cuboid(-3,-2,-1,4,7,2).cuboid(-5,1,-0.7F,5,8,1.4F)
                 .cuboid(-7,5,-0.5F,5,7,1), ModelTransform.pivot(4.5F,0,2));
+        // Individually layered feather vanes create a visibly dimensional fan,
+        // rather than a single flat wing silhouette. Each feather has its own
+        // volume and sits at a slightly different depth.
         root.addChild("left_feathers", ModelPartBuilder.create().uv(0,0)
-                .cuboid(1,5,-0.9F,2,7,1.8F).cuboid(3,7,-0.8F,2,7,1.6F)
-                .cuboid(5,9,-0.7F,2,6,1.4F).cuboid(0,9,-0.8F,2,6,1.6F),
+                .cuboid(0,2,-1.2F,2,8,1.8F).cuboid(2,3,-1.0F,2,9,1.7F)
+                .cuboid(4,4,-0.8F,2,9,1.6F).cuboid(6,5,-0.6F,2,8,1.5F)
+                .cuboid(8,7,-0.4F,2,7,1.4F).cuboid(1,8,-1.4F,2,7,1.8F)
+                .cuboid(3,10,-1.2F,2,7,1.7F).cuboid(5,11,-1.0F,2,6,1.6F)
+                .cuboid(7,12,-0.8F,2,5,1.5F).cuboid(9,13,-0.6F,2,4,1.4F)
+                .cuboid(-1,5,-0.8F,2,6,1.5F),
                 ModelTransform.pivot(-4.5F,0,2));
         root.addChild("right_feathers", ModelPartBuilder.create().uv(0,0)
-                .cuboid(-3,5,-0.9F,2,7,1.8F).cuboid(-5,7,-0.8F,2,7,1.6F)
-                .cuboid(-7,9,-0.7F,2,6,1.4F).cuboid(-1,9,-0.8F,2,6,1.6F),
+                .cuboid(-2,2,-1.2F,2,8,1.8F).cuboid(-4,3,-1.0F,2,9,1.7F)
+                .cuboid(-6,4,-0.8F,2,9,1.6F).cuboid(-8,5,-0.6F,2,8,1.5F)
+                .cuboid(-10,7,-0.4F,2,7,1.4F).cuboid(-3,8,-1.4F,2,7,1.8F)
+                .cuboid(-5,10,-1.2F,2,7,1.7F).cuboid(-7,11,-1.0F,2,6,1.6F)
+                .cuboid(-9,12,-0.8F,2,5,1.5F).cuboid(-11,13,-0.6F,2,4,1.4F)
+                .cuboid(-1,5,-0.8F,2,6,1.5F),
                 ModelTransform.pivot(4.5F,0,2));
 
         root.addChild("headwear", ModelPartBuilder.create().uv(0,0)
