@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -362,7 +363,9 @@ private class PhoenixCrestRenderer : GLSurfaceView.Renderer {
             val shader = GLES20.glCreateShader(type)
             GLES20.glShaderSource(shader, source)
             GLES20.glCompileShader(shader)
-            check(GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, IntArray(1), 0) == GLES20.GL_TRUE) { GLES20.glGetShaderInfoLog(shader) }
+            val status = IntArray(1)
+            GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, status, 0)
+            check(status[0] == GLES20.GL_TRUE) { GLES20.glGetShaderInfoLog(shader) }
             return shader
         }
         val v = compile(GLES20.GL_VERTEX_SHADER, vs)
