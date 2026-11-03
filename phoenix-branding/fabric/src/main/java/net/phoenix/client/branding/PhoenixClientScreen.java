@@ -5,23 +5,20 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 
-/** Phoenix module control panel. */
+/** Phoenix native module and quick-tool panel. */
 public final class PhoenixClientScreen extends Screen {
     private final Screen parent;
     public PhoenixClientScreen(Screen parent){super(Text.literal("Phoenix Client"));this.parent=parent;}
-
-    @Override public void renderBackground(DrawContext draw,int mouseX,int mouseY,float delta){
-        draw.fillGradient(0,0,width,height,0xFF09070D,0xFF25111B);
-        draw.fill(0,height/3,width,height/3+1,0x44FF702E);
-        draw.fill(width/2-125,22,width/2+125,23,0x66FF702E);
-        draw.drawCenteredTextWithShadow(textRenderer,Text.literal("PHOENIX"),width/2,30,0xFFFF8547);
-        draw.drawCenteredTextWithShadow(textRenderer,Text.literal("CLIENT  /  MODULE CONTROL"),width/2,43,0xFFB8AEBB);
-        super.renderBackground(draw,mouseX,mouseY,delta);
+    @Override public void renderBackground(DrawContext d,int mx,int my,float delta){
+        d.fillGradient(0,0,width,height,0xFF09070D,0xFF25111B);
+        d.fill(width/2-125,22,width/2+125,23,0x66FF702E);
+        d.drawCenteredTextWithShadow(textRenderer,Text.literal("PHOENIX"),width/2,30,0xFFFF8547);
+        d.drawCenteredTextWithShadow(textRenderer,Text.literal("CLIENT  /  MODULE CONTROL"),width/2,43,0xFFB8AEBB);
+        super.renderBackground(d,mx,my,delta);
     }
-
     @Override protected void init(){
-        int gap=6, colWidth=Math.min(210,(width-28-gap)/2), left=width/2-colWidth-gap/2;
-        int right=left+colWidth+gap, top=height/2-104, step=23;
+        int gap=5,cw=Math.min(210,(width-24-gap)/2),left=width/2-cw-gap/2,right=left+cw+gap;
+        int top=Math.max(66,height/2-142),step=21;
         addToggle(left,top,"Master HUD",PhoenixHud.isVisible(),PhoenixHud::toggle);
         addToggle(right,top,"FPS counter",PhoenixHud.isFpsEnabled(),PhoenixHud::toggleFps);
         addToggle(left,top+step,"Coordinates",PhoenixHud.isCoordinatesEnabled(),PhoenixHud::toggleCoordinates);
@@ -38,13 +35,17 @@ public final class PhoenixClientScreen extends Screen {
         addToggle(right,top+step*6,"Held item counter",PhoenixHud.isItemCounterEnabled(),PhoenixHud::toggleItemCounter);
         addToggle(left,top+step*7,"Keystrokes",PhoenixHud.isKeystrokesEnabled(),PhoenixHud::toggleKeystrokes);
         addToggle(right,top+step*7,"Session timer",PhoenixHud.isSessionTimeEnabled(),PhoenixHud::toggleSessionTime);
-        addDrawableChild(ButtonWidget.builder(Text.literal("SAVE & RETURN"),b->close())
-                .dimensions(width/2-110,top+step*8+5,220,20).build());
+        addToggle(left,top+step*8,"Fullbright",PhoenixHud.isFullbrightEnabled(),PhoenixHud::toggleFullbright);
+        addToggle(right,top+step*8,"Waypoint HUD",PhoenixHud.isWaypointEnabled(),PhoenixHud::toggleWaypoint);
+        addToggle(left,top+step*9,"Inventory overlay",PhoenixHud.isInventoryOverlayEnabled(),PhoenixHud::toggleInventoryOverlay);
+        addToggle(right,top+step*9,"Chat transparency",PhoenixHud.isChatTransparencyEnabled(),PhoenixHud::toggleChatTransparency);
+        addDrawableChild(ButtonWidget.builder(Text.literal("SET WAYPOINT HERE"),b->{PhoenixHud.setWaypointHere();}).dimensions(left,top+step*10,cw,20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("CLEAR WAYPOINT"),b->{PhoenixHud.clearWaypoint();}).dimensions(right,top+step*10,cw,20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("SAVE & RETURN"),b->close()).dimensions(width/2-100,top+step*11+3,200,20).build());
     }
-
     private void addToggle(int x,int y,String name,boolean enabled,Runnable action){
-        addDrawableChild(ButtonWidget.builder(label(name,enabled),button->{action.run();button.setMessage(label(name,state(name)));})
-                .dimensions(x,y,Math.min(210,(width-28)/2),20).build());
+        addDrawableChild(ButtonWidget.builder(label(name,enabled),b->{action.run();b.setMessage(label(name,state(name)));})
+                .dimensions(x,y,Math.min(210,(width-24)/2),19).build());
     }
     private static boolean state(String n){return switch(n){
         case "Master HUD"->PhoenixHud.isVisible();case "FPS counter"->PhoenixHud.isFpsEnabled();
@@ -55,7 +56,9 @@ public final class PhoenixClientScreen extends Screen {
         case "Local clock"->PhoenixHud.isClockEnabled();case "Attack indicator"->PhoenixHud.isAttackIndicatorEnabled();
         case "Potion effects"->PhoenixHud.isPotionEffectsEnabled();case "Held item counter"->PhoenixHud.isItemCounterEnabled();
         case "Keystrokes"->PhoenixHud.isKeystrokesEnabled();case "Session timer"->PhoenixHud.isSessionTimeEnabled();
+        case "Fullbright"->PhoenixHud.isFullbrightEnabled();case "Waypoint HUD"->PhoenixHud.isWaypointEnabled();
+        case "Inventory overlay"->PhoenixHud.isInventoryOverlayEnabled();case "Chat transparency"->PhoenixHud.isChatTransparencyEnabled();
         default->false;};}
-    private static Text label(String n,boolean on){return Text.literal(n+"  ["+(on?"ON":"OFF")+"]");}
+    private static Text label(String n,boolean on){return Text.literal(n+" ["+(on?"ON":"OFF")+"]");}
     @Override public void close(){if(client!=null)client.setScreen(parent);}
 }
