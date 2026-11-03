@@ -19,6 +19,7 @@ public final class PhoenixHudEditorScreen extends Screen {
 
     @Override
     protected void init() {
+        PhoenixScreenStyle.beginTransition();
         int y = height - 28;
         addDrawableChild(ButtonWidget.builder(Text.literal("RESET ALL"), b -> PhoenixHud.resetElementPositions())
                 .dimensions(width / 2 - 154, y, 96, 20).build());
@@ -32,23 +33,24 @@ public final class PhoenixHudEditorScreen extends Screen {
 
     @Override
     public void render(DrawContext d, int mx, int my, float delta) {
-        d.fillGradient(0, 0, width, height, 0xF509070D, 0xF525111B);
-        d.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFF8547);
+        PhoenixScreenStyle.background(d, width, height);
+        d.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, PhoenixScreenStyle.accent());
         d.drawCenteredTextWithShadow(textRenderer,
                 Text.literal("DRAG EACH HUD WIDGET SEPARATELY • POSITIONS SAVE AUTOMATICALLY"),
-                width / 2, 27, 0xFFB8AEBB);
+                width / 2, 27, PhoenixScreenStyle.mutedText());
         for (String key : PhoenixHud.getElementKeys()) {
             int x = PhoenixHud.getElementX(key), y = PhoenixHud.getElementY(key);
             int w = Math.max(92, textRenderer.getWidth(key) + 22);
-            d.fill(x, y, x + w, y + 18, 0xD5100D14);
-            d.fill(x, y, x + 2, y + 18, 0xFFFF702E);
-            d.drawTextWithShadow(textRenderer, Text.literal(key), x + 7, y + 5, 0xFFFFA06C);
+            d.fill(x, y, x + w, y + 18, PhoenixScreenStyle.panel());
+            d.fill(x, y, x + 2, y + 18, PhoenixScreenStyle.accent());
+            d.drawTextWithShadow(textRenderer, Text.literal(key), x + 7, y + 5, PhoenixScreenStyle.mainText());
             d.drawTextWithShadow(textRenderer, Text.literal("≡"), x + w - 12, y + 5, 0xFFB8AEBB);
         }
         d.drawCenteredTextWithShadow(textRenderer,
                 Text.literal("Move widgets away from screen edges if they overlap."),
                 width / 2, height - 42, 0xFFB8AEBB);
         super.render(d, mx, my, delta);
+        PhoenixScreenStyle.renderChrome(this, d);
     }
 
     @Override
