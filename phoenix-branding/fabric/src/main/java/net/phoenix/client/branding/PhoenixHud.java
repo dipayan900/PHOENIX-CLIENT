@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.LocalTime;
 import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.Map;
 import java.time.format.DateTimeFormatter;
 
 /** Client-side Phoenix modules. Settings are kept local to the client session. */
@@ -45,11 +47,24 @@ public final class PhoenixHud {
     private static int crosshairStyle=0, crosshairColor=0xFFFF7A35, crosshairSize=7, crosshairGap=3, crosshairThickness=1;
     private static boolean crosshairDot=false;
     private static int hudX=10,hudY=10;
+    private static final String[] ELEMENT_KEYS={"FPS","XYZ","FACING","ARMOR","PING","SPEED","BIOME","DIMENSION","WORLD TIME","LOCAL","ATTACK","POTION","HELD ITEM","KEYS","SESSION","WAYPOINT","INVENTORY","LIGHT LEVEL","NEARBY 1","NEARBY 2","NEARBY 3","TOOL INFO","CPS"};
+    private static final Map<String,int[]> elementPositions=new HashMap<>();
+    private static String positionKey(String key){return key.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_-]","_");}
+    private static int elementIndex(String key){for(int i=0;i<ELEMENT_KEYS.length;i++)if(ELEMENT_KEYS[i].equals(key))return i;return 0;}
+    public static String[] getElementKeys(){return ELEMENT_KEYS.clone();}
+    public static int getElementX(String key){int[] p=elementPositions.get(positionKey(key));return p==null?10+(elementIndex(key)/12)*160:p[0];}
+    public static int getElementY(String key){int[] p=elementPositions.get(positionKey(key));return p==null?10+(elementIndex(key)%12)*22:p[1];}
+    public static void setElementPosition(String key,int x,int y){elementPositions.put(positionKey(key),new int[]{Math.max(0,x),Math.max(0,y)});saveConfig();}
+    public static void resetElementPositions(){elementPositions.clear();saveConfig();}
     private static Path configFile(){return FabricLoader.getInstance().getConfigDir().resolve("phoenix-client.properties");}
     public static int getHudX(){return hudX;} public static int getHudY(){return hudY;}
     public static void setHudPosition(int x,int y){hudX=Math.max(0,x);hudY=Math.max(0,y);saveConfig();}
-    private static void loadConfig(){try{Path p=configFile();if(Files.exists(p)){Properties v=new Properties();try(InputStream in=Files.newInputStream(p)){v.load(in);}hudX=Math.max(0,Integer.parseInt(v.getProperty("hud.x","10")));hudY=Math.max(0,Integer.parseInt(v.getProperty("hud.y","10")));crosshairStyle=Math.max(0,Math.min(4,Integer.parseInt(v.getProperty("crosshair.style","0"))));crosshairColor=(int)Long.parseLong(v.getProperty("crosshair.color","4294937141"));crosshairSize=Math.max(3,Math.min(18,Integer.parseInt(v.getProperty("crosshair.size","7"))));crosshairGap=Math.max(0,Math.min(10,Integer.parseInt(v.getProperty("crosshair.gap","3"))));crosshairThickness=Math.max(1,Math.min(4,Integer.parseInt(v.getProperty("crosshair.thickness","1"))));crosshairDot=Boolean.parseBoolean(v.getProperty("crosshair.dot","false"));customCrosshairEnabled=Boolean.parseBoolean(v.getProperty("crosshair.enabled","false"));}}catch(Exception ignored){}}
-    public static void saveConfig(){try{Path p=configFile();Files.createDirectories(p.getParent());Properties v=new Properties();v.setProperty("hud.x",String.valueOf(hudX));v.setProperty("hud.y",String.valueOf(hudY));v.setProperty("crosshair.style",String.valueOf(crosshairStyle));v.setProperty("crosshair.color",Long.toString(Integer.toUnsignedLong(crosshairColor)));v.setProperty("crosshair.size",String.valueOf(crosshairSize));v.setProperty("crosshair.gap",String.valueOf(crosshairGap));v.setProperty("crosshair.thickness",String.valueOf(crosshairThickness));v.setProperty("crosshair.dot",String.valueOf(crosshairDot));v.setProperty("crosshair.enabled",String.valueOf(customCrosshairEnabled));try(OutputStream out=Files.newOutputStream(p)){v.store(out,"Phoenix Client settings");}}catch(Exception ignored){}}
+    private static void loadConfig(){try{Path p=configFile();if(Files.exists(p)){Properties v=new Properties();try(InputStream in=Files.newInputStream(p)){v.load(in);}hudX=Math.max(0,Integer.parseInt(v.getProperty("hud.x","10")));hudY=Math.max(0,Integer.parseInt(v.getProperty("hud.y","10")));crosshairStyle=Math.max(0,Math.min(4,Integer.parseInt(v.getProperty("crosshair.style","0"))));crosshairColor=(int)Long.parseLong(v.getProperty("crosshair.color","4294937141"));crosshairSize=Math.max(3,Math.min(18,Integer.parseInt(v.getProperty("crosshair.size","7"))));crosshairGap=Math.max(0,Math.min(10,Integer.parseInt(v.getProperty("crosshair.gap","3"))));crosshairThickness=Math.max(1,Math.min(4,Integer.parseInt(v.getProperty("crosshair.thickness","1"))));crosshairDot=Boolean.parseBoolean(v.getProperty("crosshair.dot","false"));customCrosshairEnabled=Boolean.parseBoolean(v.getProperty("crosshair.enabled","false"));
+        for(String k:v.stringPropertyNames())if(k.startsWith("element.")&&k.endsWith(".x")){String id=k.substring(8,k.length()-2);try{int ex=Integer.parseInt(v.getProperty(k));int ey=Integer.parseInt(v.getProperty("element."+id+".y","10"));elementPositions.put(id,new int[]{Math.max(0,ex),Math.max(0,ey)});}catch(Exception ignored){}}
+        }}catch(Exception ignored){}}
+    public static void saveConfig(){try{Path p=configFile();Files.createDirectories(p.getParent());Properties v=new Properties();v.setProperty("hud.x",String.valueOf(hudX));v.setProperty("hud.y",String.valueOf(hudY));v.setProperty("crosshair.style",String.valueOf(crosshairStyle));v.setProperty("crosshair.color",Long.toString(Integer.toUnsignedLong(crosshairColor)));v.setProperty("crosshair.size",String.valueOf(crosshairSize));v.setProperty("crosshair.gap",String.valueOf(crosshairGap));v.setProperty("crosshair.thickness",String.valueOf(crosshairThickness));v.setProperty("crosshair.dot",String.valueOf(crosshairDot));v.setProperty("crosshair.enabled",String.valueOf(customCrosshairEnabled));
+        for(var e:elementPositions.entrySet()){v.setProperty("element."+e.getKey()+".x",String.valueOf(e.getValue()[0]));v.setProperty("element."+e.getKey()+".y",String.valueOf(e.getValue()[1]));}
+        try(OutputStream out=Files.newOutputStream(p)){v.store(out,"Phoenix Client settings");}}catch(Exception ignored){}}
 
     private PhoenixHud() {}
     public static boolean isVisible(){return visible;}
@@ -162,10 +177,7 @@ public final class PhoenixHud {
                     +(sessionTimeEnabled?1:0)+(waypointEnabled&&waypoint!=null?1:0)+(inventoryOverlayEnabled?1:0)
                     +(lightLevelEnabled?1:0)+(entityOverlayEnabled?3:0)+(toolInfoEnabled?1:0)+(cpsEnabled?1:0);
             if(lines==0&&!customCrosshairEnabled)return;
-            int x=hudX,y=hudY,w=230,h=19+lines*12;
-            draw.fill(x,y,x+w,y+h,0xB5100D14);draw.fill(x,y,x+2,y+h,0xFFFF702E);
-            draw.drawTextWithShadow(c.textRenderer,Text.literal("PHOENIX  /  MODULES"),x+8,y+5,0xFFFF8A4C);
-            int row=y+19;
+            int row=hudY;
             if(fpsEnabled){line(draw,c,"FPS",String.valueOf(c.getCurrentFps()),row);row+=12;}
             if(coordinatesEnabled){BlockPos p=c.player.getBlockPos();line(draw,c,"XYZ",p.getX()+"  "+p.getY()+"  "+p.getZ(),row);row+=12;}
             if(directionEnabled){line(draw,c,"FACING",c.player.getHorizontalFacing().getName().toUpperCase(),row);row+=12;}
@@ -184,7 +196,7 @@ public final class PhoenixHud {
             if(waypointEnabled&&waypoint!=null){if(waypointDimension.equals(c.world.getRegistryKey().getValue())){double d=Math.sqrt(c.player.squaredDistanceTo(waypoint.getX()+0.5,waypoint.getY()+0.5,waypoint.getZ()+0.5));line(draw,c,"WAYPOINT",waypoint.getX()+" "+waypoint.getY()+" "+waypoint.getZ()+" · "+Math.round(d)+"m",row);}else line(draw,c,"WAYPOINT","Other dimension",row);row+=12;}
             if(inventoryOverlayEnabled){int occupied=0;for(ItemStack s:c.player.getInventory().main)if(!s.isEmpty())occupied++;line(draw,c,"INVENTORY",occupied+" / 36 slots used",row);row+=12;}
             if(lightLevelEnabled){int light=c.world.getLightLevel(c.player.getBlockPos());line(draw,c,"LIGHT LEVEL",light+" / 15",row);row+=12;}
-            if(entityOverlayEnabled){int shown=0;for(var entity:c.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,c.player.getBoundingBox().expand(12),e->e!=c.player&&!e.isRemoved())){if(shown++>=3)break;double dist=Math.sqrt(c.player.squaredDistanceTo(entity));line(draw,c,"NEARBY",entity.getName().getString()+" · "+Math.round(dist)+"m",row);row+=12;}}
+            if(entityOverlayEnabled){int shown=0;for(var entity:c.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,c.player.getBoundingBox().expand(12),e->e!=c.player&&!e.isRemoved())){if(shown++>=3)break;double dist=Math.sqrt(c.player.squaredDistanceTo(entity));line(draw,c,"NEARBY "+shown,entity.getName().getString()+" · "+Math.round(dist)+"m",row);row+=12;}}
             if(toolInfoEnabled){ItemStack held=c.player.getMainHandStack();String v=held.isEmpty()?"No tool held":(held.isDamageable()?Math.max(0,held.getMaxDamage()-held.getDamage())+" durability":held.getName().getString());line(draw,c,"TOOL INFO",v,row);row+=12;}
             if(cpsEnabled){line(draw,c,"CPS",String.valueOf(clickTimes.size()),row);row+=12;}
             if(customCrosshairEnabled)renderCrosshair(draw,c.getWindow().getScaledWidth()/2,c.getWindow().getScaledHeight()/2);
@@ -202,5 +214,11 @@ public final class PhoenixHud {
         if(crosshairDot)d.fill(cx-1,cy-1,cx+2,cy+2,col);
     }
     private static String duration(int ticks){int s=Math.max(0,ticks)/20;return String.format(java.util.Locale.ROOT,"%d:%02d",s/60,s%60);}
-    private static void line(net.minecraft.client.gui.DrawContext d,MinecraftClient c,String k,String v,int y){d.drawTextWithShadow(c.textRenderer,Text.literal(k),hudX+8,y,0xFFFFA06C);d.drawTextWithShadow(c.textRenderer,Text.literal(v),hudX+86,y,0xFFF4EDF4);}
+    private static void line(net.minecraft.client.gui.DrawContext d,MinecraftClient c,String k,String v,int ignoredY){
+        int x=getElementX(k),y=getElementY(k),labelWidth=c.textRenderer.getWidth(k),valueWidth=c.textRenderer.getWidth(v);
+        int w=Math.min(260,Math.max(112,labelWidth+valueWidth+20));
+        d.fill(x,y,x+w,y+17,0xB5100D14);d.fill(x,y,x+2,y+17,0xFFFF702E);
+        d.drawTextWithShadow(c.textRenderer,Text.literal(k),x+7,y+4,0xFFFFA06C);
+        d.drawTextWithShadow(c.textRenderer,Text.literal(v),x+Math.min(90,Math.max(48,labelWidth+13)),y+4,0xFFF4EDF4);
+    }
 }
