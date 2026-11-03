@@ -6,7 +6,7 @@ import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.phoenix.client.branding.PhoenixCosmeticFeatureRenderer;
+import net.phoenix.client.branding.PhoenixCosmeticFeatureRendererModern;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,6 +23,6 @@ abstract class PlayerEntityRendererMixinModern {
         @SuppressWarnings("unchecked")
         FeatureRendererContext<PlayerEntityRenderState, PlayerEntityModel> renderer =
                 (FeatureRendererContext<PlayerEntityRenderState, PlayerEntityModel>) (Object) this;
-        addFeature(new PhoenixCosmeticFeatureRenderer(renderer));
+        addFeature(new PhoenixCosmeticFeatureRendererModern(renderer));
     }
 }

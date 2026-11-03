@@ -193,7 +193,7 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
 
         if(!l.cape().isEmpty()) {
             matrices.push();
-            float sway=(float)Math.sin((player.age+tickDelta)*0.08F);
+            float sway=(float)Math.sin(state.age*0.08F);
             cape.pitch=0.08F+sway*0.035F+Math.min(0.5F,limbDistance*0.12F);
             cape.yaw=0; cape.roll=sway*0.025F;
             var base=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(capeTexture(l.cape())));
@@ -204,7 +204,7 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
         }
         if(!l.wings().isEmpty()) {
             matrices.push();
-            float flap=(float)Math.sin((player.age+tickDelta)*0.18F)*0.32F;
+            float flap=(float)Math.sin(state.age*0.18F)*0.32F;
             leftWing.roll=-0.18F-flap; rightWing.roll=0.18F+flap;
             leftFeathers.roll=leftWing.roll*0.82F; rightFeathers.roll=rightWing.roll*0.82F;
             leftWing.pitch=0.04F; rightWing.pitch=0.04F;
@@ -221,7 +221,7 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
             String id=l.head();
             var main=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(headTexture(id)));
             if(id.contains("halo")) {
-                halo.yaw=(player.age+tickDelta)*0.035F;
+                halo.yaw=state.age*0.035F;
                 halo.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
             } else if(id.contains("crown")) {
                 crown.render(matrices,main,light,OverlayTexture.DEFAULT_UV);
@@ -240,7 +240,7 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
             matrices.push();
             String id=l.back();
             if(id.endsWith("_tail")) {
-                float sway=(float)Math.sin((player.age+tickDelta)*0.16F);
+                float sway=(float)Math.sin(state.age*0.16F);
                 tailBase.roll=sway*0.18F; tailMid.roll=sway*0.28F+0.12F; tailTip.roll=sway*0.38F+0.2F;
                 var b=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(id.equals("fox_tail")?texture("orange"):texture("red")));
                 tailBase.render(matrices,b,light,OverlayTexture.DEFAULT_UV);
