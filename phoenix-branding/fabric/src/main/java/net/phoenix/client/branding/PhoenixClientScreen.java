@@ -119,17 +119,16 @@ public final class PhoenixClientScreen extends Screen {
             addAction("PERFORMANCE & FPS",x,y,w,()->client.setScreen(new PhoenixPerformanceScreen(this)));
             addAction("HUD LAYOUT EDITOR",x,y+34,w,()->client.setScreen(new PhoenixHudEditorScreen(this)));
             addAction("CROSSHAIR STUDIO",x,y+68,w,()->client.setScreen(new PhoenixCrosshairScreen(this)));
-            addAction("APPEARANCE: "+PhoenixHud.getUiTheme(),x,y+102,w,()->PhoenixHud.cycleUiTheme());
-            addAction("CYCLE APPEARANCE",x,y+136,w,()->switchTo("SETTINGS",category,0));
+            addAction("APPEARANCE: "+PhoenixHud.getUiTheme()+"  ·  CHANGE",x,y+102,w,()->{PhoenixHud.cycleUiTheme();switchTo("SETTINGS",category,0);});
             addAction("RESET HUD POSITIONS",x,y+170,w,PhoenixHud::resetElementPositions);
         } else if(tab.equals("KEYBINDS")){
             int x=width/2-125,y=105;
             String[][] keys={{"OPEN PHOENIX MENU","RIGHT SHIFT"},{"HOLD TO ZOOM","C"},{"TOGGLE SPRINT","G"}};
             for(int i=0;i<keys.length;i++){
                 int yy=y+i*42;
-                addDrawableChild(ButtonWidget.builder(Text.literal(keys[i][0]+"     "+keys[i][1]),b->{}).dimensions(x,yy,250,30).build());
+                addDrawableChild(ButtonWidget.builder(Text.literal(keys[i][0]+"     "+keys[i][1]),b->client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this,client.options))).dimensions(x,yy,250,30).build());
             }
-            addAction("OPEN MINECRAFT CONTROLS",x,y+140,250,()->client.setScreen(new net.minecraft.client.gui.screen.option.ControlsOptionsScreen(this,client.options)));
+            addAction("OPEN MINECRAFT OPTIONS",x,y+140,250,()->client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this,client.options)));
         } else {
             int w=Math.min(270,width-28),x=(width-w)/2,y=105;
             addAction("DEFAULT  ·  ALL-ROUND",x,y,w,()->{PhoenixHud.applyPreset("DEFAULT");switchTo("MODULES","ALL",0);});

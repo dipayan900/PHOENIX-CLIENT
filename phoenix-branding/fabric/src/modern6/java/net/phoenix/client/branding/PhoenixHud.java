@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 /** Client-side Phoenix modules. Settings are kept local to the client session. */
 public final class PhoenixHud {
     private static boolean visible = true;
+    private static String uiTheme = "SYSTEM";
     private static boolean registered;
     private static boolean fpsEnabled = true, coordinatesEnabled = true, directionEnabled = true;
     private static boolean armorEnabled = true, clockEnabled, pingEnabled = true;
@@ -40,7 +41,7 @@ public final class PhoenixHud {
     private static long sessionTicks;
     private static BlockPos waypoint;
     private static Identifier waypointDimension;
-    private static KeyBinding zoomKey, sprintToggleKey;
+    private static KeyBinding zoomKey, sprintToggleKey, menuKey;
     private static boolean sprintToggled, cpsEnabled=true, lastLeftDown, lastRightDown;
     private static final ArrayDeque<Long> clickTimes = new ArrayDeque<>();
     private static boolean zoomActive;
@@ -76,6 +77,7 @@ public final class PhoenixHud {
             crosshairThickness = Math.max(1, Math.min(4, Integer.parseInt(values.getProperty("crosshair.thickness", "1"))));
             crosshairDot = Boolean.parseBoolean(values.getProperty("crosshair.dot", "false"));
             customCrosshairEnabled = Boolean.parseBoolean(values.getProperty("crosshair.enabled", "false"));
+            uiTheme = values.getProperty("ui.theme", uiTheme).toUpperCase(java.util.Locale.ROOT);
             visible = setting(values, "hud.visible", visible);
             fpsEnabled = setting(values, "hud.fps", fpsEnabled);
             coordinatesEnabled = setting(values, "hud.coordinates", coordinatesEnabled);
@@ -132,6 +134,7 @@ public final class PhoenixHud {
             values.setProperty("crosshair.thickness", String.valueOf(crosshairThickness));
             values.setProperty("crosshair.dot", String.valueOf(crosshairDot));
             values.setProperty("crosshair.enabled", String.valueOf(customCrosshairEnabled));
+            values.setProperty("ui.theme", uiTheme);
             values.setProperty("hud.visible", String.valueOf(visible));
             values.setProperty("hud.fps", String.valueOf(fpsEnabled));
             values.setProperty("hud.coordinates", String.valueOf(coordinatesEnabled));
@@ -168,6 +171,9 @@ public final class PhoenixHud {
     }
 
     private PhoenixHud() {}
+    public static String getUiTheme(){return uiTheme;}
+    public static boolean isLightUiTheme(){return "LIGHT".equals(uiTheme);}
+    public static void cycleUiTheme(){uiTheme=switch(uiTheme){case "SYSTEM"->"DARK";case "DARK"->"LIGHT";default->"SYSTEM";};saveConfig();}
     public static boolean isVisible(){return visible;}
     public static boolean isFpsEnabled(){return fpsEnabled;}
     public static boolean isCoordinatesEnabled(){return coordinatesEnabled;}
@@ -234,6 +240,29 @@ public final class PhoenixHud {
     public static void toggleToolInfo(){toolInfoEnabled=!toolInfoEnabled;saveConfig();}
     public static void toggleCps(){cpsEnabled=!cpsEnabled;saveConfig();}
     public static void toggleSprint(){sprintToggled=!sprintToggled;saveConfig();}
+    public static void applyPreset(String preset){
+        visible=true;
+        if("PVP".equals(preset)){
+            fpsEnabled=true;coordinatesEnabled=true;directionEnabled=true;armorEnabled=true;pingEnabled=true;
+            keystrokesEnabled=true;cpsEnabled=true;attackIndicatorEnabled=true;potionEffectsEnabled=true;
+            speedEnabled=false;biomeEnabled=false;dimensionEnabled=false;worldTimeEnabled=false;clockEnabled=false;
+            sessionTimeEnabled=false;inventoryOverlayEnabled=false;lightLevelEnabled=false;entityOverlayEnabled=false;
+            toolInfoEnabled=false;itemCounterEnabled=false;
+        }else if("PERFORMANCE".equals(preset)){
+            fpsEnabled=true;coordinatesEnabled=false;directionEnabled=false;armorEnabled=false;pingEnabled=false;
+            keystrokesEnabled=false;cpsEnabled=false;attackIndicatorEnabled=false;potionEffectsEnabled=false;
+            speedEnabled=false;biomeEnabled=false;dimensionEnabled=false;worldTimeEnabled=false;clockEnabled=false;
+            sessionTimeEnabled=false;inventoryOverlayEnabled=false;lightLevelEnabled=false;entityOverlayEnabled=false;
+            toolInfoEnabled=false;itemCounterEnabled=false;
+        }else{
+            fpsEnabled=true;coordinatesEnabled=true;directionEnabled=true;armorEnabled=true;pingEnabled=true;
+            speedEnabled=false;biomeEnabled=false;dimensionEnabled=false;worldTimeEnabled=false;clockEnabled=false;
+            attackIndicatorEnabled=false;potionEffectsEnabled=false;itemCounterEnabled=false;keystrokesEnabled=false;
+            sessionTimeEnabled=false;inventoryOverlayEnabled=false;lightLevelEnabled=false;entityOverlayEnabled=false;
+            toolInfoEnabled=false;cpsEnabled=true;
+        }
+        saveConfig();
+    }
 
     public static void setWaypointHere(){
         MinecraftClient c=MinecraftClient.getInstance();
@@ -247,9 +276,11 @@ public final class PhoenixHud {
         loadConfig();
         zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,"category.phoenix"));
         sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,"category.phoenix"));
+        menuKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.menu",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_RIGHT_SHIFT,"category.phoenix"));
         ClientTickEvents.END_CLIENT_TICK.register(client->{
             if(client.player!=null&&!client.isPaused())sessionTicks++;
             while(sprintToggleKey.wasPressed()){sprintToggled=!sprintToggled;saveConfig();}
+            while(menuKey.wasPressed()){if(client.player!=null)client.setScreen(new PhoenixClientScreen(null));}
             if(client.player!=null&&sprintToggled)client.player.setSprinting(client.options.forwardKey.isPressed()&&!client.player.isSneaking());
             long now=System.currentTimeMillis();
             if(client.getWindow()!=null){boolean left=org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT)==org.lwjgl.glfw.GLFW.GLFW_PRESS;boolean right=org.lwjgl.glfw.GLFW.glfwGetMouseButton(client.getWindow().getHandle(),org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)==org.lwjgl.glfw.GLFW.GLFW_PRESS;if((left&&!lastLeftDown)||(right&&!lastRightDown))clickTimes.addLast(now);lastLeftDown=left;lastRightDown=right;}
