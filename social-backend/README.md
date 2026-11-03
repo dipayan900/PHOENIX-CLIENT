@@ -4,11 +4,11 @@ Cloudflare Workers + D1 service for Phoenix friend requests and private launcher
 
 ## Important status
 
-This is backend source code, not a live hosted service yet. It becomes reachable only after a Cloudflare account is configured, a D1 database is created, the migration is applied, and the Worker is deployed. The Android launcher must also be connected to the deployed API.
+The backend source runs as a Cloudflare Worker with D1 storage. The Phoenix launcher is preconfigured with the existing Phoenix Social HTTPS endpoint; changes to this source become live only after the Worker deployment workflow succeeds. Keep the Worker session secret and Cloudflare credentials in GitHub Actions secrets, never in the APK or repository.
 
 ## Account rules
 
-- **Premium account:** sign in with a Microsoft account that owns Minecraft: Java Edition. The Worker exchanges the Microsoft access token through Xbox Live and Minecraft Services, then checks Java Edition entitlements and obtains the official Minecraft profile UUID/name. A username alone never proves ownership.
+- **Premium account:** sign in to Minecraft through the Amethyst engine, then connect or link the currently selected Microsoft account from Phoenix Friends. The launcher sends its current Minecraft access token over HTTPS; the Worker checks Java Edition entitlements and fetches the official profile UUID/name directly from Minecraft Services. The access token is not stored in D1. A username alone never proves ownership.
 - **Guest account:** supports Phoenix users who do not sign in with a Microsoft account. It is marked as a guest/unverified identity and cannot claim a Minecraft UUID.
 - Both account types can send friend requests.
 - Requests can only be sent to verified premium accounts.
@@ -46,19 +46,22 @@ If the Cloudflare account owner is under the provider's minimum age, an eligible
 
 ### Microsoft account sign-in
 
-The current launcher screen supports guest account creation. Verified Minecraft Java account sign-in still needs its separate official Microsoft native-app OAuth flow and client ID integration; deploying this Worker alone does not enable that UI. The Worker verifies Java entitlement server-side when that endpoint is called.
+Phoenix Friends reuses the Microsoft Minecraft account already selected in the Amethyst engine, so it does not ask users to paste tokens or enter a second set of Microsoft credentials. The selected account must be a Microsoft account with a valid, unexpired Minecraft access token. If its session has expired, reselect the account in the launcher to let the engine refresh it, then retry. A guest Phoenix account can be linked to a verified Minecraft Java account without losing its friend identity.
 
 Never share Cloudflare API tokens or Microsoft credentials in chat or commit them to GitHub.
 
 ## API outline
 
-- `POST /v1/auth/minecraft` — exchange a Microsoft access token, verify Minecraft Java ownership, and create a Phoenix session.
+- `POST /v1/auth/minecraft` — verify the selected Minecraft access token against Minecraft Services and create a Phoenix session.
+- `POST /v1/auth/link-minecraft` — verify and link the currently selected Minecraft Java account to an existing guest Phoenix identity.
+- `POST /v1/presence` — refresh the authenticated user's online heartbeat.
 - `POST /v1/auth/guest` — create or restore a device-bound guest identity.
 - `GET /v1/me` — current Phoenix identity.
 - `GET /v1/users/search?q=...` — search verified premium recipients.
 - `POST /v1/friends/requests` — send a request to a premium account.
 - `GET /v1/friends/requests` — list incoming and outgoing requests.
 - `POST /v1/friends/requests/:id/respond` — accept or decline an incoming request.
+- `DELETE /v1/friends/requests/:id` — cancel an outgoing pending request.
 - `GET /v1/friends` — list accepted friends.
 - `GET /v1/messages?with=USER_ID` — read a private conversation.
 - `POST /v1/messages` — send a message to an accepted friend.
