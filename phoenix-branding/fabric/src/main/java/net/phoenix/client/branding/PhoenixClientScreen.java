@@ -125,7 +125,7 @@ public final class PhoenixClientScreen extends Screen {
             addDrawableChild(ButtonWidget.builder(Text.literal("›"),b->switchTo("MODULES",category,(safePage+1)%pageCount))
                 .dimensions(width-48,navY-25,38,19).build());
         } else if(tab.equals("SETTINGS")){
-            int w=Math.min(270,width-28),x=(width-w)/2,y=100;
+            int w=Math.min(270,width-28),x=(width-w)/2,y=Math.max(24,Math.min(100,height-235));
             addAction("PERFORMANCE & FPS",x,y,w,()->client.setScreen(new PhoenixPerformanceScreen(this)));
             addAction("HUD LAYOUT EDITOR",x,y+34,w,()->client.setScreen(new PhoenixHudEditorScreen(this)));
             addAction("CROSSHAIR STUDIO",x,y+68,w,()->client.setScreen(new PhoenixCrosshairScreen(this)));
