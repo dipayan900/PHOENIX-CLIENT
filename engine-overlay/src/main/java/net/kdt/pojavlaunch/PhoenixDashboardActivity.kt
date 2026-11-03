@@ -9,6 +9,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
@@ -753,6 +756,20 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var serverBusy by remember { mutableStateOf(false) }
     var themeChoice by remember { mutableStateOf(prefs.getString("theme_choice", "EMBER") ?: "EMBER") }
     var appearanceChoice by remember { mutableStateOf(prefs.getString("appearance_mode", "SYSTEM") ?: "SYSTEM") }
+    var visualAnimations by remember { mutableStateOf(prefs.getBoolean("visual_animations", true)) }
+    var reducedMotion by remember { mutableStateOf(prefs.getBoolean("visual_reduced_motion", false)) }
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                "appearance_mode" -> appearanceChoice = prefs.getString("appearance_mode", "SYSTEM") ?: "SYSTEM"
+                "theme_choice" -> themeChoice = prefs.getString("theme_choice", "EMBER") ?: "EMBER"
+                "visual_animations" -> visualAnimations = prefs.getBoolean("visual_animations", true)
+                "visual_reduced_motion" -> reducedMotion = prefs.getBoolean("visual_reduced_motion", false)
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     val systemDark = isSystemInDarkTheme()
     var dashboardLayout by remember { mutableStateOf(prefs.getString("dashboard_layout", "EXPANDED") ?: "EXPANDED") }
     val snapshotFiles = remember { mutableStateListOf<File>() }
@@ -772,7 +789,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var editingId by remember { mutableStateOf<String?>(null) }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
     val studioAccent = when (themeChoice) { "FROST" -> Color(0xFF63C9FF); "VIOLET" -> Color(0xFFB38CFF); "MATRIX" -> Color(0xFF69E59A); else -> PhoenixOrange }
-    val animatedAccent by animateColorAsState(targetValue = studioAccent, label = "phoenix-theme-accent")
+    val animatedAccent by animateColorAsState(targetValue = studioAccent, animationSpec = if (visualAnimations && !reducedMotion) tween(durationMillis = 320) else snap(), label = "phoenix-theme-accent")
     val useDarkAppearance = when (appearanceChoice) { "DARK" -> true; "LIGHT" -> false; else -> systemDark }
     val appearanceBg = if (useDarkAppearance) PhoenixBg else Color(0xFFF3F4F7)
     val appearancePanel = if (useDarkAppearance) PhoenixPanel else Color(0xFFFFFFFF)
@@ -848,7 +865,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             }
         ) { padding ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize().background(appearanceBg).padding(padding),
+                modifier = Modifier.fillMaxSize().background(appearanceBg).animateContentSize().padding(padding),
                 contentPadding = PaddingValues(if (dashboardLayout == "COMPACT") 12.dp else 18.dp),
                 verticalArrangement = Arrangement.spacedBy(if (dashboardLayout == "COMPACT") 9.dp else 14.dp)
             ) {
