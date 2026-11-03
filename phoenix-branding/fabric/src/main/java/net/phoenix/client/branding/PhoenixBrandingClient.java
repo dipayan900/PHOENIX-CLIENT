@@ -21,7 +21,6 @@ public final class PhoenixBrandingClient implements ClientModInitializer {
         PayloadTypeRegistry.playC2S().register(PhoenixBrandPayload.ID, PhoenixBrandPayload.CODEC);
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            PhoenixLoadoutState.clear();
             if (ClientPlayNetworking.canSend(BRAND_CHANNEL)) {
                 ClientPlayNetworking.send(new PhoenixBrandPayload());
             }
