@@ -6,7 +6,8 @@
     "PlayerListHudMixin",
     "PlayerEntityRendererMixin",
     "PlayerEntityModelEmoteMixin",
-    "TitleScreenMixin"
+    "TitleScreenMixin",
+    "GameMenuScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

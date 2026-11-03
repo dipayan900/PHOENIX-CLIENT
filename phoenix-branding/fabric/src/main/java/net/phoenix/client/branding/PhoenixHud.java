@@ -1,25 +1,19 @@
 package net.phoenix.client.branding;
 
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
-import org.lwjgl.glfw.GLFW;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
-/** Client-only HUD modules with persistent-in-session individual toggles. */
+/** Client-only HUD modules with individual controls. */
 public final class PhoenixHud {
     private static boolean visible = true;
     private static boolean fpsEnabled = true, coordinatesEnabled = true, directionEnabled = true;
     private static boolean armorEnabled = true, clockEnabled, pingEnabled = true;
     private static boolean speedEnabled, biomeEnabled, dimensionEnabled, worldTimeEnabled;
-    private static KeyBinding toggleKey, menuKey;
 
     private PhoenixHud() {}
     public static boolean isVisible() { return visible; }
@@ -47,18 +41,7 @@ public final class PhoenixHud {
     public static void toggleWorldTime() { worldTimeEnabled = !worldTimeEnabled; }
 
     public static void register() {
-        toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.phoenix.toggle_hud", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, "category.phoenix"));
-        menuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.phoenix.open_menu", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_CONTROL, "category.phoenix"));
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (toggleKey.wasPressed()) {
-                visible = !visible;
-                if (client.player != null) client.player.sendMessage(
-                        Text.literal("§6Phoenix HUD " + (visible ? "enabled" : "disabled")), true);
-            }
-            while (menuKey.wasPressed()) client.setScreen(new PhoenixClientScreen(client.currentScreen));
-        });
+        // Phoenix is opened from the Minecraft title and pause menus; no global hotkeys.
         HudRenderCallback.EVENT.register((draw, tickCounter) -> {
             if (!visible) return;
             MinecraftClient client = MinecraftClient.getInstance();
