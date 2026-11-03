@@ -58,13 +58,13 @@ public final class PhoenixPauseScreen extends Screen {
 
     @Override
     public void renderBackground(DrawContext draw, int mouseX, int mouseY, float delta) {
+        super.renderBackground(draw, mouseX, mouseY, delta);
         draw.fillGradient(0, 0, width, height, 0xF509070D, 0xF525111B);
         draw.fill(width / 2 - 132, 28, width / 2 + 132, 29, 0xAAFF702E);
         draw.drawCenteredTextWithShadow(textRenderer, Text.literal("PHOENIX"),
                 width / 2, 39, 0xFFFF8547);
         draw.drawCenteredTextWithShadow(textRenderer, Text.literal("CLIENT  /  PAUSE CONTROL CENTER"),
                 width / 2, 53, 0xFFB8AEBB);
-        super.renderBackground(draw, mouseX, mouseY, delta);
     }
 
     @Override
