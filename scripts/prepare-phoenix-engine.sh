@@ -243,6 +243,37 @@ s = s.replace(
 )
 styles.write_text(s)
 
+# DayNight resource resolution lets Android's legacy Amethyst fragments follow
+# the same SYSTEM/LIGHT/DARK preference as the Compose dashboard.
+st = styles.read_text()
+import re
+st = re.sub(r'Theme\\.AppCompat\\.Light\\.NoActionBar', 'Theme.AppCompat.DayNight.NoActionBar', st)
+st = re.sub(r'Theme\\.MaterialComponents\\.Light\\.NoActionBar', 'Theme.MaterialComponents.DayNight.NoActionBar', st)
+splash_items = '''
+        <item name="android:windowSplashScreenBackground">#171018</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_phoenix_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#171018</item>'''
+if 'windowSplashScreenAnimatedIcon' not in st:
+    st = st.replace('<item name="android:windowBackground">@color/background_app</item>',
+                    '<item name="android:windowBackground">@color/background_app</item>' + splash_items)
+styles.write_text(st)
+
+# Preserve a true dark resource palette for night mode and make the default
+# day palette light. Explicit LIGHT/DARK preferences are handled by AppCompat.
+c = colors.read_text()
+night_dir = colors.parent.parent / "values-night"
+night_dir.mkdir(parents=True, exist_ok=True)
+(night_dir / "colors.xml").write_text(c)
+for old, new in {
+    '#0B0910': '#F3F4F7',
+    '#211923': '#FFFFFF',
+    '#09070D': '#E4E6EC',
+    '#151019': '#FFFFFF',
+    '#B8AEBB': '#66636D',
+}.items():
+    c = c.replace(old, new)
+colors.write_text(c)
+
 # A subtle dark tile with an ember border and a pressed-state glow.
 normal = activity_layout.parent.parent / "drawable/phoenix_menu_button.xml"
 normal.write_text('''<?xml version="1.0" encoding="utf-8"?>
