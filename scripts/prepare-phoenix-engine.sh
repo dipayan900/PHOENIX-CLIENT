@@ -96,6 +96,10 @@ m = m.replace(
     '<activity\n            android:name=".LauncherActivity"',
     '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />\n        <activity\n            android:name=".LauncherActivity"'
 )
+m = m.replace(
+    '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />',
+    '<activity android:name=".PhoenixVisualStudioActivity" android:exported="false" />\\n        <activity android:name=".PhoenixDashboardActivity" android:exported="false" />'
+)
 manifest.write_text(m)
 
 t = test_storage.read_text()
@@ -118,6 +122,26 @@ XML
 cp "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
 mkdir -p "$APP/src/main/kotlin/net/kdt/pojavlaunch"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt"
+cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixVisualStudioActivity.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixVisualStudioActivity.kt"
+# Add a first-class entry point from Phoenix Settings to the dedicated visual studio.
+python3 - "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+anchor = '                            Button(onClick = { page = "Performance" }, modifier = Modifier.fillMaxWidth(),'
+button = '''                            Button(onClick = { activity.startActivity(Intent(activity, PhoenixVisualStudioActivity::class.java)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
+                                Text("OPEN PHOENIX VISUAL STUDIO  ✦", color = animatedAccent, fontWeight = FontWeight.Bold)
+                            }
+'''
+if "OPEN PHOENIX VISUAL STUDIO" not in s:
+    if anchor not in s:
+        raise SystemExit("Phoenix Visual Studio integration failed: Settings performance entry anchor changed.")
+    s = s.replace(anchor, button + anchor, 1)
+p.write_text(s)
+PY
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixServerApi.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixServerApi.kt"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixSocialScreen.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixSocialScreen.kt"
 
