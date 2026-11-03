@@ -254,8 +254,10 @@ splash_items = '''
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_phoenix_foreground</item>
         <item name="android:windowSplashScreenIconBackgroundColor">#171018</item>'''
 if 'windowSplashScreenAnimatedIcon' not in st:
-    st = st.replace('<item name="android:windowBackground">@color/background_app</item>',
-                    '<item name="android:windowBackground">@color/background_app</item>' + splash_items)
+    splash_anchor = '<item name="windowActionBar">false</item>'
+    if splash_anchor not in st:
+        raise SystemExit("Phoenix splash theme anchor changed upstream.")
+    st = st.replace(splash_anchor, splash_anchor + splash_items, 1)
 styles.write_text(st)
 
 # Preserve a true dark resource palette for night mode and make the default
