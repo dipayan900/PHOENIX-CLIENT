@@ -34,7 +34,7 @@ public final class PhoenixScreenStyle {
     /** Draw after Screen.render so keyboard/controller focus is visible above widgets. */
     public static void renderChrome(Screen screen, DrawContext draw) {
         for (var child : screen.children()) {
-            if (child instanceof ClickableWidget widget && widget.isFocused() && widget.visible && widget.active) {
+            if (child instanceof ClickableWidget widget && widget.isFocused()) {
                 int x = widget.getX(), y = widget.getY(), right = x + widget.getWidth(), bottom = y + widget.getHeight();
                 int c = accent();
                 draw.fill(x - 2, y - 2, right + 2, y - 1, c);
