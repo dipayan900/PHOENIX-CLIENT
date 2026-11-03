@@ -242,8 +242,8 @@ public final class PhoenixHud {
 
     public static void register(){
         loadConfig();
-        zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,"category.phoenix"));
-        sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,"category.phoenix"));
+        zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.zoom",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_C,KeyBinding.Category.create(Identifier.of("phoenix","controls"))));
+        sprintToggleKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.phoenix.toggle_sprint",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_G,KeyBinding.Category.create(Identifier.of("phoenix","controls"))));
         ClientTickEvents.END_CLIENT_TICK.register(client->{
             if(client.player!=null&&!client.isPaused())sessionTicks++;
             while(sprintToggleKey.wasPressed()){sprintToggled=!sprintToggled;saveConfig();}
