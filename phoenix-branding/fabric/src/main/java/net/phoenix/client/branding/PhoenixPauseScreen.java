@@ -24,7 +24,7 @@ public final class PhoenixPauseScreen extends Screen {
                 button -> client.setScreen(new PhoenixClientScreen(this)))
                 .dimensions(left, top + 28, buttonWidth, 22).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("HUD EDITOR"),
-                button -> client.setScreen(new PhoenixClientScreen(this)))
+                button -> client.setScreen(new PhoenixHudEditorScreen(this)))
                 .dimensions(left, top + 56, buttonWidth, 22).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("OPTIONS"),
                 button -> client.setScreen(new OptionsScreen(this, client.options)))

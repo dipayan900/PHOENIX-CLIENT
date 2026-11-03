@@ -54,7 +54,7 @@ public final class PhoenixHud {
     public static String[] getElementKeys(){return ELEMENT_KEYS.clone();}
     public static int getElementX(String key){int[] p=elementPositions.get(positionKey(key));return p==null?10+(elementIndex(key)/12)*160:p[0];}
     public static int getElementY(String key){int[] p=elementPositions.get(positionKey(key));return p==null?10+(elementIndex(key)%12)*22:p[1];}
-    public static void setElementPosition(String key,int x,int y){elementPositions.put(positionKey(key),new int[]{Math.max(0,x),Math.max(0,y)});saveConfig();}
+    public static void setElementPosition(String key,int x,int y){elementPositions.put(positionKey(key),new int[]{Math.max(0,x),Math.max(0,y)});}
     public static void resetElementPositions(){elementPositions.clear();saveConfig();}
     private static Path configFile(){return FabricLoader.getInstance().getConfigDir().resolve("phoenix-client.properties");}
     public static int getHudX(){return hudX;} public static int getHudY(){return hudY;}
