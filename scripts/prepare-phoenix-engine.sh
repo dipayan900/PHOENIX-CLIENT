@@ -346,6 +346,8 @@ PY
 mkdir -p "$APP/src/main/java/net/kdt/pojavlaunch"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixModInstaller.java" \
    "$APP/src/main/java/net/kdt/pojavlaunch/PhoenixModInstaller.java"
+cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixVanillaBootstrap.java" \
+   "$APP/src/main/java/net/kdt/pojavlaunch/PhoenixVanillaBootstrap.java"
 python3 - "$APP/src/main/java/net/kdt/pojavlaunch/Tools.java" <<'PY'
 from pathlib import Path
 import sys
@@ -386,6 +388,47 @@ new = """        Tools.launchMinecraft(this, minecraftAccount, minecraftProfile,
 if old not in s:
     raise SystemExit("Phoenix runtime verification patch failed: MainActivity launch return point changed.")
 p.write_text(s.replace(old, new, 1))
+PY
+
+# Convert a Vanilla selection into an isolated Fabric-backed Phoenix runtime.
+python3 - "$APP/src/main/java/net/kdt/pojavlaunch/MainActivity.java" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+needle = """    private void runCraft(String versionId, JMinecraftVersionList.Version version) throws Throwable {
+        String assetVersion;"""
+replacement = """    private void runCraft(String versionId, JMinecraftVersionList.Version version) throws Throwable {
+        // Phoenix's in-game modules require a client-side loader. A Vanilla
+        // selection is cloned into a managed Fabric profile without modifying
+        // the user's saved Vanilla profile.
+        if (version != null && version.inheritsFrom == null
+                && PhoenixVanillaBootstrap.supports(versionId)) {
+            try {
+                PhoenixVanillaBootstrap.Prepared prepared =
+                        PhoenixVanillaBootstrap.prepare(this, versionId, minecraftProfile);
+                versionId = prepared.versionId;
+                minecraftProfile = prepared.profile;
+                JMinecraftVersionList.Version managedVersion = Tools.GLOBAL_GSON.fromJson(
+                        Tools.read(new java.io.File(Tools.DIR_HOME_VERSION + "/" + versionId + "/" + versionId + ".json").getAbsolutePath()),
+                        JMinecraftVersionList.Version.class);
+                if (managedVersion.javaVersion == null) {
+                    managedVersion.javaVersion = version.javaVersion;
+                }
+                version = managedVersion;
+                Toast.makeText(this,
+                        "Phoenix runtime prepared for Minecraft " + versionId,
+                        Toast.LENGTH_LONG).show();
+            } catch (Exception error) {
+                throw new IllegalStateException(
+                        "Phoenix could not prepare its managed runtime. Check your connection and try again: "
+                                + error.getMessage(), error);
+            }
+        }
+        String assetVersion;"""
+if needle not in s:
+    raise SystemExit("Phoenix patch failed: runCraft entrypoint changed upstream.")
+p.write_text(s.replace(needle, replacement, 1))
 PY
 
 # Phoenix-managed Vanilla selection: create an isolated Fabric runtime in memory.
