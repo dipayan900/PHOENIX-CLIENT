@@ -146,15 +146,37 @@ async function minecraftLogin(msAccessToken: string) {
   return profile;
 }
 
+
+async function minecraftProfileFromAccessToken(accessToken: string) {
+  const entitlementResponse = await fetch("https://api.minecraftservices.com/entitlements/mcstore", {
+    headers: { authorization: "Bearer " + accessToken },
+  });
+  if (!entitlementResponse.ok) throw new Error("Minecraft account verification failed. Select your Microsoft account again in Phoenix and retry.");
+  const entitlements = await entitlementResponse.json() as { items?: Array<{ name?: string }> };
+  const ownsJava = (entitlements.items ?? []).some(item => item.name === "game_minecraft" || item.name === "product_minecraft");
+  if (!ownsJava) throw new Error("This Microsoft account does not have a verified Minecraft Java entitlement.");
+  const profileResponse = await fetch("https://api.minecraftservices.com/minecraft/profile", {
+    headers: { authorization: "Bearer " + accessToken },
+  });
+  if (!profileResponse.ok) throw new Error("A Minecraft Java profile was not found.");
+  const profile = await profileResponse.json() as { id: string; name: string };
+  if (!profile.id || !profile.name) throw new Error("Minecraft profile data was incomplete.");
+  return profile;
+}
+
 async function authMinecraft(request: Request, env: Env): Promise<Response> {
   if (!await rateLimit(env, "minecraft-auth:" + (request.headers.get("CF-Connecting-IP") ?? "unknown"), 10, 300))
     return fail("Too many sign-in attempts. Try again later.", 429);
-  const data = await body<{ microsoftAccessToken?: string }>(request);
-  const accessToken = data?.microsoftAccessToken;
-  if (typeof accessToken !== "string" || accessToken.length < 100 || accessToken.length > 12000)
-    return fail("A valid Microsoft access token is required.");
+  const data = await body<{ microsoftAccessToken?: string; minecraftAccessToken?: string }>(request);
+  const microsoftToken = data?.microsoftAccessToken;
+  const minecraftToken = data?.minecraftAccessToken;
+  if ((typeof microsoftToken !== "string" || microsoftToken.length < 100 || microsoftToken.length > 12000) &&
+      (typeof minecraftToken !== "string" || minecraftToken.length < 20 || minecraftToken.length > 12000))
+    return fail("Sign in with a valid Minecraft Java account in Phoenix first.");
   try {
-    const profile = await minecraftLogin(accessToken);
+    const profile = typeof minecraftToken === "string"
+      ? await minecraftProfileFromAccessToken(minecraftToken)
+      : await minecraftLogin(microsoftToken!);
     const timestamp = now();
     let user = await env.DB.prepare("SELECT id, username, auth_type, minecraft_uuid, minecraft_name FROM users WHERE minecraft_uuid = ?")
       .bind(profile.id).first<User>();
@@ -235,12 +257,44 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 
   if (method === "GET" && path === "/v1/me") return json({ user });
 
+  if (method === "POST" && path === "/v1/presence") {
+    const timestamp = now();
+    await env.DB.prepare("UPDATE users SET last_seen = ? WHERE id = ?").bind(timestamp, user.id).run();
+    return json({ ok: true, last_seen: timestamp });
+  }
+
+  if (method === "POST" && path === "/v1/auth/link-minecraft") {
+    if (!await rateLimit(env, "minecraft-link:" + user.id, 5, 300))
+      return fail("Too many account-link attempts. Try again later.", 429);
+    const data = await body<{ minecraftAccessToken?: string }>(request);
+    const accessToken = data?.minecraftAccessToken;
+    if (typeof accessToken !== "string" || accessToken.length < 20 || accessToken.length > 12000)
+      return fail("Select a signed-in Microsoft Minecraft Java account in Phoenix first.");
+    try {
+      const profile = await minecraftProfileFromAccessToken(accessToken);
+      const existing = await env.DB.prepare("SELECT id FROM users WHERE minecraft_uuid = ?").bind(profile.id).first<{ id: string }>();
+      if (existing && existing.id !== user.id)
+        return fail("This Minecraft account is already linked to another Phoenix account. Sign in to that account instead.", 409);
+      await env.DB.prepare("UPDATE users SET auth_type = 'premium', minecraft_uuid = ?, minecraft_name = ?, last_seen = ? WHERE id = ?")
+        .bind(profile.id, profile.name, now(), user.id).run();
+      const linked = await getUser(env, user.id);
+      return json({ ok: true, user: linked });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Minecraft account verification failed.";
+      return fail(message, 401);
+    }
+  }
+
   if (method === "GET" && path === "/v1/users/search") {
     const query = (url.searchParams.get("q") ?? "").trim().slice(0, 24);
     if (query.length < 3) return json({ users: [] });
     const rows = await env.DB.prepare(
-      "SELECT id, username, auth_type, minecraft_name FROM users WHERE auth_type = 'premium' AND username LIKE ? AND id <> ? LIMIT 20"
-    ).bind("%" + query.replace(/[%_]/g, "") + "%", user.id).all();
+      `SELECT id, username, auth_type, minecraft_name FROM users u
+       WHERE auth_type = 'premium' AND username LIKE ? AND id <> ?
+       AND NOT EXISTS (SELECT 1 FROM friendships f WHERE (f.user_a = ? AND f.user_b = u.id) OR (f.user_a = u.id AND f.user_b = ?))
+       AND NOT EXISTS (SELECT 1 FROM friend_requests r WHERE r.status = 'pending' AND ((r.from_user_id = ? AND r.to_user_id = u.id) OR (r.from_user_id = u.id AND r.to_user_id = ?)))
+       LIMIT 20`
+    ).bind("%" + query.replace(/[%_]/g, "") + "%", user.id, user.id, user.id, user.id, user.id).all();
     return json({ users: rows.results ?? [] });
   }
 
@@ -256,6 +310,17 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       "SELECT 1 AS found FROM blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?) LIMIT 1"
     ).bind(user.id, targetId, targetId, user.id).first();
     if (blocked) return fail("This connection is unavailable.", 403);
+    const reciprocal = await env.DB.prepare(
+      "SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'"
+    ).bind(targetId, user.id).first<{ id: string }>();
+    if (reciprocal) {
+      const [a, b] = [user.id, targetId].sort();
+      await env.DB.batch([
+        env.DB.prepare("UPDATE friend_requests SET status = 'accepted', updated_at = ? WHERE id = ? AND status = 'pending'").bind(now(), reciprocal.id),
+        env.DB.prepare("INSERT OR IGNORE INTO friendships(user_a, user_b, created_at) VALUES (?, ?, ?)").bind(a, b, now()),
+      ]);
+      return json({ ok: true, status: "accepted" });
+    }
     const prior = await env.DB.prepare(
       "SELECT id, status FROM friend_requests WHERE from_user_id = ? AND to_user_id = ?"
     ).bind(user.id, targetId).first<{ id: string; status: string }>();
@@ -280,6 +345,16 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
        ORDER BY r.created_at DESC LIMIT 100`
     ).bind(user.id, user.id).all();
     return json({ requests: rows.results ?? [] });
+  }
+
+
+  const cancelRequestMatch = path.match(/^\/v1\/friends\/requests\/([0-9a-f-]+)$/i);
+  if (method === "DELETE" && cancelRequestMatch) {
+    const result = await env.DB.prepare(
+      "UPDATE friend_requests SET status = 'cancelled', updated_at = ? WHERE id = ? AND from_user_id = ? AND status = 'pending'"
+    ).bind(now(), cancelRequestMatch[1], user.id).run();
+    if ((result.meta?.changes ?? 0) === 0) return fail("That outgoing request is no longer available.", 404);
+    return json({ ok: true });
   }
 
   const respondMatch = path.match(/^\/v1\/friends\/requests\/([0-9a-f-]+)\/respond$/i);
@@ -307,10 +382,11 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 
   if (method === "GET" && path === "/v1/friends") {
     const rows = await env.DB.prepare(
-      `SELECT u.id, u.username, u.auth_type, u.minecraft_name, f.created_at
+      `SELECT u.id, u.username, u.auth_type, u.minecraft_name, u.last_seen, f.created_at,
+       CASE WHEN u.last_seen >= ? THEN 1 ELSE 0 END AS online
        FROM friendships f JOIN users u ON u.id = CASE WHEN f.user_a = ? THEN f.user_b ELSE f.user_a END
        WHERE f.user_a = ? OR f.user_b = ? ORDER BY u.username COLLATE NOCASE`
-    ).bind(user.id, user.id, user.id).all();
+    ).bind(now() - 75, user.id, user.id, user.id).all();
     return json({ friends: rows.results ?? [] });
   }
 
