@@ -37,8 +37,23 @@ public final class PhoenixPauseScreen extends Screen {
 
     private void saveAndReturn() {
         MinecraftClient minecraft = MinecraftClient.getInstance();
-        // Integrated worlds are saved by the server as the client disconnects.
-        minecraft.disconnect(new TitleScreen());
+        // Minecraft 1.21.6 changed disconnect(Screen) to disconnect(Screen, boolean).
+        // Resolve the available signature at runtime so one Phoenix source works
+        // across the 1.21.1-1.21.11 adapter matrix.
+        TitleScreen titleScreen = new TitleScreen();
+        try {
+            try {
+                MinecraftClient.class
+                        .getMethod("disconnect", Screen.class, boolean.class)
+                        .invoke(minecraft, titleScreen, false);
+            } catch (NoSuchMethodException legacyVersion) {
+                MinecraftClient.class
+                        .getMethod("disconnect", Screen.class)
+                        .invoke(minecraft, titleScreen);
+            }
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalStateException("Phoenix could not return to the title screen", error);
+        }
     }
 
     @Override
