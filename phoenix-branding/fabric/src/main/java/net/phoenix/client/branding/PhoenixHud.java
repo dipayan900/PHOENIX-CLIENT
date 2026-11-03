@@ -20,7 +20,7 @@ public final class PhoenixHud {
 
     private PhoenixHud() {}
 
-    public static void register() {
+    public static boolean isVisible() { return visible; }\n\n    public static void toggle() { visible = !visible; }\n\n    public static void register() {
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.phoenix.toggle_hud",
                 InputUtil.Type.KEYSYM,
