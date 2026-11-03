@@ -74,6 +74,23 @@ jobs:
             for REQUIRED in fabric.mod.json phoenix_branding.mixins.json net/phoenix/client/branding/PhoenixBrandingClient.class net/phoenix/client/branding/PhoenixTitleScreen.class net/phoenix/client/branding/mixin/TitleScreenMixin.class net/phoenix/client/branding/mixin/SplashOverlayMixin.class; do
               grep -Fxq "$REQUIRED" "$RUNNER_TEMP/phoenix-jar-contents.txt"
             done
+            python3 - "$JAR" <<'PY'
+import json
+import sys
+import zipfile
+
+jar_path = sys.argv[1]
+with zipfile.ZipFile(jar_path) as archive:
+    config = json.loads(archive.read("phoenix_branding.mixins.json"))
+    package_path = config["package"].replace(".", "/").rstrip("/")
+    missing = [
+        f"{package_path}/{mixin.replace('.', '/')}.class"
+        for mixin in config.get("client", [])
+        if f"{package_path}/{mixin.replace('.', '/')}.class" not in archive.namelist()
+    ]
+if missing:
+    raise SystemExit("Mixin classes missing from Phoenix adapter: " + ", ".join(missing))
+PY
             unzip -p "$JAR" fabric.mod.json | grep -q '"id"[[:space:]]*:[[:space:]]*"phoenix_branding"'
             cp "$JAR" "$OUT/phoenix-branding-fabric-$MC_VERSION.jar"
             echo "Built Phoenix Fabric adapter: $MC_VERSION"
