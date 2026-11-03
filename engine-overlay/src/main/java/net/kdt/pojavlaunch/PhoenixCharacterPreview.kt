@@ -282,7 +282,7 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
         val sway = sin(t*2.2f)*.16f
         draw(0f, .88f, -.38f, .16f, .36f, .16f, c, 0f, 0f, -12f+sway*20f)
         draw(-.04f+sway, .60f, -.47f, .14f, .34f, .14f, shade(c,1.2f), 0f, 0f, 18f+sway*30f)
-        draw(.04f+sway, .34f, -.48f, .19f, .25f, .18f, shade(c,id.contains("dragon")?.65f:1.4f), 0f, 0f, -8f+sway*35f)
+        draw(.04f+sway, .34f, -.48f, .19f, .25f, .18f, shade(c,if (id.contains("dragon")) 0.65f else 1.4f), 0f, 0f, -8f+sway*35f)
     }
 
     private fun drawBackGear(c: FloatArray, id: String, t: Float) {
