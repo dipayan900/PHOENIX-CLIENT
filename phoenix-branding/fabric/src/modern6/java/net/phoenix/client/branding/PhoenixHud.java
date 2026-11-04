@@ -8,6 +8,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.item.ItemStack;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.Identifier;
@@ -53,6 +54,9 @@ public final class PhoenixHud {
     private static int hudX=10,hudY=10;
     private static final String[] ELEMENT_KEYS={"FPS","XYZ","FACING","ARMOR","PING","SPEED","BIOME","DIMENSION","WORLD TIME","LOCAL","ATTACK","POTION","HELD ITEM","KEYS","SESSION","WAYPOINT","INVENTORY","LIGHT LEVEL","NEARBY 1","NEARBY 2","NEARBY 3","TOOL INFO","CPS"};
     private static final Map<String,int[]> elementPositions=new HashMap<>();
+    private static boolean particlesEnabled = true;
+    private static int particleStyle = 0;
+    private static final Map<String,Float> observedHealth = new HashMap<>();
     private static String positionKey(String key){return key.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_-]","_");}
     private static int elementIndex(String key){for(int i=0;i<ELEMENT_KEYS.length;i++)if(ELEMENT_KEYS[i].equals(key))return i;return 0;}
     public static String[] getElementKeys(){return ELEMENT_KEYS.clone();}
@@ -102,6 +106,8 @@ public final class PhoenixHud {
             lightLevelEnabled = setting(values, "hud.light_level", lightLevelEnabled);
             entityOverlayEnabled = setting(values, "hud.nearby_entities", entityOverlayEnabled);
             healthIndicatorEnabled = setting(values, "hud.health_indicators", healthIndicatorEnabled);
+            particlesEnabled = setting(values, "particles.enabled", particlesEnabled);
+            particleStyle = Math.max(0, Math.min(3, Integer.parseInt(values.getProperty("particles.style", "0"))));
             toolInfoEnabled = setting(values, "hud.tool_info", toolInfoEnabled);
             cpsEnabled = setting(values, "hud.cps", cpsEnabled);
             sprintToggled = setting(values, "module.toggle_sprint", sprintToggled);
@@ -160,6 +166,8 @@ public final class PhoenixHud {
             values.setProperty("hud.light_level", String.valueOf(lightLevelEnabled));
             values.setProperty("hud.nearby_entities", String.valueOf(entityOverlayEnabled));
             values.setProperty("hud.health_indicators", String.valueOf(healthIndicatorEnabled));
+            values.setProperty("particles.enabled", String.valueOf(particlesEnabled));
+            values.setProperty("particles.style", String.valueOf(particleStyle));
             values.setProperty("hud.tool_info", String.valueOf(toolInfoEnabled));
             values.setProperty("hud.cps", String.valueOf(cpsEnabled));
             values.setProperty("module.toggle_sprint", String.valueOf(sprintToggled));
@@ -202,6 +210,10 @@ public final class PhoenixHud {
     public static boolean isEntityOverlayEnabled(){return entityOverlayEnabled;}
     public static boolean isHealthIndicatorEnabled(){return healthIndicatorEnabled;}
     public static void toggleHealthIndicator(){healthIndicatorEnabled=!healthIndicatorEnabled;saveConfig();}
+    public static boolean isParticlesEnabled(){return particlesEnabled;}
+    public static void toggleParticles(){particlesEnabled=!particlesEnabled;saveConfig();}
+    public static int getParticleStyle(){return particleStyle;}
+    public static void setParticleStyle(int style){particleStyle=Math.max(0,Math.min(3,style));saveConfig();}
     public static boolean isCustomCrosshairEnabled(){return customCrosshairEnabled;}
     public static boolean isToolInfoEnabled(){return toolInfoEnabled;}
     public static boolean isCpsEnabled(){return cpsEnabled;}
@@ -294,6 +306,7 @@ public final class PhoenixHud {
                 if(zoomActive){client.options.getFov().setValue(previousFov);zoomActive=false;}
                 return;
             }
+            updateHitParticles(client);
             boolean wantsZoom=zoomKey.isPressed();
             if(wantsZoom&&!zoomActive){previousFov=client.options.getFov().getValue();zoomActive=true;}
             if(wantsZoom){client.options.getFov().setValue(30);}
@@ -380,6 +393,32 @@ public final class PhoenixHud {
         d.drawTextWithShadow(c.textRenderer,Text.literal(name),x+27,y+18,widgetTextColor());
         if(stack.isDamageable()){float ratio=(float)(stack.getMaxDamage()-stack.getDamage())/(float)stack.getMaxDamage();
             d.fill(x+27,y+29,x+124,y+32,0xFF302A32);d.fill(x+27,y+29,x+27+Math.max(1,Math.round(97*ratio)),y+32,durabilityColor(ratio));}
+    }
+
+    private static void updateHitParticles(MinecraftClient client){
+        if(!particlesEnabled||client.player==null||client.world==null)return;
+        var nearby=client.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,
+                client.player.getBoundingBox().expand(12.0),e->e!=client.player&&!e.isRemoved());
+        for(net.minecraft.entity.LivingEntity entity:nearby){
+            String id=entity.getUuidAsString();
+            float health=entity.getHealth();
+            Float previous=observedHealth.put(id,health);
+            if(previous!=null&&health<previous){
+                net.minecraft.particle.ParticleEffect effect=switch(particleStyle){
+                    case 1 -> ParticleTypes.HEART;
+                    case 2 -> ParticleTypes.END_ROD;
+                    case 3 -> ParticleTypes.FLAME;
+                    default -> ParticleTypes.CRIT;
+                };
+                for(int i=0;i<5;i++){
+                    double ox=(Math.random()-0.5)*0.65,oz=(Math.random()-0.5)*0.65;
+                    double vx=(Math.random()-0.5)*0.08,vz=(Math.random()-0.5)*0.08;
+                    client.world.addParticle(effect,entity.getX()+ox,entity.getY()+entity.getHeight()*0.65,
+                            entity.getZ()+oz,vx,0.035+Math.random()*0.06,vz);
+                }
+            }
+        }
+        if(observedHealth.size()>512)observedHealth.clear();
     }
 
     public static void renderCrosshair(net.minecraft.client.gui.DrawContext d,int cx,int cy){
