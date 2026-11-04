@@ -7,7 +7,8 @@
     "TitleScreenMixin",
     "SplashOverlayMixin",
     "GameMenuScreenMixin",
-    "ContainerPreviewTooltipMixin"
+    "ContainerPreviewTooltipMixin",
+    "EntityRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
