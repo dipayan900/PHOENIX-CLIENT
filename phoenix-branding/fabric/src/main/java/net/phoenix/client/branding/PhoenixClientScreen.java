@@ -158,17 +158,12 @@ public final class PhoenixClientScreen extends Screen {
     }
 
     @Override public void renderBackground(DrawContext draw,int mouseX,int mouseY,float delta){
-        boolean light=PhoenixHud.isLightUiTheme();
-        int top=light?0xFFF3F4F7:0xFF09070D, bottom=light?0xFFE4E6EC:0xFF25111B;
-        int panel=light?0xFFFFFFFF:0xD5100D16, accent=light?0xFFB94D1B:0xFFFF702E;
-        int main=light?0xFF25232A:0xFFFF8547, muted=light?0xFF66636D:0xFFB8AEBB;
-        draw.fillGradient(0,0,width,height,top,bottom);
-        draw.fill(10,10,width-10,height-10,panel);
-        draw.fill(10,10,width-10,12,accent);
-        draw.drawCenteredTextWithShadow(textRenderer,Text.literal("🔥  PHOENIX"),width/2,24,main);
+        PhoenixScreenStyle.background(draw,width,height);
+        int main=PhoenixScreenStyle.mainText(), muted=PhoenixScreenStyle.mutedText();
+        draw.drawCenteredTextWithShadow(textRenderer,Text.literal("PHOENIX  /  CLIENT"),width/2,24,main);
         String heading=tab.equals("MODULES")?"CLIENT MODULES  /  LIVE CONTROLS":tab.equals("SETTINGS")?"CLIENT SETTINGS":tab.equals("KEYBINDS")?"KEYBIND REFERENCE":"MODULE PROFILES";
         draw.drawCenteredTextWithShadow(textRenderer,Text.literal(heading),width/2,42,muted);
-        draw.fill(20,66,width-20,67,accent);
+        draw.fill(20,66,width-20,67,PhoenixScreenStyle.accent());
         if(tab.equals("MODULES")) draw.drawCenteredTextWithShadow(textRenderer,Text.literal("SEARCH · FILTER · TAP TO TOGGLE · AUTO-SAVED"),width/2,103,muted);
         else if(tab.equals("KEYBINDS")) draw.drawCenteredTextWithShadow(textRenderer,Text.literal("QUICK ACCESS CONTROLS"),width/2,78,muted);
         else if(tab.equals("PRESETS")) draw.drawCenteredTextWithShadow(textRenderer,Text.literal("READY-MADE MODULE CONFIGURATIONS"),width/2,78,muted);
