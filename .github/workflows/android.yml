@@ -108,6 +108,21 @@ jobs:
           test "$(find "$OUT" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 11
       - name: Download exact-version AppleSkin Fabric builds
         run: python3 scripts/download-appleskin.py "$RUNNER_TEMP/phoenix-fabric-assets"
+      - name: Verify AppleSkin has no unavailable JEI integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for JAR in "$RUNNER_TEMP"/phoenix-fabric-assets/appleskin-fabric-*.jar; do
+            [ -e "$JAR" ] || continue
+            if unzip -p "$JAR" fabric.mod.json | grep -qi 'appleskin.jei.mixins.json'; then
+              echo "::error::AppleSkin JEI mixin is still registered in $JAR"
+              exit 1
+            fi
+            if jar tf "$JAR" | grep -qi 'jei.*mixins.json'; then
+              echo "::error::Optional AppleSkin JEI mixin file remains in $JAR"
+              exit 1
+            fi
+          done
       - name: Checkout Amethyst Java engine source
         run: |
           git config --global url."https://github.com/".insteadOf git@github.com:
