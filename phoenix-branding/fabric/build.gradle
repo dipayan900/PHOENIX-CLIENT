@@ -34,6 +34,14 @@ sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityMode
 
 if (project.minecraft_version != '1.21.1') {
     sourceSets.main.java.srcDir 'src/modern/java'
+    // Compile the modern API variants instead of the legacy 1.21.1 copies.
+    sourceSets.main.java.exclude { element ->
+        def legacyFiles = [
+            'src/main/java/net/phoenix/client/branding/PhoenixHud.java',
+            'src/main/java/net/phoenix/client/branding/PhoenixHudEditorScreen.java'
+        ]
+        legacyFiles.contains(element.file.path.replace('\\\\', '/').replace(project.projectDir.path + '/', ''))
+    }
     sourceSets.main.java.exclude 'net/phoenix/client/branding/PhoenixCosmeticFeatureRenderer.java'
     sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityRendererMixin.java'
     sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityModelEmoteMixin.java'
