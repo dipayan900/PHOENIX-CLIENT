@@ -49,6 +49,7 @@ public final class PhoenixHudEditorScreen extends Screen {
         d.drawCenteredTextWithShadow(textRenderer,
                 Text.literal("Move widgets away from screen edges if they overlap."),
                 width / 2, height - 42, 0xFFB8AEBB);
+        PhoenixScreenStyle.renderControlFrames(this, d);
         super.render(d, mx, my, delta);
         PhoenixScreenStyle.renderChrome(this, d);
     }
