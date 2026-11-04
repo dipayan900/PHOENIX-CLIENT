@@ -58,6 +58,7 @@ public final class PhoenixVisualSettingsScreen extends Screen {
         d.drawCenteredTextWithShadow(textRenderer,
                 Text.literal("Controls are saved to your local Minecraft profile."),
                 width / 2, height - 20, PhoenixScreenStyle.mutedText());
+        PhoenixScreenStyle.renderControlFrames(this, d);
         super.render(d, mx, my, delta);
         PhoenixScreenStyle.renderChrome(this, d);
     }
