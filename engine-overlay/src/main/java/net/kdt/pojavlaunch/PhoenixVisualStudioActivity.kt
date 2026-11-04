@@ -34,6 +34,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import java.util.Locale
+import java.io.File
 import net.kdt.pojavlaunch.value.launcherprofiles.LauncherProfiles
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
@@ -56,7 +57,7 @@ class PhoenixVisualStudioActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { PhoenixVisualStudioScreen { finish() } }
+        setContent { PhoenixVisualStudioScreen(onBack = { finish() }, onCrestSurface = { crestSurface = it }) }
     }
 }
 
@@ -64,7 +65,7 @@ private data class PhoenixVisualModule(val id: String, val title: String, val de
 private data class PhoenixBind(val id: String, val title: String, val defaultKey: String)
 
 @Composable
-private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
+private fun PhoenixVisualStudioScreen(onBack: () -> Unit, onCrestSurface: (PhoenixCrestSurface) -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("phoenix_client", Context.MODE_PRIVATE) }
     val accentOptions = listOf("INFERNO", "FROST", "AMETHYST")
@@ -159,7 +160,7 @@ private fun PhoenixVisualStudioScreen(onBack: () -> Unit) {
                                 Text("A real OpenGL ES 2.0 mesh, rendered with depth and perspective. Drag across the crest to rotate it.", color = muted, fontSize = 12.sp)
                                 AndroidView(
                                     factory = { ctx -> PhoenixCrestSurface(ctx).also { surface ->
-                                        crestSurface = surface
+                                        onCrestSurface(surface)
                                         surface.setRenderer(PhoenixCrestRenderer())
                                         surface.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
                                     } },
