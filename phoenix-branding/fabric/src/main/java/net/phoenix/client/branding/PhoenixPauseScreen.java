@@ -44,7 +44,7 @@ public final class PhoenixPauseScreen extends Screen {
         MinecraftClient minecraft = MinecraftClient.getInstance();
         try {
             try {
-                invokeClientMethod(minecraft, "disconnectWithSavingScreen");
+                invokeClientMethod(minecraft, "disconnectWithSavingScreen", new Class<?>[0]);
                 return;
             } catch (NoSuchMethodException olderVersion) {
                 // The dedicated saving screen was added after older supported versions.
@@ -52,14 +52,15 @@ public final class PhoenixPauseScreen extends Screen {
 
             TitleScreen titleScreen = new TitleScreen();
             try {
-                invokeClientMethod(minecraft, "disconnect", Screen.class, boolean.class, boolean.class,
-                        titleScreen, false, true);
+                invokeClientMethod(minecraft, "disconnect",
+                        new Class<?>[]{Screen.class, boolean.class, boolean.class}, titleScreen, false, true);
             } catch (NoSuchMethodException intermediateVersion) {
                 try {
-                    invokeClientMethod(minecraft, "disconnect", Screen.class, boolean.class,
-                            titleScreen, false);
+                    invokeClientMethod(minecraft, "disconnect",
+                            new Class<?>[]{Screen.class, boolean.class}, titleScreen, false);
                 } catch (NoSuchMethodException legacyVersion) {
-                    invokeClientMethod(minecraft, "disconnect", Screen.class, titleScreen);
+                    invokeClientMethod(minecraft, "disconnect",
+                            new Class<?>[]{Screen.class}, titleScreen);
                 }
             }
         } catch (ReflectiveOperationException error) {
@@ -69,18 +70,8 @@ public final class PhoenixPauseScreen extends Screen {
 
 
     private static void invokeClientMethod(MinecraftClient minecraft, String name,
-                                           Class<?>... signatureAndArguments) throws ReflectiveOperationException {
-        int parameterCount = signatureAndArguments.length;
-        Class<?>[] parameterTypes = new Class<?>[parameterCount];
-        Object[] arguments = new Object[parameterCount];
-        for (int i = 0; i < parameterCount; i++) {
-            Object value = signatureAndArguments[i];
-            if (value instanceof Class<?> type) {
-                parameterTypes[i] = type;
-            } else {
-                arguments[i] = value;
-            }
-        }
+                                           Class<?>[] parameterTypes, Object... arguments)
+            throws ReflectiveOperationException {
         java.lang.reflect.Method method = MinecraftClient.class.getDeclaredMethod(name, parameterTypes);
         method.setAccessible(true);
         method.invoke(minecraft, arguments);
