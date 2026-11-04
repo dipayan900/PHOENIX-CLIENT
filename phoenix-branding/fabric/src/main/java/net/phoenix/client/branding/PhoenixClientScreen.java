@@ -128,23 +128,24 @@ public final class PhoenixClientScreen extends Screen {
             addDrawableChild(ButtonWidget.builder(Text.literal("›"),b->switchTo("MODULES",category,(safePage+1)%pageCount))
                 .dimensions(width-48,navY-25,38,19).build());
         } else if(tab.equals("SETTINGS")){
-            int w=Math.min(270,width-28),x=(width-w)/2,y=Math.max(24,Math.min(100,height-235));
-            addAction("PERFORMANCE & FPS",x,y,w,()->client.setScreen(new PhoenixPerformanceScreen(this)));
-            addAction("HUD LAYOUT EDITOR",x,y+34,w,()->client.setScreen(new PhoenixHudEditorScreen(this)));
-            addAction("CROSSHAIR STUDIO",x,y+68,w,()->client.setScreen(new PhoenixCrosshairScreen(this)));
-            addAction("PARTICLE VISUAL STUDIO",x,y+238,w,()->client.setScreen(new PhoenixParticleScreen(this)));
-            addAction("VISUAL MODULE SETTINGS",x,y+102,w,()->client.setScreen(new PhoenixVisualSettingsScreen(this)));
-            addAction("APPEARANCE: "+PhoenixHud.getUiTheme()+"  ·  CHANGE",x,y+136,w,()->{PhoenixHud.cycleUiTheme();switchTo("SETTINGS",category,0);});
-            addAction("RESET HUD POSITIONS",x,y+170,w,PhoenixHud::resetElementPositions);
-            addAction("INDIVIDUAL MODULE CONFIG",x,y+204,w,()->client.setScreen(new PhoenixModuleSettingsScreen(this)));
+            int w=Math.min(300,width-28),x=(width-w)/2,y=Math.max(58,Math.min(100,height-180));
+            int gap=8,cellW=(w-gap)/2,rowH=30;
+            addAction("PERFORMANCE & FPS",x,y,cellW,()->client.setScreen(new PhoenixPerformanceScreen(this)));
+            addAction("HUD LAYOUT EDITOR",x+cellW+gap,y,cellW,()->client.setScreen(new PhoenixHudEditorScreen(this)));
+            addAction("CROSSHAIR STUDIO",x,y+rowH,cellW,()->client.setScreen(new PhoenixCrosshairScreen(this)));
+            addAction("PARTICLE VISUAL STUDIO",x+cellW+gap,y+rowH,cellW,()->client.setScreen(new PhoenixParticleScreen(this)));
+            addAction("VISUAL SETTINGS",x,y+rowH*2,cellW,()->client.setScreen(new PhoenixVisualSettingsScreen(this)));
+            addAction("APPEARANCE: "+PhoenixHud.getUiTheme(),x+cellW+gap,y+rowH*2,cellW,()->{PhoenixHud.cycleUiTheme();switchTo("SETTINGS",category,0);});
+            addAction("RESET HUD POSITIONS",x,y+rowH*3,cellW,PhoenixHud::resetElementPositions);
+            addAction("MODULE CONFIG",x+cellW+gap,y+rowH*3,cellW,()->client.setScreen(new PhoenixModuleSettingsScreen(this)));
         } else if(tab.equals("KEYBINDS")){
-            int x=width/2-125,y=105;
+            int w=Math.min(280,width-28),x=(width-w)/2,y=Math.max(82,height/2-70);
             String[][] keys={{"OPEN PHOENIX MENU","RIGHT SHIFT"},{"HOLD TO ZOOM","C"},{"TOGGLE SPRINT","G"}};
             for(int i=0;i<keys.length;i++){
-                int yy=y+i*42;
-                addDrawableChild(ButtonWidget.builder(Text.literal(keys[i][0]+"     "+keys[i][1]),b->client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this,client.options))).dimensions(x,yy,250,30).build());
+                int yy=y+i*36;
+                addDrawableChild(ButtonWidget.builder(Text.literal(keys[i][0]+"     "+keys[i][1]),b->client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this,client.options))).dimensions(x,yy,w,26).build());
             }
-            addAction("OPEN MINECRAFT OPTIONS",x,y+140,250,()->client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this,client.options)));
+            addAction("OPEN MINECRAFT OPTIONS",x,y+112,w,()->client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this,client.options)));
         } else {
             int w=Math.min(270,width-28),x=(width-w)/2,y=105;
             addAction("DEFAULT  ·  ALL-ROUND",x,y,w,()->{PhoenixHud.applyPreset("DEFAULT");switchTo("MODULES","ALL",0);});
