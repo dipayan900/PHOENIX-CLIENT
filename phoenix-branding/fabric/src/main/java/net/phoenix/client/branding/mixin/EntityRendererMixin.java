@@ -26,11 +26,33 @@ abstract class EntityRendererMixin {
             current = Text.literal(PhoenixBrandingClient.PREFIX).append(current);
         }
         if (PhoenixHud.isHealthIndicatorEnabled()) {
-            float max = Math.max(1.0f, living.getMaxHealth());
-            int filled = Math.max(0, Math.min(10, Math.round((living.getHealth() / max) * 10.0f)));
-            String hearts = "❤".repeat(filled) + "♡".repeat(10 - filled);
+            float maxHealth = Math.max(1.0f, living.getMaxHealth());
+            float currentHealth = Math.max(0.0f, Math.min(maxHealth, living.getHealth()));
+
+            // One unit here is half a heart (1 health point). Do not cap at
+            // ten hearts: servers and attributes can grant much higher max health.
+            int heartSlots = Math.max(1, (int) Math.ceil(maxHealth / 2.0f));
+            int currentHalfHearts = Math.max(0, Math.min((int) Math.ceil(maxHealth),
+                    (int) Math.ceil(currentHealth)));
+            int fullHearts = Math.min(heartSlots, currentHalfHearts / 2);
+            boolean halfHeart = currentHalfHearts % 2 == 1 && fullHearts < heartSlots;
+            int emptyHearts = Math.max(0, heartSlots - fullHearts - (halfHeart ? 1 : 0));
+
+            String hearts = "❤".repeat(fullHearts)
+                    + (halfHeart ? "◐" : "")
+                    + "♡".repeat(emptyHearts);
             current = current.copy().append(Text.literal("  " + hearts)
                     .formatted(net.minecraft.util.Formatting.RED));
+
+            // Absorption is additional health and is displayed separately in gold.
+            int absorptionHalfHearts = Math.max(0, (int) Math.ceil(living.getAbsorptionAmount()));
+            if (absorptionHalfHearts > 0) {
+                int absorptionFull = absorptionHalfHearts / 2;
+                boolean absorptionHalf = absorptionHalfHearts % 2 == 1;
+                String absorption = "❤".repeat(absorptionFull) + (absorptionHalf ? "◐" : "");
+                current = current.copy().append(Text.literal(" " + absorption)
+                        .formatted(net.minecraft.util.Formatting.GOLD));
+            }
         }
         cir.setReturnValue(current);
     }
