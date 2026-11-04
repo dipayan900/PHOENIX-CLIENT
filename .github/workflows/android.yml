@@ -77,6 +77,11 @@ jobs:
               grep -Fxq "$REQUIRED" "$RUNNER_TEMP/phoenix-jar-contents.txt"
             done
             python3 -c 'import json,sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); c=json.loads(z.read("phoenix_branding.mixins.json")); p=c["package"].replace(".","/").rstrip("/"); missing=[f"{p}/{m.replace(chr(46), chr(47))}.class" for m in c.get("client",[]) if f"{p}/{m.replace(chr(46), chr(47))}.class" not in z.namelist()]; assert not missing, "Mixin classes missing from Phoenix adapter: "+", ".join(missing)' "$JAR"
+            if [ "$MINOR" -eq 11 ]; then
+              javap -classpath "$JAR" -p net.phoenix.client.branding.mixin.EntityRendererMixin > "$RUNNER_TEMP/phoenix-entity-renderer-mixin.txt"
+              grep -Eq 'phoenix\\\$showLivingHealthLabels\\([^)]*double' "$RUNNER_TEMP/phoenix-entity-renderer-mixin.txt"
+              echo "Verified Minecraft 1.21.11 EntityRenderer mixin has the required double parameter."
+            fi
             unzip -p "$JAR" fabric.mod.json | grep -q '"id"[[:space:]]*:[[:space:]]*"phoenix_branding"'
             cp "$JAR" "$OUT/phoenix-branding-fabric-$MC_VERSION.jar"
             echo "Built Phoenix Fabric adapter: $MC_VERSION"
