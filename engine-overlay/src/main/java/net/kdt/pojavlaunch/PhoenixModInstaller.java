@@ -122,8 +122,8 @@ public final class PhoenixModInstaller {
             if (marker.exists() && !marker.delete()) Log.w(TAG, "Could not clear previous Phoenix marker.");
             try (FileOutputStream status = new FileOutputStream(
                     new File(config, "phoenix-client-install-status.txt"))) {
-                String statusText = "INSTALLED\\nMinecraft: " + mcVersion + "\\nProfile: " + versionId
-                        + "\\nJAR: " + target.getAbsolutePath() + "\\n";
+                String statusText = "INSTALLED\nMinecraft: " + mcVersion + "\nProfile: " + versionId
+                        + "\nJAR: " + target.getAbsolutePath() + "\n";
                 status.write(statusText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 status.getFD().sync();
             }
