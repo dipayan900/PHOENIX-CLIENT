@@ -68,7 +68,7 @@ jobs:
             BUILD_OK=false
             for ATTEMPT in 1 2 3; do
               echo "Gradle build attempt $ATTEMPT/3 for $MC_VERSION"
-              if gradle --no-daemon --retry 3 --max-workers=2 -p phoenix-branding/fabric clean build \
+              if gradle --no-daemon --max-workers=2 -p phoenix-branding/fabric clean build \
                 -Pminecraft_version="$MC_VERSION" \
                 -Pyarn_mappings="$YARN_MAPPINGS" \
                 -Ploader_version=0.18.1 \
