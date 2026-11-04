@@ -32,6 +32,8 @@ public final class PhoenixModuleSettingsScreen extends Screen {
         new Entry("Inventory Overlay", PhoenixHud::isInventoryOverlayEnabled, PhoenixHud::toggleInventoryOverlay),
         new Entry("Light Level", PhoenixHud::isLightLevelEnabled, PhoenixHud::toggleLightLevel),
         new Entry("Nearby Entities", PhoenixHud::isEntityOverlayEnabled, PhoenixHud::toggleEntityOverlay),
+        new Entry("Entity Health Hearts", PhoenixHud::isHealthIndicatorEnabled, PhoenixHud::toggleHealthIndicator),
+        new Entry("Hit Particles", PhoenixHud::isParticlesEnabled, PhoenixHud::toggleParticles),
         new Entry("Tool Information", PhoenixHud::isToolInfoEnabled, PhoenixHud::toggleToolInfo),
         new Entry("CPS Counter", PhoenixHud::isCpsEnabled, PhoenixHud::toggleCps),
         new Entry("Fullbright", PhoenixHud::isFullbrightEnabled, PhoenixHud::toggleFullbright),
