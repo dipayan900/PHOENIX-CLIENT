@@ -89,6 +89,8 @@ g = g.replace("dependencies {\n", """dependencies {
 gradle.write_text(g)
 
 m = manifest.read_text()
+if 'android.permission.POST_NOTIFICATIONS' not in m:
+    m = m.replace('<application\\n', '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\\n    <application\\n', 1)
 # Android blocks cleartext HTTP by default. Phoenix sync uses bearer-token HTTP
 # only on a trusted private LAN; the Paper plugin warns against public exposure.
 m = m.replace(
