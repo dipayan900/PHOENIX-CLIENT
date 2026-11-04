@@ -31,8 +31,8 @@ abstract class EntityRendererMixin {
 
             // One unit here is half a heart (1 health point). Do not cap at
             // ten hearts: servers and attributes can grant much higher max health.
-            int heartSlots = Math.max(1, (int) Math.ceil(maxHealth / 2.0f));
-            int currentHalfHearts = Math.max(0, Math.min((int) Math.ceil(maxHealth),
+            int heartSlots = Math.max(1, Math.min(100, (int) Math.ceil(maxHealth / 2.0f)));
+            int currentHalfHearts = Math.max(0, Math.min(heartSlots * 2,
                     (int) Math.ceil(currentHealth)));
             int fullHearts = Math.min(heartSlots, currentHalfHearts / 2);
             boolean halfHeart = currentHalfHearts % 2 == 1 && fullHearts < heartSlots;
@@ -45,7 +45,7 @@ abstract class EntityRendererMixin {
                     .formatted(net.minecraft.util.Formatting.RED));
 
             // Absorption is additional health and is displayed separately in gold.
-            int absorptionHalfHearts = Math.max(0, (int) Math.ceil(living.getAbsorptionAmount()));
+            int absorptionHalfHearts = Math.max(0, Math.min(200, (int) Math.ceil(living.getAbsorptionAmount())));
             if (absorptionHalfHearts > 0) {
                 int absorptionFull = absorptionHalfHearts / 2;
                 boolean absorptionHalf = absorptionHalfHearts % 2 == 1;
