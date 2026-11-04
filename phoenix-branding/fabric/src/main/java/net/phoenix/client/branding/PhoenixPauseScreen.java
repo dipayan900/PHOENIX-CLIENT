@@ -93,6 +93,7 @@ public final class PhoenixPauseScreen extends Screen {
 
     @Override
     public void render(DrawContext draw, int mouseX, int mouseY, float delta) {
+        PhoenixScreenStyle.renderControlFrames(this, draw);
         super.render(draw, mouseX, mouseY, delta);
         PhoenixScreenStyle.renderChrome(this, draw);
     }
