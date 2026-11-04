@@ -20,6 +20,14 @@ public final class PhoenixModInstaller {
             Pattern.compile("(?<![0-9])1\\.21\\.(?:[1-9]|1[01])(?![0-9])");
     private PhoenixModInstaller() {}
 
+    private static String readUtf8(InputStream input) throws java.io.IOException {
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+        byte[] chunk = new byte[4096];
+        int count;
+        while ((count = input.read(chunk)) != -1) buffer.write(chunk, 0, count);
+        return new String(buffer.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
     private static void installAppleSkin(Context context, File modsDir, String mcVersion) {
         String fileName = "appleskin-fabric-" + mcVersion + ".jar";
         File target = new File(modsDir, fileName);
@@ -42,7 +50,7 @@ public final class PhoenixModInstaller {
                 }
                 String metadata;
                 try (InputStream meta = jar.getInputStream(jar.getEntry("fabric.mod.json"))) {
-                    metadata = new String(meta.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    metadata = readUtf8(meta);
                 }
                 if (!metadata.contains("\"id\"") || !metadata.contains("appleskin")) {
                     throw new IllegalStateException("Bundled mod metadata is not AppleSkin.");
@@ -112,9 +120,13 @@ public final class PhoenixModInstaller {
             if (!config.exists() && !config.mkdirs()) throw new IllegalStateException("Cannot create config directory.");
             File marker = new File(config, "phoenix-client-loaded.txt");
             if (marker.exists() && !marker.delete()) Log.w(TAG, "Could not clear previous Phoenix marker.");
-            Files.writeString(new File(config, "phoenix-client-install-status.txt").toPath(),
-                    "INSTALLED\nMinecraft: " + mcVersion + "\nProfile: " + versionId
-                            + "\nJAR: " + target.getAbsolutePath() + "\n");
+            try (FileOutputStream status = new FileOutputStream(
+                    new File(config, "phoenix-client-install-status.txt"))) {
+                String statusText = "INSTALLED\\nMinecraft: " + mcVersion + "\\nProfile: " + versionId
+                        + "\\nJAR: " + target.getAbsolutePath() + "\\n";
+                status.write(statusText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                status.getFD().sync();
+            }
             Log.i(TAG, "Installed Phoenix adapter for " + mcVersion + " at " + target);
             notify(context, "Phoenix client installed for Minecraft " + mcVersion + ".");
         } catch (Exception e) {
