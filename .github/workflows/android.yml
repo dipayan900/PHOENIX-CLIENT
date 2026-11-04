@@ -90,7 +90,7 @@ jobs:
             JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
             test -n "$JAR"
             jar tf "$JAR" > "$RUNNER_TEMP/phoenix-jar-contents.txt"
-            for REQUIRED in fabric.mod.json phoenix_branding.mixins.json net/phoenix/client/branding/PhoenixBrandingClient.class net/phoenix/client/branding/PhoenixTitleScreen.class net/phoenix/client/branding/mixin/TitleScreenMixin.class net/phoenix/client/branding/mixin/SplashOverlayMixin.class; do
+            for REQUIRED in fabric.mod.json phoenix_branding.mixins.json net/phoenix/client/branding/PhoenixBrandingClient.class net/phoenix/client/branding/PhoenixTitleScreen.class net/phoenix/client/branding/mixin/TitleScreenMixin.class net/phoenix/client/branding/mixin/ScreenAccessorMixin.class net/phoenix/client/branding/mixin/SplashOverlayMixin.class; do
               grep -Fxq "$REQUIRED" "$RUNNER_TEMP/phoenix-jar-contents.txt"
             done
             python3 -c 'import json,sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); c=json.loads(z.read("phoenix_branding.mixins.json")); p=c["package"].replace(".","/").rstrip("/"); missing=[f"{p}/{m.replace(chr(46), chr(47))}.class" for m in c.get("client",[]) if f"{p}/{m.replace(chr(46), chr(47))}.class" not in z.namelist()]; assert not missing, "Mixin classes missing from Phoenix adapter: "+", ".join(missing)' "$JAR"
