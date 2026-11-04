@@ -218,10 +218,10 @@ PY
 
 # Give the embedded engine controls a Phoenix-specific visual language and
 # route its community button to the owner's official Phoenix Discord invite.
-python3 - "$APP/src/main/res/values/styles.xml" "$APP/src/main/res/values/strings.xml" "$APP/src/main/java/com/kdt/mcgui/MineButton.java" "$APP/src/main/res/layout/activity_pojav_launcher.xml" <<'PY'
+python3 - "$APP/src/main/res/values/styles.xml" "$APP/src/main/res/values/strings.xml" "$APP/src/main/java/com/kdt/mcgui/MineButton.java" "$APP/src/main/res/layout/activity_pojav_launcher.xml" "$APP/src/main/res/values/colors.xml" <<'PY'
 from pathlib import Path
 import sys
-styles, strings, mine_button, activity_layout = map(Path, sys.argv[1:])
+styles, strings, mine_button, activity_layout, colors = map(Path, sys.argv[1:])
 s = styles.read_text()
 s = s.replace(
     '<item name="windowActionBar">false</item>',
