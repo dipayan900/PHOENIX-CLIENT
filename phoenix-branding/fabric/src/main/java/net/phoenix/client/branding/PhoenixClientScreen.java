@@ -172,6 +172,7 @@ public final class PhoenixClientScreen extends Screen {
 
     @Override public void render(DrawContext draw,int mouseX,int mouseY,float delta){
         renderBackground(draw,mouseX,mouseY,delta);
+        PhoenixScreenStyle.renderControlFrames(this, draw);
         super.render(draw,mouseX,mouseY,delta);
         PhoenixScreenStyle.renderChrome(this, draw);
     }
