@@ -161,14 +161,14 @@ internal fun PhoenixUpdateCenter(
 
         Text("UPDATE SAFETY SYSTEMS", color = accent, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.2.sp)
         listOf(
-            "Update Manager" to "Manifest discovery is active; staged component download and atomic activation are not enabled yet.",
-            "Integrity Verifier" to "SHA-256 validation is available for staged files. A trusted release-signature key must be provisioned before production releases.",
+            "Update Manager" to "HTTPS staging-download, size limits and component activation/rollback helpers are present. The UI does not yet run a full release installation transaction.",
+            "Integrity Verifier" to "SHA-256 and Ed25519 verification paths are implemented. Verification intentionally fails closed until the Phoenix public key is provisioned.",
             "Compatibility Engine" to "Uses Phoenix's version-specific adapter matrix; a successful build is not treated as runtime compatibility.",
             "Profile Manager" to "Minecraft profiles remain separate. Existing profile directories are not rewritten by this screen.",
-            "Data Migration Manager" to "Migration must run on a copy and pass validation before any settings are replaced.",
-            "Backup & Rollback" to "Existing Phoenix profile snapshots remain available. Full world backups require explicit storage and space checks.",
+            "Data Migration Manager" to "A schema-versioned JSON migration runner validates in-memory copies. Project-specific migration steps still need to be added as settings schemas evolve.",
+            "Backup & Rollback" to "Staged component swap and previous-version rollback helpers are present. Full world backup/restore and automatic crash-triggered rollback still require integration testing.",
             "Release Signing" to "Production signing identity is not embedded in source. Configure one persistent protected release key in CI before publishing APK updates.",
-            "Update Notifications" to "This screen reports update-check results. Background scheduled notifications are not enabled yet."
+            "Update Notifications" to "This screen reports update-check results. WorkManager periodic checks are scheduled from the dashboard. Notifications require a published signed manifest and Android notification permission."
         ).forEach { (title, detail) ->
             PhoenixUpdateInfoCard(title, "Safety status", detail, accent, panel, muted)
         }
