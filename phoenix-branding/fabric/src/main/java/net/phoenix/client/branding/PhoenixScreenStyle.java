@@ -47,6 +47,27 @@ public final class PhoenixScreenStyle {
         }
     }
 
+
+    /** Draws a restrained hardware-like frame behind each interactive control. */
+    public static void renderControlFrames(Screen screen, DrawContext draw) {
+        for (var child : screen.children()) {
+            if (child instanceof ClickableWidget widget && widget.visible) {
+                int x = widget.getX(), y = widget.getY();
+                int right = x + widget.getWidth(), bottom = y + widget.getHeight();
+                boolean hovered = widget.isHovered();
+                int outer = light() ? 0x667D6674 : 0x885E4057;
+                int surface = light() ? 0xBFFFFFFF : 0xB90D0B13;
+                int highlight = hovered ? accent() : edge();
+                draw.fill(x - 3, y - 3, right + 3, bottom + 3, outer);
+                draw.fill(x - 2, y - 2, right + 2, bottom + 2, surface);
+                draw.fill(x - 2, y - 2, right + 2, y - 1, highlight);
+                draw.fill(x - 2, y - 2, x - 1, bottom + 2, highlight);
+                draw.fill(right + 1, y - 2, right + 2, bottom + 2, outer);
+                draw.fill(x - 2, bottom + 1, right + 2, bottom + 2, outer);
+            }
+        }
+    }
+
     /** Draw after Screen.render so keyboard/controller focus remains visible above widgets. */
     public static void renderChrome(Screen screen, DrawContext draw) {
         for (var child : screen.children()) {
