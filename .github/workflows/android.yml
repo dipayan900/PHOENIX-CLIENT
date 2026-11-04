@@ -81,6 +81,8 @@ jobs:
             echo "::endgroup::"
           done
           test "$(find "$OUT" -maxdepth 1 -name 'phoenix-branding-fabric-*.jar' | wc -l)" -eq 11
+      - name: Download exact-version AppleSkin Fabric builds
+        run: python3 scripts/download-appleskin.py "$RUNNER_TEMP/phoenix-fabric-assets"
       - name: Checkout Amethyst Java engine source
         run: |
           git config --global url."https://github.com/".insteadOf git@github.com:
@@ -128,6 +130,8 @@ jobs:
           ASSETS="$RUNNER_TEMP/phoenix-engine/app_pojavlauncher/src/main/assets/phoenix"
           mkdir -p "$ASSETS"
           cp "$RUNNER_TEMP"/phoenix-fabric-assets/phoenix-branding-fabric-*.jar "$ASSETS/"
+          APPLESKIN_JARS=("$RUNNER_TEMP"/phoenix-fabric-assets/appleskin-fabric-*.jar)
+          if [ -e "${APPLESKIN_JARS[0]}" ]; then cp "${APPLESKIN_JARS[@]}" "$ASSETS/"; fi
           for MINOR in {1..11}; do
             MC_VERSION="1.21.$MINOR"
             EMBEDDED="$ASSETS/phoenix-branding-fabric-$MC_VERSION.jar"
