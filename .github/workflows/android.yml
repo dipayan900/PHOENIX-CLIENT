@@ -93,6 +93,7 @@ jobs:
             for REQUIRED in fabric.mod.json phoenix_branding.mixins.json net/phoenix/client/branding/PhoenixBrandingClient.class net/phoenix/client/branding/PhoenixTitleScreen.class net/phoenix/client/branding/mixin/TitleScreenMixin.class net/phoenix/client/branding/mixin/ScreenAccessorMixin.class net/phoenix/client/branding/mixin/SplashOverlayMixin.class; do
               grep -Fxq "$REQUIRED" "$RUNNER_TEMP/phoenix-jar-contents.txt"
             done
+            unzip -p "$JAR" phoenix_branding.mixins.json | grep -Fq '"ScreenAccessorMixin"'
             python3 -c 'import json,sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); c=json.loads(z.read("phoenix_branding.mixins.json")); p=c["package"].replace(".","/").rstrip("/"); missing=[f"{p}/{m.replace(chr(46), chr(47))}.class" for m in c.get("client",[]) if f"{p}/{m.replace(chr(46), chr(47))}.class" not in z.namelist()]; assert not missing, "Mixin classes missing from Phoenix adapter: "+", ".join(missing)' "$JAR"
             if [ "$MINOR" -eq 11 ]; then
               javap -classpath "$JAR" -p net.phoenix.client.branding.mixin.EntityRendererMixin > "$RUNNER_TEMP/phoenix-entity-renderer-mixin.txt"
