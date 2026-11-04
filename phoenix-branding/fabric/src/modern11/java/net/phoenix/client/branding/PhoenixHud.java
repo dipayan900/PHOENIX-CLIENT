@@ -360,8 +360,13 @@ public final class PhoenixHud {
     private static int widgetTextColor(){return isLightUiTheme()?0xFF29232B:0xFFF8F1F7;}
     private static int durabilityColor(float ratio){return ratio>0.6f?0xFF55D68B:ratio>0.25f?0xFFFFC04D:0xFFFF5B65;}
     private static void widgetPanel(net.minecraft.client.gui.DrawContext d,int x,int y,int w,int h,String title){
-        d.fill(x,y,x+w,y+h,widgetPanelColor());d.fill(x,y,x+w,y+2,widgetBorderColor());
-        d.drawTextWithShadow(MinecraftClient.getInstance().textRenderer,Text.literal(title),x+5,y+5,widgetBorderColor());
+        int edge=isLightUiTheme()?0x557D6674:0x775E4057;
+        d.fill(x,y,x+w,y+h,edge);
+        d.fill(x+1,y+1,x+w-1,y+h-1,widgetPanelColor());
+        d.fill(x+1,y+1,x+w-1,y+3,widgetBorderColor());
+        d.fill(x+1,y+3,x+2,y+h-1,widgetBorderColor());
+        d.fill(x+w-2,y+3,x+w-1,y+h-1,edge);
+        d.drawTextWithShadow(MinecraftClient.getInstance().textRenderer,Text.literal(title),x+6,y+6,widgetBorderColor());
     }
     private static void renderArmorWidget(net.minecraft.client.gui.DrawContext d,MinecraftClient c){
         int x=getElementX("ARMOR"),y=getElementY("ARMOR");widgetPanel(d,x,y,112,39,"ARMOR");
@@ -451,8 +456,14 @@ public final class PhoenixHud {
         int accent=light?0xFFB94D1B:0xFFFF702E;
         int label=light?0xFF8F3B18:0xFFFFA06C;
         int value=light?0xFF25232A:0xFFF4EDF4;
-        d.fill(x,y,x+w,y+17,panel);d.fill(x,y,x+2,y+17,accent);
+        int edge=light?0x557D6674:0x775E4057;
+        d.fill(x,y,x+w,y+17,edge);
+        d.fill(x+1,y+1,x+w-1,y+16,panel);
+        d.fill(x+1,y+1,x+w-1,y+2,accent);
+        d.fill(x+1,y+2,x+2,y+16,accent);
+        int split=x+Math.min(90,Math.max(48,labelWidth+13))-4;
+        d.fill(split,y+5,split+1,y+13,edge);
         d.drawTextWithShadow(c.textRenderer,Text.literal(k),x+7,y+4,label);
-        d.drawTextWithShadow(c.textRenderer,Text.literal(v),x+Math.min(90,Math.max(48,labelWidth+13)),y+4,value);
+        d.drawTextWithShadow(c.textRenderer,Text.literal(v),split+6,y+4,value);
     }
 }
