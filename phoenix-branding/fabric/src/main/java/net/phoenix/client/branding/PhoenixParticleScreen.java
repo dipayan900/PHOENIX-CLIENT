@@ -49,6 +49,7 @@ public final class PhoenixParticleScreen extends Screen {
                 PhoenixScreenStyle.accent());
         d.drawCenteredTextWithShadow(textRenderer, Text.literal("ICON PREVIEWS · NO PARTICLE NAMES"),
                 width / 2, 42, PhoenixScreenStyle.mutedText());
+        PhoenixScreenStyle.renderControlFrames(this, d);
         super.render(d, mx, my, delta);
         int w = Math.min(260, width - 24), x = (width - w) / 2;
         int y = Math.max(62, height / 2 - 76);
