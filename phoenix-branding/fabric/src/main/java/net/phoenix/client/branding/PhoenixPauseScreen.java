@@ -36,24 +36,38 @@ public final class PhoenixPauseScreen extends Screen {
                 button -> client.scheduleStop()).dimensions(left, top + 140, buttonWidth, 22).build());
     }
 
+    /**
+     * Prefer Minecraft's dedicated saving-disconnect flow. On older supported
+     * game versions, fall back to the version-appropriate disconnect overload.
+     */
     private void saveAndReturn() {
         MinecraftClient minecraft = MinecraftClient.getInstance();
-        // Minecraft 1.21.6 changed disconnect(Screen) to disconnect(Screen, boolean).
-        // Resolve the available signature at runtime so one Phoenix source works
-        // across the 1.21.1-1.21.11 adapter matrix.
-        TitleScreen titleScreen = new TitleScreen();
         try {
             try {
+                MinecraftClient.class.getMethod("disconnectWithSavingScreen").invoke(minecraft);
+                return;
+            } catch (NoSuchMethodException olderVersion) {
+                // The dedicated saving screen was added after older supported versions.
+            }
+
+            TitleScreen titleScreen = new TitleScreen();
+            try {
                 MinecraftClient.class
-                        .getMethod("disconnect", Screen.class, boolean.class)
-                        .invoke(minecraft, titleScreen, false);
-            } catch (NoSuchMethodException legacyVersion) {
-                MinecraftClient.class
-                        .getMethod("disconnect", Screen.class)
-                        .invoke(minecraft, titleScreen);
+                        .getMethod("disconnect", Screen.class, boolean.class, boolean.class)
+                        .invoke(minecraft, titleScreen, false, true);
+            } catch (NoSuchMethodException intermediateVersion) {
+                try {
+                    MinecraftClient.class
+                            .getMethod("disconnect", Screen.class, boolean.class)
+                            .invoke(minecraft, titleScreen, false);
+                } catch (NoSuchMethodException legacyVersion) {
+                    MinecraftClient.class
+                            .getMethod("disconnect", Screen.class)
+                            .invoke(minecraft, titleScreen);
+                }
             }
         } catch (ReflectiveOperationException error) {
-            throw new IllegalStateException("Phoenix could not return to the title screen", error);
+            throw new IllegalStateException("Phoenix could not save and return to the title screen", error);
         }
     }
 
