@@ -344,7 +344,17 @@ if old not in s:
         raise SystemExit("Phoenix patch failed: MinecraftDownloader network/local-profile condition changed upstream.")
 else:
     s = s.replace(old, new, 1)
-    p.write_text(s)
+# Always verify the cached vanilla client JAR against Mojang's SHA-1. This
+# prevents a partial/stale client JAR from silently omitting built-in shader
+# sources (including core/rendertype_text) when library hash checks are off.
+old_hash = """String clientSha1 = LauncherPreferences.PREF_CHECK_LIBRARY_SHA ?
+                minecraftClientInfo.sha1 : null;"""
+new_hash = "String clientSha1 = minecraftClientInfo.sha1;"
+if old_hash in s:
+    s = s.replace(old_hash, new_hash, 1)
+elif new_hash not in s:
+    raise SystemExit("Phoenix patch failed: Minecraft client JAR integrity check anchor changed upstream.")
+p.write_text(s)
 PY
 
 echo "Phoenix branding, Inferno engine theme, custom engine controls and Compose dashboard integration applied."
