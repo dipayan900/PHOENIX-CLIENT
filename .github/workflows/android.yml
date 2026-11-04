@@ -65,12 +65,28 @@ jobs:
             FABRIC_API_VERSION="$(printf '%s\n' "$DEPS" | sed -n '2p')"
             test -n "$YARN_MAPPINGS"
             test -n "$FABRIC_API_VERSION"
-            gradle --no-daemon -p phoenix-branding/fabric clean build \
-              -Pminecraft_version="$MC_VERSION" \
-              -Pyarn_mappings="$YARN_MAPPINGS" \
-              -Ploader_version=0.18.1 \
-              -Pfabric_version="$FABRIC_API_VERSION" \
-              -PphoenixIntegratedAdapters=true
+            BUILD_OK=false
+            for ATTEMPT in 1 2 3; do
+              echo "Gradle build attempt $ATTEMPT/3 for $MC_VERSION"
+              if gradle --no-daemon --retry 3 --max-workers=2 -p phoenix-branding/fabric clean build \
+                -Pminecraft_version="$MC_VERSION" \
+                -Pyarn_mappings="$YARN_MAPPINGS" \
+                -Ploader_version=0.18.1 \
+                -Pfabric_version="$FABRIC_API_VERSION" \
+                -PphoenixIntegratedAdapters=true; then
+                BUILD_OK=true
+                break
+              fi
+              if [ "$ATTEMPT" -lt 3 ]; then
+                WAIT_SECONDS=$((ATTEMPT * 20))
+                echo "Build failed for $MC_VERSION; retaining Gradle caches and retrying in ${WAIT_SECONDS}s."
+                sleep "$WAIT_SECONDS"
+              fi
+            done
+            if [ "$BUILD_OK" != true ]; then
+              echo "::error::Phoenix Fabric adapter build failed for $MC_VERSION after 3 attempts."
+              exit 1
+            fi
             JAR="$(find phoenix-branding/fabric/build/libs -maxdepth 1 -type f -name 'phoenix-branding-*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
             test -n "$JAR"
             jar tf "$JAR" > "$RUNNER_TEMP/phoenix-jar-contents.txt"
