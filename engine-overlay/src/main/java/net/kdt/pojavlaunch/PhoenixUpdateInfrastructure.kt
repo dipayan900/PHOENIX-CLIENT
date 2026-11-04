@@ -14,6 +14,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.KeyFactory
@@ -68,16 +69,19 @@ internal fun phoenixDownloadHttps(urlText: String, destination: File, maxBytes: 
         val temporary = File(destination.parentFile, destination.name + ".part")
         var total = 0L
         connection.inputStream.buffered().use { input ->
-            temporary.outputStream().buffered().use { output ->
-                val buffer = ByteArray(64 * 1024)
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    require(total <= maxBytes) { "Download exceeded the allowed size." }
-                    output.write(buffer, 0, count)
+            FileOutputStream(temporary).use { fileOutput ->
+                fileOutput.buffered().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        require(total <= maxBytes) { "Download exceeded the allowed size." }
+                        output.write(buffer, 0, count)
+                    }
+                    output.flush()
                 }
-                output.fd.sync()
+                fileOutput.fd.sync()
             }
         }
         require(total > 0L) { "Downloaded file is empty." }
