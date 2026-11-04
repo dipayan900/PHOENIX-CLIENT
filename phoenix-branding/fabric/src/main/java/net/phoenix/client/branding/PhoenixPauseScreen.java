@@ -42,41 +42,52 @@ public final class PhoenixPauseScreen extends Screen {
      */
     private void saveAndReturn() {
         MinecraftClient minecraft = MinecraftClient.getInstance();
-        try {
-            try {
-                invokeClientMethod(minecraft, "disconnectWithSavingScreen", new Class<?>[0]);
-                return;
-            } catch (NoSuchMethodException olderVersion) {
-                // The dedicated saving screen was added after older supported versions.
-            }
+        TitleScreen titleScreen = new TitleScreen();
 
-            TitleScreen titleScreen = new TitleScreen();
-            try {
-                invokeClientMethod(minecraft, "disconnect",
-                        new Class<?>[]{Screen.class, boolean.class, boolean.class}, titleScreen, false, true);
-            } catch (NoSuchMethodException intermediateVersion) {
-                try {
-                    invokeClientMethod(minecraft, "disconnect",
-                            new Class<?>[]{Screen.class, boolean.class}, titleScreen, false);
-                } catch (NoSuchMethodException legacyVersion) {
-                    invokeClientMethod(minecraft, "disconnect",
-                            new Class<?>[]{Screen.class}, titleScreen);
-                }
-            }
-        } catch (ReflectiveOperationException error) {
-            // Never crash the client if a version changes the disconnect method.
-            // Keep the user in a safe menu; the normal disconnect controls remain available.
-            minecraft.setScreen(new TitleScreen());
+        // Use vanilla's dedicated saving flow first. If that method fails on a
+        // particular adapter/runtime, continue to the normal disconnect APIs.
+        if (tryInvokeClientMethod(minecraft, "disconnectWithSavingScreen",
+                new Class<?>[0])) {
+            return;
         }
+
+        // These are real disconnect operations: unlike setScreen(TitleScreen),
+        // they close the active play connection and stop/save an integrated world.
+        if (tryInvokeClientMethod(minecraft, "disconnect",
+                new Class<?>[]{Screen.class, boolean.class, boolean.class},
+                titleScreen, false, true)) {
+            return;
+        }
+        if (tryInvokeClientMethod(minecraft, "disconnect",
+                new Class<?>[]{Screen.class, boolean.class},
+                titleScreen, false)) {
+            return;
+        }
+        if (tryInvokeClientMethod(minecraft, "disconnect",
+                new Class<?>[]{Screen.class}, titleScreen)) {
+            return;
+        }
+
+        // Never pretend to have exited a world by merely opening the title
+        // screen. Keep the pause menu available so the player can resume safely.
+        System.err.println("[Phoenix Client] Could not find a compatible Minecraft disconnect method; "
+                + "kept the current world open instead of showing a false title screen.");
+        minecraft.setScreen(this);
     }
 
-
-    private static void invokeClientMethod(MinecraftClient minecraft, String name,
-                                           Class<?>[] parameterTypes, Object... arguments)
-            throws ReflectiveOperationException {
-        java.lang.reflect.Method method = MinecraftClient.class.getDeclaredMethod(name, parameterTypes);
-        method.setAccessible(true);
-        method.invoke(minecraft, arguments);
+    private static boolean tryInvokeClientMethod(MinecraftClient minecraft, String name,
+                                                  Class<?>[] parameterTypes, Object... arguments) {
+        try {
+            java.lang.reflect.Method method =
+                    MinecraftClient.class.getDeclaredMethod(name, parameterTypes);
+            method.setAccessible(true);
+            method.invoke(minecraft, arguments);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException error) {
+            System.err.println("[Phoenix Client] Disconnect API " + name
+                    + " was unavailable or failed for this Minecraft version: " + error);
+            return false;
+        }
     }
 
     @Override
