@@ -70,18 +70,18 @@ internal fun phoenixDownloadHttps(urlText: String, destination: File, maxBytes: 
         var total = 0L
         connection.inputStream.buffered().use { input ->
             FileOutputStream(temporary).use { fileOutput ->
-                fileOutput.buffered().use { output ->
-                    val buffer = ByteArray(64 * 1024)
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        total += count
-                        require(total <= maxBytes) { "Download exceeded the allowed size." }
-                        output.write(buffer, 0, count)
-                    }
-                    output.flush()
+                val output = fileOutput.buffered()
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    require(total <= maxBytes) { "Download exceeded the allowed size." }
+                    output.write(buffer, 0, count)
                 }
+                output.flush()
                 fileOutput.fd.sync()
+                output.close()
             }
         }
         require(total > 0L) { "Downloaded file is empty." }
