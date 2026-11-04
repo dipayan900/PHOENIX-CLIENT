@@ -44,7 +44,7 @@ public final class PhoenixPauseScreen extends Screen {
         MinecraftClient minecraft = MinecraftClient.getInstance();
         try {
             try {
-                MinecraftClient.class.getMethod("disconnectWithSavingScreen").invoke(minecraft);
+                invokeClientMethod(minecraft, "disconnectWithSavingScreen");
                 return;
             } catch (NoSuchMethodException olderVersion) {
                 // The dedicated saving screen was added after older supported versions.
@@ -52,23 +52,38 @@ public final class PhoenixPauseScreen extends Screen {
 
             TitleScreen titleScreen = new TitleScreen();
             try {
-                MinecraftClient.class
-                        .getMethod("disconnect", Screen.class, boolean.class, boolean.class)
-                        .invoke(minecraft, titleScreen, false, true);
+                invokeClientMethod(minecraft, "disconnect", Screen.class, boolean.class, boolean.class,
+                        titleScreen, false, true);
             } catch (NoSuchMethodException intermediateVersion) {
                 try {
-                    MinecraftClient.class
-                            .getMethod("disconnect", Screen.class, boolean.class)
-                            .invoke(minecraft, titleScreen, false);
+                    invokeClientMethod(minecraft, "disconnect", Screen.class, boolean.class,
+                            titleScreen, false);
                 } catch (NoSuchMethodException legacyVersion) {
-                    MinecraftClient.class
-                            .getMethod("disconnect", Screen.class)
-                            .invoke(minecraft, titleScreen);
+                    invokeClientMethod(minecraft, "disconnect", Screen.class, titleScreen);
                 }
             }
         } catch (ReflectiveOperationException error) {
             throw new IllegalStateException("Phoenix could not save and return to the title screen", error);
         }
+    }
+
+
+    private static void invokeClientMethod(MinecraftClient minecraft, String name,
+                                           Class<?>... signatureAndArguments) throws ReflectiveOperationException {
+        int parameterCount = signatureAndArguments.length;
+        Class<?>[] parameterTypes = new Class<?>[parameterCount];
+        Object[] arguments = new Object[parameterCount];
+        for (int i = 0; i < parameterCount; i++) {
+            Object value = signatureAndArguments[i];
+            if (value instanceof Class<?> type) {
+                parameterTypes[i] = type;
+            } else {
+                arguments[i] = value;
+            }
+        }
+        java.lang.reflect.Method method = MinecraftClient.class.getDeclaredMethod(name, parameterTypes);
+        method.setAccessible(true);
+        method.invoke(minecraft, arguments);
     }
 
     @Override
