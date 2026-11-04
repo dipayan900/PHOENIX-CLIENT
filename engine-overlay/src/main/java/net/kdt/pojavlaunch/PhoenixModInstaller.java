@@ -73,6 +73,59 @@ public final class PhoenixModInstaller {
         catch (Exception ignored) { Log.w(TAG, "Could not display Phoenix install status."); }
     }
 
+    /**
+     * Repair the legacy "fullscreen:off/on" values written by some mobile
+     * launchers. Minecraft 1.21.11 parses this option as a strict boolean.
+     * Preserve every unrelated user option and keep a one-time backup.
+     */
+    private static void sanitizeMinecraftOptions(File gameDir) {
+        File options = new File(gameDir, "options.txt");
+        if (!options.isFile() || !options.canRead() || !options.canWrite()) return;
+        File temporary = new File(gameDir, "options.txt.phoenix-tmp");
+        File backup = new File(gameDir, ".phoenix-options-before-boolean-fix.txt");
+        try {
+            java.util.List<String> lines = Files.readAllLines(
+                    options.toPath(), java.nio.charset.StandardCharsets.UTF_8);
+            java.util.List<String> repaired = new java.util.ArrayList<>(lines.size());
+            boolean changed = false;
+            for (String line : lines) {
+                int separator = line.indexOf(':');
+                if (separator > 0 && "fullscreen".equalsIgnoreCase(line.substring(0, separator).trim())) {
+                    String value = line.substring(separator + 1).trim();
+                    if ("off".equalsIgnoreCase(value)) {
+                        repaired.add(line.substring(0, separator + 1) + "false");
+                        changed = true;
+                        continue;
+                    }
+                    if ("on".equalsIgnoreCase(value)) {
+                        repaired.add(line.substring(0, separator + 1) + "true");
+                        changed = true;
+                        continue;
+                    }
+                }
+                repaired.add(line);
+            }
+            if (!changed) return;
+            if (!backup.exists()) Files.copy(options.toPath(), backup.toPath());
+            Files.write(temporary.toPath(), repaired,
+                    java.nio.charset.StandardCharsets.UTF_8);
+            try (FileOutputStream sync = new FileOutputStream(temporary, true)) {
+                sync.getFD().sync();
+            }
+            try {
+                Files.move(temporary.toPath(), options.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
+                Files.move(temporary.toPath(), options.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+            Log.i(TAG, "Repaired legacy fullscreen option value; original options backed up.");
+        } catch (Exception error) {
+            if (temporary.exists()) temporary.delete();
+            Log.w(TAG, "Could not normalize legacy fullscreen option; Minecraft will use its own fallback.", error);
+        }
+    }
+
     public static void install(Context context, File gameDir, String versionId) {
         if (context == null || gameDir == null || versionId == null) {
             Log.e(TAG, "Phoenix installer received a null launch argument."); return;
@@ -86,6 +139,8 @@ public final class PhoenixModInstaller {
             String message = "Phoenix supports Minecraft 1.21.1-1.21.11 only. Profile unchanged: " + versionId;
             Log.e(TAG, message); notify(context, message); return;
         }
+
+        sanitizeMinecraftOptions(gameDir);
 
         String mcVersion = matcher.group();
         String fileName = "phoenix-branding-fabric-" + mcVersion + ".jar";
