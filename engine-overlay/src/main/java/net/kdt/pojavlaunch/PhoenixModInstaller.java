@@ -20,6 +20,45 @@ public final class PhoenixModInstaller {
             Pattern.compile("(?<![0-9])1\\.21\\.(?:[1-9]|1[01])(?![0-9])");
     private PhoenixModInstaller() {}
 
+    private static void installAppleSkin(Context context, File modsDir, String mcVersion) {
+        String fileName = "appleskin-fabric-" + mcVersion + ".jar";
+        File target = new File(modsDir, fileName);
+        File temporary = new File(modsDir, fileName + ".tmp");
+        File[] existing = modsDir.listFiles(file -> file.isFile()
+                && file.getName().toLowerCase(Locale.ROOT).contains("appleskin")
+                && file.getName().toLowerCase(Locale.ROOT).endsWith(".jar"));
+        if (existing != null && existing.length > 0 && !target.isFile()) {
+            Log.i(TAG, "AppleSkin already exists in this profile; preserving the user's mod.");
+            return;
+        }
+        try (InputStream in = context.getAssets().open("phoenix/" + fileName);
+             FileOutputStream out = new FileOutputStream(temporary)) {
+            byte[] buffer = new byte[16384]; int count;
+            while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
+            out.getFD().sync();
+            try (JarFile jar = new JarFile(temporary)) {
+                if (jar.getEntry("fabric.mod.json") == null) {
+                    throw new IllegalStateException("Bundled AppleSkin JAR has no Fabric metadata.");
+                }
+                String metadata;
+                try (InputStream meta = jar.getInputStream(jar.getEntry("fabric.mod.json"))) {
+                    metadata = new String(meta.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                }
+                if (!metadata.contains("\"id\"") || !metadata.contains("appleskin")) {
+                    throw new IllegalStateException("Bundled mod metadata is not AppleSkin.");
+                }
+            }
+            Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Log.i(TAG, "Installed version-matched AppleSkin for Minecraft " + mcVersion);
+        } catch (java.io.FileNotFoundException unavailable) {
+            if (temporary.exists()) temporary.delete();
+            Log.i(TAG, "No exact AppleSkin build bundled for " + mcVersion + "; skipped safely.");
+        } catch (Exception error) {
+            if (temporary.exists()) temporary.delete();
+            Log.w(TAG, "AppleSkin could not be installed for " + mcVersion + "; Phoenix will continue.", error);
+        }
+    }
+
     private static void notify(Context context, String message) {
         if (context == null) return;
         try { Toast.makeText(context.getApplicationContext(), message, Toast.LENGTH_LONG).show(); }
@@ -63,6 +102,7 @@ public final class PhoenixModInstaller {
                     throw new IllegalStateException("Bundled Phoenix adapter is incomplete.");
             }
             Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            installAppleSkin(context, modsDir, mcVersion);
             File[] old = modsDir.listFiles(f -> f.isFile()
                     && f.getName().toLowerCase(Locale.ROOT).startsWith("phoenix-branding-fabric-")
                     && f.getName().toLowerCase(Locale.ROOT).endsWith(".jar") && !f.equals(target));
