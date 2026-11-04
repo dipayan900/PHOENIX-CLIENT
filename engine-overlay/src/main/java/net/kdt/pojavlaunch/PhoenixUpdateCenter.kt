@@ -37,7 +37,7 @@ private fun parsePhoenixUpdateManifest(raw: String): PhoenixUpdateManifest {
     val channel = json.optString("channel")
     require(channel == "stable" || channel == "beta") { "Invalid update channel." }
     val version = json.optString("latestVersion")
-    require(Regex("""[0-9]+\\.[0-9]+\\.[0-9]+""").matches(version)) { "Invalid release version." }
+    require(Regex("""[0-9]+\.[0-9]+\.[0-9]+""").matches(version)) { "Invalid release version." }
     val apkUrl = json.optString("apkUrl")
     val hash = json.optString("apkSha256")
     require(apkUrl.isBlank() || (apkUrl.startsWith("https://") && apkUrl.length < 2048)) {
