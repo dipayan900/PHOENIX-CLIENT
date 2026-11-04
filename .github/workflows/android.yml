@@ -56,6 +56,8 @@ jobs:
             fi
             if [ "$MINOR" -eq 11 ]; then
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/PhoenixPerformanceScreen.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixPerformanceScreen.java
+              cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java
+              grep -Fq 'Entity entity, double squaredDistance,' phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java
             fi
             echo "::group::Building Phoenix Fabric adapter for $MC_VERSION"
             DEPS="$(python3 scripts/resolve-fabric-versions.py "$MC_VERSION")"
