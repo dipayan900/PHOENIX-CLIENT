@@ -320,7 +320,7 @@ public final class PhoenixHud {
             if(fpsEnabled){line(draw,c,"FPS",String.valueOf(c.getCurrentFps()),row);row+=12;}
             if(coordinatesEnabled){BlockPos p=c.player.getBlockPos();line(draw,c,"XYZ",p.getX()+"  "+p.getY()+"  "+p.getZ(),row);row+=12;}
             if(directionEnabled){line(draw,c,"FACING",c.player.getHorizontalFacing().asString().toUpperCase(java.util.Locale.ROOT),row);row+=12;}
-            if(armorEnabled){int pieces=0,durability=0;EquipmentSlot[] armorSlots={EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET};for(EquipmentSlot slot:armorSlots){ItemStack s=c.player.getEquippedStack(slot);if(!s.isEmpty()){pieces++;if(s.isDamageable())durability+=Math.max(0,s.getMaxDamage()-s.getDamage());}}line(draw,c,"ARMOR",pieces+" pieces · "+durability+" durability",row);row+=12;}
+            if(armorEnabled){renderArmorWidget(draw,c);row+=42;}
             if(pingEnabled){var handler=c.getNetworkHandler();var e=handler==null?null:handler.getPlayerListEntry(c.player.getUuid());line(draw,c,"PING",e==null?"—":e.getLatency()+" ms",row);row+=12;}
             if(speedEnabled){double v=c.player.getVelocity().horizontalLength()*20*3.6;line(draw,c,"SPEED",String.format(java.util.Locale.ROOT,"%.1f km/h",v),row);row+=12;}
             if(biomeEnabled){String b=c.world.getBiome(c.player.getBlockPos()).getKey().map(k->k.getValue().getPath()).orElse("unknown");line(draw,c,"BIOME",b,row);row+=12;}
@@ -330,17 +330,58 @@ public final class PhoenixHud {
             if(attackIndicatorEnabled){line(draw,c,"ATTACK",Math.round(c.player.getAttackCooldownProgress(0)*100)+"%",row);row+=12;}
             if(potionEffectsEnabled){var e=c.player.getStatusEffects().stream().findFirst().orElse(null);line(draw,c,"POTION",e==null?"None":e.getEffectType().value().getName().getString()+" "+duration(e.getDuration()),row);row+=12;}
             if(itemCounterEnabled){ItemStack held=c.player.getMainHandStack();int count=0;if(!held.isEmpty())for(int slot=0;slot<36;slot++){ItemStack s=c.player.getInventory().getStack(slot);if(ItemStack.areItemsAndComponentsEqual(s,held))count+=s.getCount();}line(draw,c,"HELD ITEM",held.isEmpty()?"Empty":held.getName().getString()+" ×"+count,row);row+=12;}
-            if(keystrokesEnabled){var o=c.options;line(draw,c,"KEYS",(o.forwardKey.isPressed()?"W":"·")+" "+(o.leftKey.isPressed()?"A":"·")+" "+(o.backKey.isPressed()?"S":"·")+" "+(o.rightKey.isPressed()?"D":"·")+" "+(o.jumpKey.isPressed()?"JUMP":""),row);row+=12;}
+            if(keystrokesEnabled){renderKeystrokesWidget(draw,c);row+=58;}
             if(sessionTimeEnabled){long s=sessionTicks/20;line(draw,c,"SESSION",String.format(java.util.Locale.ROOT,"%02d:%02d:%02d",s/3600,(s/60)%60,s%60),row);row+=12;}
             if(waypointEnabled&&waypoint!=null){if(waypointDimension.equals(c.world.getRegistryKey().getValue())){double d=Math.sqrt(c.player.squaredDistanceTo(waypoint.getX()+0.5,waypoint.getY()+0.5,waypoint.getZ()+0.5));line(draw,c,"WAYPOINT",waypoint.getX()+" "+waypoint.getY()+" "+waypoint.getZ()+" · "+Math.round(d)+"m",row);}else line(draw,c,"WAYPOINT","Other dimension",row);row+=12;}
-            if(inventoryOverlayEnabled){int occupied=0;for(int slot=0;slot<36;slot++)if(!c.player.getInventory().getStack(slot).isEmpty())occupied++;line(draw,c,"INVENTORY",occupied+" / 36 slots used",row);row+=12;}
+            if(inventoryOverlayEnabled){renderInventoryWidget(draw,c);row+=28;}
             if(lightLevelEnabled){int light=c.world.getLightLevel(c.player.getBlockPos());line(draw,c,"LIGHT LEVEL",light+" / 15",row);row+=12;}
             if(entityOverlayEnabled){int shown=0;for(var entity:c.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,c.player.getBoundingBox().expand(12),e->e!=c.player&&!e.isRemoved())){if(shown++>=3)break;double dist=Math.sqrt(c.player.squaredDistanceTo(entity));line(draw,c,"NEARBY "+shown,entity.getName().getString()+" · "+Math.round(dist)+"m",row);row+=12;}}
-            if(toolInfoEnabled){ItemStack held=c.player.getMainHandStack();String v=held.isEmpty()?"No tool held":(held.isDamageable()?Math.max(0,held.getMaxDamage()-held.getDamage())+" durability":held.getName().getString());line(draw,c,"TOOL INFO",v,row);row+=12;}
+            if(toolInfoEnabled){renderToolWidget(draw,c);row+=38;}
             if(cpsEnabled){line(draw,c,"CPS",String.valueOf(clickTimes.size()),row);row+=12;}
             if(customCrosshairEnabled)renderCrosshair(draw,c.getWindow().getScaledWidth()/2,c.getWindow().getScaledHeight()/2);
         });
     }
+    private static int widgetPanelColor(){return isLightUiTheme()?0xEFFFFFFF:0xD9100D16;}
+    private static int widgetBorderColor(){return isLightUiTheme()?0xFFB94D1B:0xFFFF702E;}
+    private static int widgetTextColor(){return isLightUiTheme()?0xFF29232B:0xFFF8F1F7;}
+    private static int durabilityColor(float ratio){return ratio>0.6f?0xFF55D68B:ratio>0.25f?0xFFFFC04D:0xFFFF5B65;}
+    private static void widgetPanel(net.minecraft.client.gui.DrawContext d,int x,int y,int w,int h,String title){
+        d.fill(x,y,x+w,y+h,widgetPanelColor());d.fill(x,y,x+w,y+2,widgetBorderColor());
+        d.drawTextWithShadow(MinecraftClient.getInstance().textRenderer,Text.literal(title),x+5,y+5,widgetBorderColor());
+    }
+    private static void renderArmorWidget(net.minecraft.client.gui.DrawContext d,MinecraftClient c){
+        int x=getElementX("ARMOR"),y=getElementY("ARMOR");widgetPanel(d,x,y,112,39,"ARMOR");
+        EquipmentSlot[] slots={EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET};
+        for(int i=0;i<slots.length;i++){ItemStack stack=c.player.getEquippedStack(slots[i]);int sx=x+5+i*27,sy=y+17;
+            d.fill(sx-1,sy-1,sx+17,sy+17,0x553A303F);if(!stack.isEmpty()){d.drawItem(stack,sx,sy);
+                if(stack.isDamageable()){float ratio=(float)(stack.getMaxDamage()-stack.getDamage())/(float)stack.getMaxDamage();
+                    d.fill(sx,sy+17,sx+16,sy+19,0xFF302A32);d.fill(sx,sy+17,sx+Math.max(1,Math.round(16*ratio)),sy+19,durabilityColor(ratio));}}}
+    }
+    private static void renderKeystrokesWidget(net.minecraft.client.gui.DrawContext d,MinecraftClient c){
+        int x=getElementX("KEYS"),y=getElementY("KEYS");widgetPanel(d,x,y,94,55,"KEYSTROKES");
+        drawKey(d,c,"W",c.options.forwardKey.isPressed(),x+37,y+17);drawKey(d,c,"A",c.options.leftKey.isPressed(),x+17,y+35);
+        drawKey(d,c,"S",c.options.backKey.isPressed(),x+37,y+35);drawKey(d,c,"D",c.options.rightKey.isPressed(),x+57,y+35);
+        d.fill(x+17,y+49,x+77,y+52,c.options.jumpKey.isPressed()?widgetBorderColor():0xFF554B59);
+    }
+    private static void drawKey(net.minecraft.client.gui.DrawContext d,MinecraftClient c,String key,boolean pressed,int x,int y){
+        int bg=pressed?0xFF69351F:(isLightUiTheme()?0xFFE4DDE5:0xFF302735);d.fill(x,y,x+18,y+16,bg);
+        d.fill(x,y,x+18,y+1,pressed?0xFFFF9A5B:0xFF655968);int tw=c.textRenderer.getWidth(key);
+        d.drawTextWithShadow(c.textRenderer,Text.literal(key),x+(18-tw)/2,y+4,widgetTextColor());
+    }
+    private static void renderInventoryWidget(net.minecraft.client.gui.DrawContext d,MinecraftClient c){
+        int x=getElementX("INVENTORY"),y=getElementY("INVENTORY");widgetPanel(d,x,y,182,27,"HOTBAR");
+        for(int i=0;i<9;i++){int sx=x+5+i*19,sy=y+9;d.fill(sx,sy,sx+18,sy+17,i==c.player.getInventory().selectedSlot?0xFF70402A:0x99534A58);
+            ItemStack stack=c.player.getInventory().getStack(i);if(!stack.isEmpty())d.drawItem(stack,sx+1,sy);}
+    }
+    private static void renderToolWidget(net.minecraft.client.gui.DrawContext d,MinecraftClient c){
+        int x=getElementX("TOOL INFO"),y=getElementY("TOOL INFO");ItemStack stack=c.player.getMainHandStack();widgetPanel(d,x,y,132,36,"HELD ITEM");
+        if(stack.isEmpty()){d.drawTextWithShadow(c.textRenderer,Text.literal("Empty hand"),x+7,y+19,widgetTextColor());return;}
+        d.drawItem(stack,x+6,y+17);String name=stack.getName().getString();if(name.length()>13)name=name.substring(0,12)+"…";
+        d.drawTextWithShadow(c.textRenderer,Text.literal(name),x+27,y+18,widgetTextColor());
+        if(stack.isDamageable()){float ratio=(float)(stack.getMaxDamage()-stack.getDamage())/(float)stack.getMaxDamage();
+            d.fill(x+27,y+29,x+124,y+32,0xFF302A32);d.fill(x+27,y+29,x+27+Math.max(1,Math.round(97*ratio)),y+32,durabilityColor(ratio));}
+    }
+
     public static void renderCrosshair(net.minecraft.client.gui.DrawContext d,int cx,int cy){
         int s=crosshairSize,g=crosshairGap,t=crosshairThickness,col=crosshairColor;
         switch(crosshairStyle){
