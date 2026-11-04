@@ -22,7 +22,8 @@ public final class PhoenixHudEditorScreen extends Screen {
    d.drawTextWithShadow(textRenderer,Text.literal("≡"),x+w-12,y+5,0xFFB8AEBB);
   }
   d.drawCenteredTextWithShadow(textRenderer,Text.literal("Move widgets away from screen edges if they overlap."),width/2,height-42,0xFFB8AEBB);
-  super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);
+  PhoenixScreenStyle.renderControlFrames(this, d);
+        super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);
  }
  @Override public boolean mouseClicked(double mouseX,double mouseY,int button){
   if(button==0){String[] keys=PhoenixHud.getElementKeys();
