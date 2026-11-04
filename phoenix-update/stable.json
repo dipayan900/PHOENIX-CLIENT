@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "product": "Phoenix Client",
+  "channel": "stable",
+  "latestVersion": "0.0.0",
+  "minimumLauncherVersion": "0.0.0",
+  "releaseNotes": "No public stable update has been published yet. This manifest is the bootstrap endpoint for Phoenix Update Center.",
+  "apkUrl": "",
+  "apkSha256": "",
+  "components": [],
+  "compatibilityMatrix": "https://raw.githubusercontent.com/dipayan900/PHOENIX-CLIENT/integration/amethyst-phoenix/phoenix-compatibility/compatibility-matrix.json",
+  "policy": {
+    "downloadToTemporaryFile": true,
+    "verifySha256BeforeActivation": true,
+    "preserveExistingProfiles": true,
+    "neverOverwriteWorlds": true,
+    "keepPreviousGameVersions": true,
+    "requireAndroidPackageInstallerForApk": true,
+    "requireRuntimeSmokeTests": true
+  }
+}
