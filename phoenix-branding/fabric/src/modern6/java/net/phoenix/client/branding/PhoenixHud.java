@@ -387,7 +387,7 @@ public final class PhoenixHud {
             for(int col=0;col<9;col++){
                 int slot=row==3?col:9+row*9+col;
                 int sx=x+5+col*19,sy=y+15+row*16;
-                boolean selected=row==3&&col==c.player.getInventory().getSelectedSlot();
+                boolean selected=row==3&&col==c.player.getInventory().getStack(col)==c.player.getMainHandStack();
                 d.fill(sx,sy,sx+18,sy+16,selected?0xFF70402A:0x99534A58);
                 ItemStack stack=c.player.getInventory().getStack(slot);
                 if(!stack.isEmpty())d.drawItem(stack,sx+1,sy);
