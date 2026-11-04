@@ -15,7 +15,7 @@ abstract class PlayerListHudMixin {
     @Inject(method = "getPlayerName", at = @At("RETURN"), cancellable = true)
     private void phoenix$markLocalPlayer(PlayerListEntry entry, CallbackInfoReturnable<Text> cir) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null || !client.player.getUuid().equals(entry.getProfile().getId())) return;
+        if (client.player == null || !client.getGameProfile().equals(entry.getProfile())) return;
         Text current = cir.getReturnValue();
         if (current != null && !current.getString().startsWith(PhoenixBrandingClient.PREFIX)) {
             cir.setReturnValue(Text.literal(PhoenixBrandingClient.PREFIX).append(current));
