@@ -72,8 +72,26 @@ private fun fetchPhoenixUpdateManifest(): PhoenixUpdateManifest {
         require(contentType.contains("json", true) || contentType.contains("text/plain", true)) {
             "Update service did not return a JSON manifest."
         }
-        val raw = connection.inputStream.bufferedReader().use { it.readText() }
-        return parsePhoenixUpdateManifest(raw)
+        val rawBytes = connection.inputStream.use { it.readBytes() }
+        require(rawBytes.size <= 256 * 1024) { "Update manifest is unexpectedly large." }
+        val signatureConnection = (URL(PhoenixUpdateSecurity.SIGNATURE_URL).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 8000
+            readTimeout = 8000
+            instanceFollowRedirects = false
+        }
+        val detachedSignature = try {
+            require(signatureConnection.responseCode == HttpURLConnection.HTTP_OK) {
+                "Signed update manifest is not published yet."
+            }
+            signatureConnection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            signatureConnection.disconnect()
+        }
+        require(PhoenixUpdateSecurity.verifyManifest(rawBytes, detachedSignature)) {
+            "Manifest signature is not trusted. Update checking is disabled until the release public key is configured."
+        }
+        return parsePhoenixUpdateManifest(rawBytes.toString(Charsets.UTF_8))
     } finally {
         connection.disconnect()
     }
