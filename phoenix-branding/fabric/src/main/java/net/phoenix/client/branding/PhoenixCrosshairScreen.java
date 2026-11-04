@@ -22,7 +22,8 @@ public final class PhoenixCrosshairScreen extends Screen {
   addDrawableChild(ButtonWidget.builder(Text.literal("SAVE & RETURN"),b->close()).dimensions(cx-105,y+180,210,20).build());
  }
  private static String styleName(){return switch(PhoenixHud.getCrosshairStyle()){case 1->"PLUS";case 2->"SQUARE";case 3->"HORIZONTAL";case 4->"BRACKET";default->"CLASSIC";};}
- @Override public void render(DrawContext d,int mx,int my,float delta){renderBackground(d,mx,my,delta);d.drawCenteredTextWithShadow(textRenderer,title,width/2,24,PhoenixScreenStyle.accent());d.drawCenteredTextWithShadow(textRenderer,Text.literal("LIVE PREVIEW"),width/2,50,PhoenixScreenStyle.mutedText());PhoenixHud.renderCrosshair(d,width/2,height/2-4);d.drawCenteredTextWithShadow(textRenderer,Text.literal("Size "+PhoenixHud.getCrosshairSize()+" · Gap "+PhoenixHud.getCrosshairGap()+" · Thickness "+PhoenixHud.getCrosshairThickness()),width/2,height-35,PhoenixScreenStyle.mainText());super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);}
+ @Override public void render(DrawContext d,int mx,int my,float delta){renderBackground(d,mx,my,delta);d.drawCenteredTextWithShadow(textRenderer,title,width/2,24,PhoenixScreenStyle.accent());d.drawCenteredTextWithShadow(textRenderer,Text.literal("LIVE PREVIEW"),width/2,50,PhoenixScreenStyle.mutedText());PhoenixHud.renderCrosshair(d,width/2,height/2-4);d.drawCenteredTextWithShadow(textRenderer,Text.literal("Size "+PhoenixHud.getCrosshairSize()+" · Gap "+PhoenixHud.getCrosshairGap()+" · Thickness "+PhoenixHud.getCrosshairThickness()),width/2,height-35,PhoenixScreenStyle.mainText());PhoenixScreenStyle.renderControlFrames(this, d);
+        super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);}
  @Override public void renderBackground(DrawContext d,int mx,int my,float delta){PhoenixScreenStyle.background(d,width,height);}
  @Override public void close(){if(client!=null)client.setScreen(parent);}
 }
