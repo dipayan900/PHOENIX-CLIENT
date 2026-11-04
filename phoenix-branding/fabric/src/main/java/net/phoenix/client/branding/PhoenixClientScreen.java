@@ -56,6 +56,8 @@ public final class PhoenixClientScreen extends Screen {
             toggle("Fullbright","VISUAL",PhoenixHud::isFullbrightEnabled,PhoenixHud::toggleFullbright),
             toggle("Chat Transparency","VISUAL",PhoenixHud::isChatTransparencyEnabled,PhoenixHud::toggleChatTransparency),
             toggle("Custom Crosshair","VISUAL",PhoenixHud::isCustomCrosshairEnabled,PhoenixHud::toggleCustomCrosshair),
+            toggle("Hit Particles","VISUAL",PhoenixHud::isParticlesEnabled,PhoenixHud::toggleParticles),
+            action("Particle Visual Studio","VISUAL",()->client.setScreen(new PhoenixParticleScreen(this))),
             toggle("Toggle Sprint","UTILITY",PhoenixHud::isSprintToggled,PhoenixHud::toggleSprint),
             action("Performance Center","PERFORMANCE",()->client.setScreen(new PhoenixPerformanceScreen(this))),
             action("Crosshair Studio","VISUAL",()->client.setScreen(new PhoenixCrosshairScreen(this))),
@@ -130,6 +132,7 @@ public final class PhoenixClientScreen extends Screen {
             addAction("PERFORMANCE & FPS",x,y,w,()->client.setScreen(new PhoenixPerformanceScreen(this)));
             addAction("HUD LAYOUT EDITOR",x,y+34,w,()->client.setScreen(new PhoenixHudEditorScreen(this)));
             addAction("CROSSHAIR STUDIO",x,y+68,w,()->client.setScreen(new PhoenixCrosshairScreen(this)));
+            addAction("PARTICLE VISUAL STUDIO",x,y+238,w,()->client.setScreen(new PhoenixParticleScreen(this)));
             addAction("VISUAL MODULE SETTINGS",x,y+102,w,()->client.setScreen(new PhoenixVisualSettingsScreen(this)));
             addAction("APPEARANCE: "+PhoenixHud.getUiTheme()+"  ·  CHANGE",x,y+136,w,()->{PhoenixHud.cycleUiTheme();switchTo("SETTINGS",category,0);});
             addAction("RESET HUD POSITIONS",x,y+170,w,PhoenixHud::resetElementPositions);
