@@ -346,7 +346,7 @@ public final class PhoenixHud {
             if(keystrokesEnabled){renderKeystrokesWidget(draw,c);row+=58;}
             if(sessionTimeEnabled){long s=sessionTicks/20;line(draw,c,"SESSION",String.format(java.util.Locale.ROOT,"%02d:%02d:%02d",s/3600,(s/60)%60,s%60),row);row+=12;}
             if(waypointEnabled&&waypoint!=null){if(waypointDimension.equals(c.world.getRegistryKey().getValue())){double d=Math.sqrt(c.player.squaredDistanceTo(waypoint.getX()+0.5,waypoint.getY()+0.5,waypoint.getZ()+0.5));line(draw,c,"WAYPOINT",waypoint.getX()+" "+waypoint.getY()+" "+waypoint.getZ()+" · "+Math.round(d)+"m",row);}else line(draw,c,"WAYPOINT","Other dimension",row);row+=12;}
-            if(inventoryOverlayEnabled){renderInventoryWidget(draw,c);row+=28;}
+            if(inventoryOverlayEnabled){renderInventoryWidget(draw,c);row+=84;}
             if(lightLevelEnabled){int light=c.world.getLightLevel(c.player.getBlockPos());line(draw,c,"LIGHT LEVEL",light+" / 15",row);row+=12;}
             if(entityOverlayEnabled){int shown=0;for(var entity:c.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,c.player.getBoundingBox().expand(12),e->e!=c.player&&!e.isRemoved())){if(shown++>=3)break;double dist=Math.sqrt(c.player.squaredDistanceTo(entity));line(draw,c,"NEARBY "+shown,entity.getName().getString()+" · "+Math.round(dist)+"m",row);row+=12;}}
             if(toolInfoEnabled){renderToolWidget(draw,c);row+=38;}
@@ -382,10 +382,19 @@ public final class PhoenixHud {
         d.drawTextWithShadow(c.textRenderer,Text.literal(key),x+(18-tw)/2,y+4,widgetTextColor());
     }
     private static void renderInventoryWidget(net.minecraft.client.gui.DrawContext d,MinecraftClient c){
-        int x=getElementX("INVENTORY"),y=getElementY("INVENTORY");widgetPanel(d,x,y,182,27,"HOTBAR");
-        for(int i=0;i<9;i++){int sx=x+5+i*19,sy=y+9;d.fill(sx,sy,sx+18,sy+17,i==c.player.getInventory().selectedSlot?0xFF70402A:0x99534A58);
-            ItemStack stack=c.player.getInventory().getStack(i);if(!stack.isEmpty())d.drawItem(stack,sx+1,sy);}
+        int x=getElementX("INVENTORY"),y=getElementY("INVENTORY");widgetPanel(d,x,y,182,82,"INVENTORY");
+        for(int row=0;row<4;row++){
+            for(int col=0;col<9;col++){
+                int slot=row==3?col:9+row*9+col;
+                int sx=x+5+col*19,sy=y+15+row*16;
+                boolean selected=row==3&&col==c.player.getInventory().selectedSlot;
+                d.fill(sx,sy,sx+18,sy+16,selected?0xFF70402A:0x99534A58);
+                ItemStack stack=c.player.getInventory().getStack(slot);
+                if(!stack.isEmpty())d.drawItem(stack,sx+1,sy);
+            }
+        }
     }
+
     private static void renderToolWidget(net.minecraft.client.gui.DrawContext d,MinecraftClient c){
         int x=getElementX("TOOL INFO"),y=getElementY("TOOL INFO");ItemStack stack=c.player.getMainHandStack();widgetPanel(d,x,y,132,36,"HELD ITEM");
         if(stack.isEmpty()){d.drawTextWithShadow(c.textRenderer,Text.literal("Empty hand"),x+7,y+19,widgetTextColor());return;}
