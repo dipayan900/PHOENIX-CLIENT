@@ -5,6 +5,7 @@
   "client": [
     "PlayerListHudMixin",
     "TitleScreenMixin",
+    "ScreenAccessorMixin",
     "SplashOverlayMixin",
     "GameMenuScreenMixin",
     "ContainerPreviewTooltipMixin",
