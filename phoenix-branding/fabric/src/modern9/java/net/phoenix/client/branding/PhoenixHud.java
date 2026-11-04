@@ -38,6 +38,7 @@ public final class PhoenixHud {
     private static boolean keystrokesEnabled, sessionTimeEnabled;
     private static boolean fullbrightEnabled, waypointEnabled, inventoryOverlayEnabled, chatTransparencyEnabled;
     private static boolean lightLevelEnabled, entityOverlayEnabled, customCrosshairEnabled, toolInfoEnabled;
+    private static boolean healthIndicatorEnabled = true;
     private static long sessionTicks;
     private static BlockPos waypoint;
     private static Identifier waypointDimension;
@@ -101,6 +102,7 @@ public final class PhoenixHud {
             chatTransparencyEnabled = setting(values, "hud.chat_transparency", chatTransparencyEnabled);
             lightLevelEnabled = setting(values, "hud.light_level", lightLevelEnabled);
             entityOverlayEnabled = setting(values, "hud.nearby_entities", entityOverlayEnabled);
+            healthIndicatorEnabled = setting(values, "hud.health_indicators", healthIndicatorEnabled);
             toolInfoEnabled = setting(values, "hud.tool_info", toolInfoEnabled);
             cpsEnabled = setting(values, "hud.cps", cpsEnabled);
             sprintToggled = setting(values, "module.toggle_sprint", sprintToggled);
@@ -158,6 +160,7 @@ public final class PhoenixHud {
             values.setProperty("hud.chat_transparency", String.valueOf(chatTransparencyEnabled));
             values.setProperty("hud.light_level", String.valueOf(lightLevelEnabled));
             values.setProperty("hud.nearby_entities", String.valueOf(entityOverlayEnabled));
+            values.setProperty("hud.health_indicators", String.valueOf(healthIndicatorEnabled));
             values.setProperty("hud.tool_info", String.valueOf(toolInfoEnabled));
             values.setProperty("hud.cps", String.valueOf(cpsEnabled));
             values.setProperty("module.toggle_sprint", String.valueOf(sprintToggled));
@@ -198,6 +201,8 @@ public final class PhoenixHud {
     public static boolean hasWaypoint(){return waypoint!=null;}
     public static boolean isLightLevelEnabled(){return lightLevelEnabled;}
     public static boolean isEntityOverlayEnabled(){return entityOverlayEnabled;}
+    public static boolean isHealthIndicatorEnabled(){return healthIndicatorEnabled;}
+    public static void toggleHealthIndicator(){healthIndicatorEnabled=!healthIndicatorEnabled;saveConfig();}
     public static boolean isCustomCrosshairEnabled(){return customCrosshairEnabled;}
     public static boolean isToolInfoEnabled(){return toolInfoEnabled;}
     public static boolean isCpsEnabled(){return cpsEnabled;}
