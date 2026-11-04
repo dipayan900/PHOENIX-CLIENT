@@ -10,6 +10,8 @@ import pathlib
 import sys
 import urllib.parse
 import urllib.request
+import zipfile
+import io
 
 if len(sys.argv) != 2:
     raise SystemExit("usage: download-appleskin.py <output-directory>")
@@ -48,8 +50,34 @@ for minor in range(1, 12):
         expected = file_info.get("hashes", {}).get("sha512")
         if expected and hashlib.sha512(data).hexdigest().lower() != expected.lower():
             raise RuntimeError(f"AppleSkin SHA-512 verification failed for {mc}")
+        # Phoenix does not bundle JEI. Remove AppleSkin's optional JEI mixin
+        # so it does not target JEI classes that are intentionally absent.
+        with zipfile.ZipFile(io.BytesIO(data), "r") as source:
+            entries = {name: source.read(name) for name in source.namelist()}
+        metadata_name = "fabric.mod.json"
+        if metadata_name not in entries:
+            raise RuntimeError(f"AppleSkin {mc} JAR has no fabric.mod.json")
+        metadata = json.loads(entries[metadata_name].decode("utf-8"))
+        retained = []
+        removed = []
+        for item in metadata.get("mixins", []):
+            config_name = item if isinstance(item, str) else item.get("config", "")
+            if "jei" in str(config_name).lower():
+                removed.append(str(config_name))
+            else:
+                retained.append(item)
+        metadata["mixins"] = retained
+        entries[metadata_name] = json.dumps(metadata, separators=(",", ":")).encode("utf-8")
+        for config_name in removed:
+            entries.pop(config_name, None)
+        for name in list(entries):
+            if name.lower().endswith(".mixins.json") and "jei" in name.lower():
+                entries.pop(name, None)
         target = out / f"appleskin-fabric-{mc}.jar"
-        target.write_bytes(data)
+        with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as patched:
+            for name, payload in entries.items():
+                patched.writestr(name, payload)
+        print(f"Removed optional JEI mixin for {mc}; JEI is not bundled.")
         downloaded += 1
         print(f"AppleSkin {version['version_number']} bundled for Minecraft {mc}")
     except Exception as error:
