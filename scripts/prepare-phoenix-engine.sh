@@ -90,20 +90,20 @@ gradle.write_text(g)
 
 m = manifest.read_text()
 if 'android.permission.POST_NOTIFICATIONS' not in m:
-    m = m.replace('<manifest', '<manifest\\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />', 1)
+    m = m.replace('<manifest', '<manifest\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />', 1)
 # Android blocks cleartext HTTP by default. Phoenix sync uses bearer-token HTTP
 # only on a trusted private LAN; the Paper plugin warns against public exposure.
 m = m.replace(
-    '<application\\n',
-    '<application\\n        android:usesCleartextTraffic="true"\\n'
+    '<application\n',
+    '<application\n        android:usesCleartextTraffic="true"\n'
 )
 m = m.replace(
-    '<activity\\n            android:name=".LauncherActivity"',
-    '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />\\n        <activity\\n            android:name=".LauncherActivity"'
+    '<activity\n            android:name=".LauncherActivity"',
+    '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />\n        <activity\n            android:name=".LauncherActivity"'
 )
 m = m.replace(
     '<activity android:name=".PhoenixDashboardActivity" android:exported="false" />',
-    '<activity android:name=".PhoenixVisualStudioActivity" android:exported="false" />\\n        <activity android:name=".PhoenixDashboardActivity" android:exported="false" />'
+    '<activity android:name=".PhoenixVisualStudioActivity" android:exported="false" />\n        <activity android:name=".PhoenixDashboardActivity" android:exported="false" />'
 )
 manifest.write_text(m)
 
