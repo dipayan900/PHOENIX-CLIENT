@@ -38,7 +38,8 @@ if (project.minecraft_version != '1.21.1') {
     sourceSets.main.java.exclude { element ->
         def legacyFiles = [
             'src/main/java/net/phoenix/client/branding/PhoenixHud.java',
-            'src/main/java/net/phoenix/client/branding/PhoenixHudEditorScreen.java'
+            'src/main/java/net/phoenix/client/branding/PhoenixHudEditorScreen.java',
+            'src/main/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java'
         ]
         legacyFiles.contains(element.file.path.replace('\\\\', '/').replace(project.projectDir.path + '/', ''))
     }
