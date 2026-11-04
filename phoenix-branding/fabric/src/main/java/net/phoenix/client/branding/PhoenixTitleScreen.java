@@ -27,6 +27,6 @@ public final class PhoenixTitleScreen extends Screen {
   d.drawCenteredTextWithShadow(textRenderer,Text.literal("CLIENT  /  YOUR GAME, YOUR SETTINGS"),width/2,Math.max(58,height/2-88),PhoenixScreenStyle.mutedText());
   d.drawCenteredTextWithShadow(textRenderer,Text.literal("FABRIC  •  PHOENIX CLIENT"),width/2,height-18,PhoenixScreenStyle.mutedText());
  }
- @Override public void render(DrawContext d,int mx,int my,float delta){super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);}
+ @Override public void render(DrawContext d,int mx,int my,float delta){PhoenixScreenStyle.renderControlFrames(this,d);super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);}
  @Override public boolean shouldPause(){return false;}
 }
