@@ -1,5 +1,6 @@
 package net.phoenix.client.branding;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
@@ -24,11 +25,23 @@ public final class PhoenixHudEditorScreen extends Screen {
   d.drawCenteredTextWithShadow(textRenderer,Text.literal("Move widgets away from screen edges if they overlap."),width/2,height-42,0xFFB8AEBB);
   super.render(d,mx,my,delta);PhoenixScreenStyle.renderChrome(this,d);
  }
- @Override public boolean mouseClicked(double mx,double my,int button){if(button==0){String[] keys=PhoenixHud.getElementKeys();
-  for(int i=keys.length-1;i>=0;i--){String key=keys[i];int x=PhoenixHud.getElementX(key),y=PhoenixHud.getElementY(key),w=Math.max(92,textRenderer.getWidth(key)+22);
-   if(mx>=x&&mx<=x+w&&my>=y&&my<=y+18){draggingKey=key;dragX=mx-x;dragY=my-y;return true;}}
-  }return super.mouseClicked(mx,my,button);}
- @Override public boolean mouseDragged(double mx,double my,int button,double dx,double dy){if(button==0&&draggingKey!=null){PhoenixHud.setElementPosition(draggingKey,(int)(mx-dragX),(int)(my-dragY));return true;}return super.mouseDragged(mx,my,button,dx,dy);}
- @Override public boolean mouseReleased(double mx,double my,int button){if(button==0&&draggingKey!=null){draggingKey=null;PhoenixHud.saveConfig();return true;}return super.mouseReleased(mx,my,button);}
+ @Override public boolean mouseClicked(Click click, boolean doubled){
+  if(click.button()==0){double mx=click.x(),my=click.y();String[] keys=PhoenixHud.getElementKeys();
+   for(int i=keys.length-1;i>=0;i--){String key=keys[i];int x=PhoenixHud.getElementX(key),y=PhoenixHud.getElementY(key),w=Math.max(92,textRenderer.getWidth(key)+22);
+    if(mx>=x&&mx<=x+w&&my>=y&&my<=y+18){draggingKey=key;dragX=mx-x;dragY=my-y;return true;}}
+  }return super.mouseClicked(click,doubled);
+ }
+ @Override public boolean mouseDragged(Click click,double offsetX,double offsetY){
+  if(click.button()==0&&draggingKey!=null){
+   PhoenixHud.setElementPosition(draggingKey,
+    PhoenixHud.getElementX(draggingKey)+(int)Math.round(offsetX),
+    PhoenixHud.getElementY(draggingKey)+(int)Math.round(offsetY));
+   return true;
+  }return super.mouseDragged(click,offsetX,offsetY);
+ }
+ @Override public boolean mouseReleased(Click click){
+  if(click.button()==0&&draggingKey!=null){draggingKey=null;PhoenixHud.saveConfig();return true;}
+  return super.mouseReleased(click);
+ }
  @Override public void close(){if(client!=null)client.setScreen(parent);}
 }
