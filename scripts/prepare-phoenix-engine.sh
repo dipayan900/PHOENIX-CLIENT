@@ -89,8 +89,12 @@ g = g.replace("dependencies {\n", """dependencies {
 gradle.write_text(g)
 
 m = manifest.read_text()
-    m = m.replace('<application\n', '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <application\n', 1)
-    m = m.replace('<manifest', '<manifest\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />', 1)
+# Add the notification permission as a manifest child, before the application.
+permission = '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n'
+if 'android.permission.POST_NOTIFICATIONS' not in m:
+    if '<application' not in m:
+        raise SystemExit("Phoenix manifest patch failed: application element not found.")
+    m = m.replace('<application', permission + '<application', 1)
 # Android blocks cleartext HTTP by default. Phoenix sync uses bearer-token HTTP
 # only on a trusted private LAN; the Paper plugin warns against public exposure.
 m = m.replace(
