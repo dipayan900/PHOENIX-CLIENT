@@ -1,7 +1,7 @@
 name: Build Phoenix Branding Add-ons
 on:
   push:
-    branches: ['feature/phoenix-cosmetics-integration']
+    branches: ['feature/phoenix-cosmetics-integration', 'integration/amethyst-phoenix']
     paths: ['phoenix-branding/**', '.github/workflows/phoenix-branding.yml']
   pull_request:
     paths: ['phoenix-branding/**', '.github/workflows/phoenix-branding.yml']
@@ -20,7 +20,7 @@ jobs:
         run: gradle --no-daemon build
       - uses: actions/upload-artifact@v4
         with:
-          name: phoenix-branding-fabric-1.21.1
+          name: phoenix-branding-fabric-1.21.11
           path: phoenix-branding/fabric/build/libs/phoenix-branding-*.jar
           if-no-files-found: error
   paper:
