@@ -46,24 +46,24 @@ public final class PhoenixPauseScreen extends Screen {
 
         // Use vanilla's dedicated saving flow first. If that method fails on a
         // particular adapter/runtime, continue to the normal disconnect APIs.
-        if (tryInvokeClientMethod(minecraft, "disconnectWithSavingScreen",
+        if (tryInvokeClientMethod(minecraft, "method_72099",
                 new Class<?>[0])) {
             return;
         }
 
         // These are real disconnect operations: unlike setScreen(TitleScreen),
         // they close the active play connection and stop/save an integrated world.
-        if (tryInvokeClientMethod(minecraft, "disconnect",
+        if (tryInvokeClientMethod(minecraft, "method_18096",
                 new Class<?>[]{Screen.class, boolean.class, boolean.class},
                 titleScreen, false, true)) {
             return;
         }
-        if (tryInvokeClientMethod(minecraft, "disconnect",
+        if (tryInvokeClientMethod(minecraft, "method_76795",
                 new Class<?>[]{Screen.class, boolean.class},
                 titleScreen, false)) {
             return;
         }
-        if (tryInvokeClientMethod(minecraft, "disconnect",
+        if (tryInvokeClientMethod(minecraft, "method_18096",
                 new Class<?>[]{Screen.class}, titleScreen)) {
             return;
         }
