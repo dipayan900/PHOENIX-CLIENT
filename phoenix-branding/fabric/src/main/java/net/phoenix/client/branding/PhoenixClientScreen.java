@@ -50,6 +50,7 @@ public final class PhoenixClientScreen extends Screen {
             toggle("Inventory Overlay","HUD",PhoenixHud::isInventoryOverlayEnabled,PhoenixHud::toggleInventoryOverlay),
             toggle("Light Level","HUD",PhoenixHud::isLightLevelEnabled,PhoenixHud::toggleLightLevel),
             toggle("Nearby Entities","HUD",PhoenixHud::isEntityOverlayEnabled,PhoenixHud::toggleEntityOverlay),
+            toggle("Entity Health Hearts","HUD",PhoenixHud::isHealthIndicatorEnabled,PhoenixHud::toggleHealthIndicator),
             toggle("Tool Information","HUD",PhoenixHud::isToolInfoEnabled,PhoenixHud::toggleToolInfo),
             toggle("CPS Counter","HUD",PhoenixHud::isCpsEnabled,PhoenixHud::toggleCps),
             toggle("Fullbright","VISUAL",PhoenixHud::isFullbrightEnabled,PhoenixHud::toggleFullbright),
