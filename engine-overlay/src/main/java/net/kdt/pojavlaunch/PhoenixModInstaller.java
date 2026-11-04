@@ -106,7 +106,9 @@ public final class PhoenixModInstaller {
                         || jar.getEntry("phoenix_branding.mixins.json") == null
                         || jar.getEntry("net/phoenix/client/branding/PhoenixBrandingClient.class") == null
                         || jar.getEntry("net/phoenix/client/branding/mixin/TitleScreenMixin.class") == null
-                        || jar.getEntry("net/phoenix/client/branding/mixin/SplashOverlayMixin.class") == null)
+                        || jar.getEntry("net/phoenix/client/branding/mixin/SplashOverlayMixin.class") == null
+                        || jar.getEntry("net/phoenix/client/branding/mixin/EntityRendererMixin.class") == null
+                        || jar.getEntry("net/phoenix/client/branding/PhoenixParticleScreen.class") == null)
                     throw new IllegalStateException("Bundled Phoenix adapter is incomplete.");
             }
             Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
