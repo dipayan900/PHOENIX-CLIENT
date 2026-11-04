@@ -64,7 +64,9 @@ public final class PhoenixPauseScreen extends Screen {
                 }
             }
         } catch (ReflectiveOperationException error) {
-            throw new IllegalStateException("Phoenix could not save and return to the title screen", error);
+            // Never crash the client if a version changes the disconnect method.
+            // Keep the user in a safe menu; the normal disconnect controls remain available.
+            minecraft.setScreen(new TitleScreen());
         }
     }
 
