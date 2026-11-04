@@ -1287,6 +1287,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
                                 Text("OPEN PHOENIX ADVANCED STUDIO", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
+                            Button(onClick = { page = "Updates" }, modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)) {
+                                Text("OPEN PHOENIX UPDATE CENTER", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
                             Button(onClick = { page = "Credits" }, modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = appearancePanel)) {
                                 Text("ABOUT PHOENIX & CREATOR CREDITS", color = animatedAccent, fontWeight = FontWeight.Bold)
@@ -1296,6 +1300,18 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 Text("OPEN ENGINE SETTINGS", color = animatedAccent, fontWeight = FontWeight.Bold)
                             }
                             Text("Microsoft sign-in uses the engine's official authentication screen. Phoenix does not collect or store your Microsoft password.", color = appearanceMuted, fontSize = 12.sp)
+                        }
+                    }
+                    "Updates" -> {
+                        item {
+                            TextButton(onClick = { page = "Settings" }) { Text("← SETTINGS", color = animatedAccent) }
+                            PhoenixUpdateCenter(
+                                context = context,
+                                accent = animatedAccent,
+                                panel = appearancePanel,
+                                muted = appearanceMuted,
+                                onNotice = { notice = it }
+                            )
                         }
                     }
                     "Credits" -> {
