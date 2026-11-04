@@ -701,6 +701,7 @@ private fun connectProfilesToEngine(profiles: List<PhoenixSavedProfile>, activeI
 @Composable
 private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     val context = activity
+    LaunchedEffect(Unit) { runCatching { PhoenixUpdateNotifications.schedule(context) } }
     val uriHandler = LocalUriHandler.current
     val prefs = remember { context.getSharedPreferences("phoenix_client", Context.MODE_PRIVATE) }
     val profiles = remember { mutableStateListOf<PhoenixSavedProfile>().apply { addAll(readPhoenixProfiles(context)) } }
