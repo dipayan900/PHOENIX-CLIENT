@@ -865,11 +865,11 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
             containerColor = appearanceBg,
             bottomBar = {
                 NavigationBar(containerColor = Color(0xFF151019)) {
-                    listOf("Home", "Profiles", "Version", "Mods", "Packs", "Friends", "Settings").forEach { tab ->
+                    listOf("Home", "Profiles", "Looks", "Version", "Mods", "Packs", "Friends", "Settings").forEach { tab ->
                         NavigationBarItem(
                             selected = if (tab == "Packs") page == "Toolbox" else page == tab,
                             onClick = { page = if (tab == "Packs") "Toolbox" else tab },
-                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Version" -> "▤"; "Mods" -> "✦"; "Packs" -> "▧"; "Friends" -> "◎"; else -> "⚙" }, fontSize = 18.sp) },
+                            icon = { Text(when(tab) { "Home" -> "⌂"; "Profiles" -> "◉"; "Looks" -> "◈"; "Version" -> "▤"; "Mods" -> "✦"; "Packs" -> "▧"; "Friends" -> "◎"; else -> "⚙" }, fontSize = 18.sp) },
                             label = { Text(if (tab == "Profiles") "Accounts" else tab, fontSize = 10.sp) }
                         )
                     }
@@ -1026,6 +1026,18 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 }
                                 Text("JOIN  →", color = animatedAccent, fontSize = 12.sp, fontWeight = FontWeight.Black)
                             }
+                        }
+                    }
+                    "Looks" -> {
+                        item {
+                            PhoenixLocalCosmeticsScreen(
+                                context = context,
+                                gameDir = phoenixGameDirectory(active.engineProfileId),
+                                accent = animatedAccent,
+                                panel = appearancePanel,
+                                muted = appearanceMuted,
+                                textColor = appearanceText
+                            )
                         }
                     }
                     "Friends" -> {

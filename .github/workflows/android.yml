@@ -57,6 +57,8 @@ jobs:
             if [ "$MINOR" -eq 11 ]; then
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/PhoenixPerformanceScreen.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixPerformanceScreen.java
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java
+              cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
+              cp phoenix-branding/fabric/src/modern11/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
               grep -Fq 'Entity entity, double squaredDistance,' phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java
             fi
             echo "::group::Building Phoenix Fabric adapter for $MC_VERSION"

@@ -131,6 +131,7 @@ XML
 cp "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" "$APP/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
 mkdir -p "$APP/src/main/kotlin/net/kdt/pojavlaunch"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixDashboardActivity.kt"
+cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixLocalCosmeticsScreen.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixLocalCosmeticsScreen.kt"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixUpdateCenter.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixUpdateCenter.kt"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixUpdateInfrastructure.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixUpdateInfrastructure.kt"
 cp "$PHOENIX_ROOT/engine-overlay/src/main/java/net/kdt/pojavlaunch/PhoenixVisualStudioActivity.kt" "$APP/src/main/kotlin/net/kdt/pojavlaunch/PhoenixVisualStudioActivity.kt"
