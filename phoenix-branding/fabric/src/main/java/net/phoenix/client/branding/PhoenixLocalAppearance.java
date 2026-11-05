@@ -29,6 +29,17 @@ public final class PhoenixLocalAppearance {
 
     private PhoenixLocalAppearance() {}
 
+    private static void clearCachedTexture(String kind) {
+        Entry previous = CACHE.remove(kind);
+        if (previous != null) {
+            try {
+                MinecraftClient.getInstance().getTextureManager().destroyTexture(previous.id());
+            } catch (Throwable ignored) {
+                // Texture cleanup must never prevent normal Minecraft skin rendering.
+            }
+        }
+    }
+
     public static Identifier skin() {
         return load("skin");
     }
@@ -46,7 +57,7 @@ public final class PhoenixLocalAppearance {
             // Clear cache on unequip. This guarantees that re-equipping the
             // same PNG immediately reloads it even if size/timestamp are unchanged.
             if (!file.isFile() || file.length() < 8 || file.length() > 2_097_152L) {
-                CACHE.remove(kind);
+                clearCachedTexture(kind);
                 return null;
             }
 
@@ -55,6 +66,9 @@ public final class PhoenixLocalAppearance {
             Entry cached = CACHE.get(kind);
             if (cached != null && cached.modified() == modified && cached.length() == length) {
                 return cached.id();
+            }
+            if (cached != null) {
+                clearCachedTexture(kind);
             }
 
             NativeImage image;
@@ -81,7 +95,7 @@ public final class PhoenixLocalAppearance {
                     : image.getWidth() == 64 && image.getHeight() == 32;
             if (!validDimensions) {
                 image.close();
-                CACHE.remove(kind);
+                clearCachedTexture(kind);
                 System.err.println("[Phoenix] Rejected local " + kind
                         + " texture with invalid dimensions: " + file);
                 return null;
@@ -103,7 +117,7 @@ public final class PhoenixLocalAppearance {
                     + " texture from " + file + " as " + id);
             return id;
         } catch (Throwable error) {
-            CACHE.remove(kind);
+            clearCachedTexture(kind);
             System.err.println("[Phoenix] local " + kind
                     + " texture unavailable: " + error);
             error.printStackTrace();
