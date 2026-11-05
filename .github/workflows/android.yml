@@ -43,6 +43,12 @@ jobs:
           mkdir -p "$OUT"
           for MINOR in {1..11}; do
             MC_VERSION="1.21.$MINOR"
+            # The legacy SkinTextures mixin is valid only for 1.21.1.
+            # Remove it before compiling 1.21.2+; 1.21.11 installs its
+            # separately compiled modern adapter and matching mixin config below.
+            if [ "$MINOR" -ge 2 ]; then
+              rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
+            fi
             if [ "$MINOR" -eq 2 ]; then
               cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
             fi
