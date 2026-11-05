@@ -14,15 +14,20 @@ import java.util.Map;
 /** Profile-local texture loader. Never modifies account credentials or server state. */
 public final class PhoenixLocalAppearance {
  private static final Map<String,Entry> CACHE=new ConcurrentHashMap<>();
- private record Entry(long modified,Identifier id){}
+ private record Entry(long modified,long length,Identifier id){}
  private PhoenixLocalAppearance(){}
  public static Identifier skin(){return load("skin");}
  public static Identifier cape(){return load("cape");}
  private static Identifier load(String kind){
   try{
-   File f=FabricLoader.getInstance().getGameDir().resolve("phoenix/cosmetics/equipped/"+kind+".png").toFile();
-   if(!f.isFile()||f.length()<8||f.length()>2097152)return null;
-   String key=kind+f.getAbsolutePath();long modified=f.lastModified();Entry old=CACHE.get(key);if(old!=null&&old.modified==modified)return old.id;
+   File gameDir=FabricLoader.getInstance().getGameDir().toFile();
+   File f=new File(new File(gameDir,"phoenix/cosmetics/equipped"),kind+".png").getCanonicalFile();
+   if(!f.isFile()||f.length()<8||f.length()>2097152){
+    System.out.println("[Phoenix] No equipped local "+kind+" at "+f+" (gameDir="+gameDir.getCanonicalPath()+")");
+    return null;
+   }
+   String key=kind+f.getAbsolutePath();long modified=f.lastModified(),length=f.length();
+   Entry old=CACHE.get(key);if(old!=null&&old.modified==modified&&old.length==length)return old.id;
    NativeImage image;try(InputStream in=Files.newInputStream(f.toPath())){image=NativeImage.read(in);}
    Class<?> type=NativeImageBackedTexture.class;Object texture;
    try{Constructor<?> c=type.getConstructor(int.class,int.class,boolean.class);texture=c.newInstance(image.getWidth(),image.getHeight(),true);}
@@ -32,7 +37,9 @@ public final class PhoenixLocalAppearance {
    Object manager=MinecraftClient.getInstance().getTextureManager();
    Method register=manager.getClass().getMethod("registerDynamicTexture",String.class,type);
    Identifier id=(Identifier)register.invoke(manager,"phoenix_local_"+kind,texture);
-   CACHE.put(key,new Entry(modified,id));return id;
-  }catch(Throwable e){System.err.println("[Phoenix] local "+kind+" texture unavailable: "+e.getMessage());return null;}
+   CACHE.put(key,new Entry(modified,length,id));
+   System.out.println("[Phoenix] Applied local "+kind+" texture from "+f+" as "+id);
+   return id;
+  }catch(Throwable e){System.err.println("[Phoenix] local "+kind+" texture unavailable: "+e);e.printStackTrace();return null;}
  }
 }
