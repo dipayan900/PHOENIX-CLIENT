@@ -1,45 +1,97 @@
 package net.phoenix.client.branding;
+
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.util.Identifier;
+
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
-/** Profile-local texture loader. Never modifies account credentials or server state. */
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Loads profile-local PNG cosmetics into Minecraft's texture manager.
+ *
+ * Minecraft's runtime uses intermediary method names. Calls made through
+ * reflection with Yarn names (for example "setImage") are not remapped by
+ * Loom, so all Minecraft method invocations must remain ordinary bytecode
+ * calls. Constructor reflection is retained only for the constructor shape
+ * that differs between the legacy and modern texture APIs.
+ */
 public final class PhoenixLocalAppearance {
- private static final Map<String,Entry> CACHE=new ConcurrentHashMap<>();
- private record Entry(long modified,long length,Identifier id){}
- private PhoenixLocalAppearance(){}
- public static Identifier skin(){return load("skin");}
- public static Identifier cape(){return load("cape");}
- private static Identifier load(String kind){
-  try{
-   File gameDir=FabricLoader.getInstance().getGameDir().toFile();
-   File f=new File(new File(gameDir,"phoenix/cosmetics/equipped"),kind+".png").getCanonicalFile();
-   if(!f.isFile()||f.length()<8||f.length()>2097152){
-    System.out.println("[Phoenix] No equipped local "+kind+" at "+f+" (gameDir="+gameDir.getCanonicalPath()+")");
-    return null;
-   }
-   String key=kind+f.getAbsolutePath();long modified=f.lastModified(),length=f.length();
-   Entry old=CACHE.get(key);if(old!=null&&old.modified==modified&&old.length==length)return old.id;
-   NativeImage image;try(InputStream in=Files.newInputStream(f.toPath())){image=NativeImage.read(in);}
-   Class<?> type=NativeImageBackedTexture.class;Object texture;
-   try{Constructor<?> c=type.getConstructor(int.class,int.class,boolean.class);texture=c.newInstance(image.getWidth(),image.getHeight(),true);}
-   catch(NoSuchMethodException newer){Constructor<?> c=type.getConstructor(String.class,int.class,int.class,boolean.class);texture=c.newInstance("Phoenix "+kind,image.getWidth(),image.getHeight(),true);}
-   type.getMethod("setImage",NativeImage.class).invoke(texture,image);
-   try{type.getMethod("upload").invoke(texture);}catch(NoSuchMethodException ignored){}
-   Object manager=MinecraftClient.getInstance().getTextureManager();
-   Method register=manager.getClass().getMethod("registerDynamicTexture",String.class,type);
-   Identifier id=(Identifier)register.invoke(manager,"phoenix_local_"+kind,texture);
-   CACHE.put(key,new Entry(modified,length,id));
-   System.out.println("[Phoenix] Applied local "+kind+" texture from "+f+" as "+id);
-   return id;
-  }catch(Throwable e){System.err.println("[Phoenix] local "+kind+" texture unavailable: "+e);e.printStackTrace();return null;}
- }
+    private static final Map<String, Entry> CACHE = new ConcurrentHashMap<>();
+
+    private record Entry(long modified, long length, Identifier id) {}
+
+    private PhoenixLocalAppearance() {}
+
+    public static Identifier skin() {
+        return load("skin");
+    }
+
+    public static Identifier cape() {
+        return load("cape");
+    }
+
+    private static Identifier load(String kind) {
+        try {
+            File gameDir = FabricLoader.getInstance().getGameDir().toFile();
+            File file = new File(new File(gameDir, "phoenix/cosmetics/equipped"),
+                    kind + ".png").getCanonicalFile();
+
+            if (!file.isFile() || file.length() < 8 || file.length() > 2_097_152L) {
+                return null;
+            }
+
+            String key = kind + ":" + file.getAbsolutePath();
+            long modified = file.lastModified();
+            long length = file.length();
+            Entry cached = CACHE.get(key);
+            if (cached != null && cached.modified() == modified && cached.length() == length) {
+                return cached.id();
+            }
+
+            NativeImage image;
+            try (InputStream input = Files.newInputStream(file.toPath())) {
+                image = NativeImage.read(input);
+            }
+
+            NativeImageBackedTexture texture;
+            try {
+                Constructor<NativeImageBackedTexture> constructor =
+                        NativeImageBackedTexture.class.getConstructor(
+                                int.class, int.class, boolean.class);
+                texture = constructor.newInstance(image.getWidth(), image.getHeight(), true);
+            } catch (NoSuchMethodException legacyConstructorMissing) {
+                Constructor<NativeImageBackedTexture> constructor =
+                        NativeImageBackedTexture.class.getConstructor(
+                                String.class, int.class, int.class, boolean.class);
+                texture = constructor.newInstance(
+                        "Phoenix " + kind, image.getWidth(), image.getHeight(), true);
+            }
+
+            // Direct calls are remapped by Fabric Loom to the runtime's
+            // intermediary names (method_4526 / method_4617).
+            texture.setImage(image);
+            texture.upload();
+
+            Identifier id = MinecraftClient.getInstance()
+                    .getTextureManager()
+                    .registerDynamicTexture("phoenix_local_" + kind, texture);
+
+            CACHE.put(key, new Entry(modified, length, id));
+            System.out.println("[Phoenix] Applied local " + kind
+                    + " texture from " + file + " as " + id);
+            return id;
+        } catch (Throwable error) {
+            System.err.println("[Phoenix] local " + kind
+                    + " texture unavailable: " + error);
+            error.printStackTrace();
+            return null;
+        }
+    }
 }
