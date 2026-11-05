@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(AbstractClientPlayerEntity.class)
 abstract class LocalPlayerSkinMixinModern {
- @Inject(method="getSkinTextures",at=@At("RETURN"),cancellable=true)
+ @Inject(method="getSkin",at=@At("RETURN"),cancellable=true)
  private void phoenix$localAppearance(CallbackInfoReturnable<SkinTextures> cir){
   if(MinecraftClient.getInstance().player!=(Object)this)return;
   SkinTextures s=cir.getReturnValue();Identifier skin=PhoenixLocalAppearance.skin(),cape=PhoenixLocalAppearance.cape();
