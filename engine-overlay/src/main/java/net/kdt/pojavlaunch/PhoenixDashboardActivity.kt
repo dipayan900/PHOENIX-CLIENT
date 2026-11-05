@@ -1257,23 +1257,30 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         val targetLoader = modLoader
                                         val targetEngineProfileId = active.engineProfileId
                                         val targetProfileName = active.name
+                                        val targetQuery = modQuery.trim()
                                         modBusy = true
                                         modResults.clear()
                                         modStatus = "Searching Modrinth for Minecraft $targetVersion ($targetLoader)..."
                                         Thread {
                                             try {
-                                                val found = searchPhoenixMods(modQuery.trim(), targetVersion, targetLoader, targetEngineProfileId)
-                                            activity.runOnUiThread {
-                                                modResults.clear()
-                                                modResults.addAll(found)
-                                                modStatus = if (found.isEmpty()) "No compatible mods found for Minecraft $targetVersion / $targetLoader." else "Found ${found.size} compatible projects for Minecraft $targetVersion in $targetProfileName."
-                                                modBusy = false
+                                                val found = searchPhoenixMods(targetQuery, targetVersion, targetLoader, targetEngineProfileId)
+                                                activity.runOnUiThread {
+                                                    modResults.clear()
+                                                    modResults.addAll(found)
+                                                    modStatus = if (found.isEmpty()) {
+                                                        "No compatible mods found for Minecraft $targetVersion / $targetLoader."
+                                                    } else {
+                                                        "Found ${found.size} compatible projects for Minecraft $targetVersion in $targetProfileName."
+                                                    }
+                                                    modBusy = false
+                                                }
+                                            } catch (error: Exception) {
+                                                activity.runOnUiThread {
+                                                    modStatus = error.message ?: "Mod search failed."
+                                                    modBusy = false
+                                                }
                                             }
-                                            }
-                                        } catch (error: Exception) {
-                                            activity.runOnUiThread { modStatus = error.message ?: "Mod search failed."; modBusy = false }
-                                        }
-                                    }.start()
+                                        }.start()
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
