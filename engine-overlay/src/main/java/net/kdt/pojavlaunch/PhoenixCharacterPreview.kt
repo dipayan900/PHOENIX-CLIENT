@@ -23,7 +23,7 @@ import kotlin.math.sin
 
 /** Real, lit OpenGL ES 2.0 mannequin preview. Drag horizontally to orbit the model. */
 @Composable
-fun PhoenixCharacterPreview(cosmeticId: String = "phoenix", skinPath: String? = null, capePath: String? = null, modifier: Modifier = Modifier) {
+fun PhoenixCharacterPreview(cosmeticId: String = "phoenix", modifier: Modifier = Modifier, skinPath: String? = null, capePath: String? = null) {
     AndroidView(
         modifier = modifier,
         factory = { context -> PhoenixCharacterGLView(context).apply { setCosmetic(cosmeticId); setAppearance(skinPath, capePath) } },
@@ -38,7 +38,7 @@ private class PhoenixCharacterGLView(context: Context) : GLSurfaceView(context) 
     init {
         setEGLContextClientVersion(2)
         setRenderer(previewRenderer)
-        renderMode = RENDERMODE_CONTINUOUSLY
+        renderMode = RENDERMODE_WHEN_DIRTY
         setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> { lastX = event.x; true }
@@ -46,6 +46,7 @@ private class PhoenixCharacterGLView(context: Context) : GLSurfaceView(context) 
                     val dx = event.x - lastX
                     lastX = event.x
                     previewRenderer.rotate(dx * 0.55f)
+                    requestRender()
                     true
                 }
                 else -> true
@@ -53,8 +54,8 @@ private class PhoenixCharacterGLView(context: Context) : GLSurfaceView(context) 
         }
     }
 
-    fun setCosmetic(id: String) { previewRenderer.setCosmetic(id) }
-    fun setAppearance(skin: String?, cape: String?) { previewRenderer.setAppearance(skin, cape) }
+    fun setCosmetic(id: String) { previewRenderer.setCosmetic(id); requestRender() }
+    fun setAppearance(skin: String?, cape: String?) { previewRenderer.setAppearance(skin, cape); requestRender() }
 }
 
 private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
@@ -91,6 +92,7 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
     fun setAppearance(skin: String?, cape: String?) { requestedSkinPath = skin; requestedCapePath = cape }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        skinTexture=0;capeTexture=0;loadedSkinPath=null;loadedCapePath=null
         GLES20.glClearColor(0.035f, 0.025f, 0.055f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
         GLES20.glDisable(GLES20.GL_CULL_FACE)
