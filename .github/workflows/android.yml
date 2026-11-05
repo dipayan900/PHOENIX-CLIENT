@@ -50,7 +50,7 @@ jobs:
               rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
               if [ "$MINOR" -lt 11 ]; then
-                python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c.append("LocalPlayerSkinMixinModern") if "LocalPlayerSkinMixinModern" not in c else None; p.write_text(json.dumps(d, indent=2)+"\\n")'
+                python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c.append("LocalPlayerSkinMixinModern") if "LocalPlayerSkinMixinModern" not in c else None; p.write_text(json.dumps(d, indent=2)+"\n")'
               fi
             fi
             if [ "$MINOR" -eq 2 ]; then
