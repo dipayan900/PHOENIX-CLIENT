@@ -21,11 +21,11 @@ abstract class LocalPlayerSkinMixinModern {
   // dynamically in TextureManager as phoenix:local_skin / phoenix:local_cape.
   // Point texturePath at that exact dynamic identifier so Minecraft resolves
   // the registered GPU texture instead of searching a nonexistent PNG resource.
-  AssetInfo.TextureAssetInfo skinAsset = skin == null
-          ? (AssetInfo.TextureAssetInfo) s.body()
+  AssetInfo.TextureAsset skinAsset = skin == null
+          ? s.body()
           : new AssetInfo.TextureAssetInfo(skin, skin);
-  AssetInfo.TextureAssetInfo capeAsset = cape == null
-          ? (AssetInfo.TextureAssetInfo) s.cape()
+  AssetInfo.TextureAsset capeAsset = cape == null
+          ? s.cape()
           : new AssetInfo.TextureAssetInfo(cape, cape);
   cir.setReturnValue(new SkinTextures(skinAsset,capeAsset,s.elytra(),s.model(),s.secure()));
  }
