@@ -61,7 +61,10 @@ private data class PhoenixModResult(
     val title: String,
     val description: String,
     val downloads: Long,
-    val slug: String
+    val slug: String,
+    val minecraftVersion: String,
+    val loader: String,
+    val engineProfileId: String
 )
 
 private data class PhoenixPackResult(
@@ -422,10 +425,20 @@ private fun modrinthJsonArray(url: String): JSONArray {
     }
 }
 
-private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: String): List<PhoenixModResult> {
+private fun normalizePhoenixMinecraftVersion(input: String): String {
+    val match = Regex("(?<![0-9])[0-9]+\\.[0-9]+(?:\\.[0-9]+)?(?![0-9])").find(input.trim())
+        ?: throw java.io.IOException("Enter a valid Minecraft version, such as 1.21.11.")
+    return match.value
+}
+
+private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: String, engineProfileId: String): List<PhoenixModResult> {
+    val exactVersion = normalizePhoenixMinecraftVersion(minecraftVersion)
+    if (loader !in setOf("fabric", "forge", "neoforge", "quilt")) {
+        throw java.io.IOException("Select a supported mod loader.")
+    }
     val facets = org.json.JSONArray()
         .put(org.json.JSONArray().put("project_type:mod"))
-        .put(org.json.JSONArray().put("versions:$minecraftVersion"))
+        .put(org.json.JSONArray().put("versions:$exactVersion"))
         .put(org.json.JSONArray().put("categories:$loader"))
     val encodedFacets = URLEncoder.encode(facets.toString(), "UTF-8")
     val encodedQuery = URLEncoder.encode(query, "UTF-8")
@@ -439,7 +452,10 @@ private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: S
                 title = hit.optString("title", "Untitled mod"),
                 description = hit.optString("description", ""),
                 downloads = hit.optLong("downloads", 0),
-                slug = hit.optString("slug", "")
+                slug = hit.optString("slug", ""),
+                minecraftVersion = exactVersion,
+                loader = loader,
+                engineProfileId = engineProfileId
             ))
         }
     }
@@ -526,10 +542,15 @@ private fun removePhoenixContentFile(engineProfileId: String, folderName: String
     if (!target.delete()) throw java.io.IOException("Could not remove $fileName.")
 }
 
-private fun installPhoenixMod(mod: PhoenixModResult, minecraftVersion: String, loader: String, engineProfileId: String): String {
+private fun installPhoenixMod(mod: PhoenixModResult): String {
+    val minecraftVersion = normalizePhoenixMinecraftVersion(mod.minecraftVersion)
+    val loader = mod.loader
+    if (loader !in setOf("fabric", "forge", "neoforge", "quilt")) {
+        throw java.io.IOException("The selected mod loader is no longer valid.")
+    }
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
-    val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
-        ?: throw java.io.IOException("Select a valid game profile before installing mods.")
+    val profile = LauncherProfiles.mainProfileJson.profiles[mod.engineProfileId]
+        ?: throw java.io.IOException("The Minecraft profile selected during search no longer exists. Search again from the active profile.")
     val versions = URLEncoder.encode(org.json.JSONArray().put(minecraftVersion).toString(), "UTF-8")
     val loaders = URLEncoder.encode(org.json.JSONArray().put(loader).toString(), "UTF-8")
     val versionConnection = URL("https://api.modrinth.com/v2/project/${mod.projectId}/version?game_versions=$versions&loaders=$loaders")
@@ -727,6 +748,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var avatarChoice by remember { mutableStateOf(prefs.getString("cosmetic_avatar", "🔥") ?: "🔥") }
     var bannerChoice by remember { mutableStateOf(prefs.getString("cosmetic_banner", "EMBER") ?: "EMBER") }
     var modQuery by remember { mutableStateOf("") }
+    var modMinecraftVersion by remember { mutableStateOf("") }
     var modLoader by remember { mutableStateOf(prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric") }
     var modStatus by remember { mutableStateOf("Search Modrinth for mods compatible with your selected Minecraft version and loader.") }
     var modBusy by remember { mutableStateOf(false) }
@@ -820,6 +842,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     LaunchedEffect(Unit) { persist() }
     LaunchedEffect(activeId) {
         modLoader = prefs.getString("mod_loader_${activeId}", "fabric") ?: "fabric"
+        modMinecraftVersion = active.version
+        modResults.clear()
         ramAllocation = prefs.getInt("ram_allocation_${activeId}", LauncherPreferences.PREF_RAM_ALLOCATION).toFloat()
         fpsPreset = prefs.getString("fps_profile_${activeId}", "PERFORMANCE") ?: "PERFORMANCE"
         fpsStatus = "Performance settings loaded for " + active.name + "."
@@ -1192,6 +1216,20 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             )
                         }
                         item {
+                            OutlinedTextField(
+                                value = modMinecraftVersion,
+                                onValueChange = {
+                                    modMinecraftVersion = it.take(48)
+                                    modResults.clear()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Minecraft version") },
+                                placeholder = { Text("e.g. 1.21.11 or your custom profile version") },
+                                singleLine = true,
+                                supportingText = { Text("Defaults to the active profile. Search and installation use this exact Minecraft version.") }
+                            )
+                        }
+                        item {
                             Text("MOD LOADER", color = animatedAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                 listOf("fabric", "forge", "neoforge", "quilt").forEach { loader ->
@@ -1205,27 +1243,38 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     )
                                 }
                             }
-                            val gameVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
-                            Text("Minecraft $gameVersion", color = appearanceMuted, fontSize = 12.sp)
+                            val selectedVersionLabel = modMinecraftVersion.ifBlank { active.version }
+                            Text("Target: Minecraft $selectedVersionLabel · Profile: ${active.name}", color = appearanceMuted, fontSize = 12.sp)
                             Button(
-                                enabled = !modBusy && modQuery.isNotBlank(),
+                                enabled = !modBusy && modQuery.isNotBlank() && modMinecraftVersion.isNotBlank(),
                                 onClick = {
-                                    modBusy = true
-                                    modStatus = "Searching Modrinth..."
-                                    Thread {
-                                        try {
-                                            val version = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
-                                            val found = searchPhoenixMods(modQuery.trim(), version, modLoader)
+                                    val targetVersion = runCatching { normalizePhoenixMinecraftVersion(modMinecraftVersion) }
+                                        .getOrElse {
+                                            modStatus = it.message ?: "Enter a valid Minecraft version."
+                                            ""
+                                        }
+                                    if (targetVersion.isNotBlank()) {
+                                        val targetLoader = modLoader
+                                        val targetEngineProfileId = active.engineProfileId
+                                        val targetProfileName = active.name
+                                        modBusy = true
+                                        modResults.clear()
+                                        modStatus = "Searching Modrinth for Minecraft $targetVersion ($targetLoader)..."
+                                        Thread {
+                                            try {
+                                                val found = searchPhoenixMods(modQuery.trim(), targetVersion, targetLoader, targetEngineProfileId)
                                             activity.runOnUiThread {
                                                 modResults.clear()
                                                 modResults.addAll(found)
-                                                modStatus = if (found.isEmpty()) "No compatible mods found. Check the version and loader filters." else "Found ${found.size} compatible projects."
+                                                modStatus = if (found.isEmpty()) "No compatible mods found for Minecraft $targetVersion / $targetLoader." else "Found ${found.size} compatible projects for Minecraft $targetVersion in $targetProfileName."
                                                 modBusy = false
+                                            }
                                             }
                                         } catch (error: Exception) {
                                             activity.runOnUiThread { modStatus = error.message ?: "Mod search failed."; modBusy = false }
                                         }
                                     }.start()
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = animatedAccent)
@@ -1240,6 +1289,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 Text(mod.title, color = appearanceText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                                 Text(mod.description, color = appearanceMuted, fontSize = 12.sp, maxLines = 3)
                                 Text("${mod.downloads} downloads  ·  ${mod.slug}", color = animatedAccent, fontSize = 10.sp)
+                                Text("Minecraft ${mod.minecraftVersion} · ${mod.loader} · ${profiles.firstOrNull { it.engineProfileId == mod.engineProfileId }?.name ?: "Selected profile"}", color = appearanceMuted, fontSize = 10.sp)
                                 Button(
                                     enabled = !modBusy,
                                     onClick = {
@@ -1247,12 +1297,13 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         modStatus = "Checking compatible release and downloading ${mod.title}..."
                                         Thread {
                                             try {
-                                                val version = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
-                                                val installed = installPhoenixMod(mod, version, modLoader, active.engineProfileId)
+                                                val installed = installPhoenixMod(mod)
                                                 activity.runOnUiThread {
-                                                    installedMods.clear()
-                                                    installedMods.addAll(listPhoenixInstalledMods(active.engineProfileId))
-                                                    modStatus = "Installed $installed. Restart Minecraft to load it."
+                                                    if (active.engineProfileId == mod.engineProfileId) {
+                                                        installedMods.clear()
+                                                        installedMods.addAll(listPhoenixInstalledMods(mod.engineProfileId))
+                                                    }
+                                                    modStatus = "Installed $installed into the selected profile's mods folder for Minecraft ${mod.minecraftVersion} / ${mod.loader}. Restart that game profile to load it."
                                                     modBusy = false
                                                 }
                                             } catch (error: Exception) {
