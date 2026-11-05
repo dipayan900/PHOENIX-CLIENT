@@ -297,7 +297,7 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
         private val LEFT_ARM_UV=floatArrayOf(36f,52f,40f,64f, 44f,52f,48f,64f, 32f,52f,36f,64f, 40f,52f,44f,64f, 36f,48f,40f,52f, 40f,48f,44f,52f)
         private val RIGHT_LEG_UV=floatArrayOf(4f,20f,8f,32f, 12f,20f,16f,32f, 0f,20f,4f,32f, 8f,20f,12f,32f, 4f,16f,8f,20f, 8f,16f,12f,20f)
         private val LEFT_LEG_UV=floatArrayOf(20f,52f,24f,64f, 28f,52f,32f,64f, 16f,52f,20f,64f, 24f,52f,28f,64f, 20f,48f,24f,52f, 24f,48f,28f,52f)
-        private val CAPE_UV=floatArrayOf(0f,1f,1f,17f, 12f,1f,22f,17f, 0f,1f,1f,17f, 11f,1f,12f,17f, 1f,0f,11f,1f, 11f,0f,21f,1f)
+        private val CAPE_UV=floatArrayOf(1f,1f,11f,17f, 12f,1f,22f,17f, 0f,1f,1f,17f, 11f,1f,12f,17f, 1f,0f,11f,1f, 11f,0f,21f,1f)
     }
 
     private fun drawCape(c: FloatArray, t: Float) {
