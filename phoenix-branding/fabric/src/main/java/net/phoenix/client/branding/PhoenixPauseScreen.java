@@ -37,28 +37,31 @@ public final class PhoenixPauseScreen extends Screen {
     }
 
     /**
-     * Prefer Minecraft's dedicated saving-disconnect flow. On older supported
-     * game versions, fall back to the version-appropriate disconnect overload.
+     * Disconnect through Minecraft's normal screen-aware disconnect API.
+     * The dedicated saving-screen helper can leave some mobile runtimes parked
+     * on its progress screen; the regular disconnect API still shuts down an
+     * integrated server safely and returns to the supplied title screen.
      */
     private void saveAndReturn() {
         MinecraftClient minecraft = MinecraftClient.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
-        // Use vanilla's dedicated saving flow first. If that method fails on a
-        // particular adapter/runtime, continue to the normal disconnect APIs.
-        if (tryInvokeClientMethod(minecraft, "method_72099",
-                new Class<?>[0])) {
-            return;
-        }
-
-        // These are real disconnect operations: unlike setScreen(TitleScreen),
-        // they close the active play connection and stop/save an integrated world.
+        // Prefer the current 1.21.x three-argument disconnect overload. It
+        // closes multiplayer connections and cleanly stops a local integrated
+        // server before showing the destination screen.
         if (tryInvokeClientMethod(minecraft, "method_18096",
                 new Class<?>[]{Screen.class, boolean.class, boolean.class},
                 titleScreen, false, true)) {
             return;
         }
+
+        // Newer/older adapters may expose the two-argument overload instead.
         if (tryInvokeClientMethod(minecraft, "method_76795",
+                new Class<?>[]{Screen.class, boolean.class},
+                titleScreen, false)) {
+            return;
+        }
+        if (tryInvokeClientMethod(minecraft, "method_18096",
                 new Class<?>[]{Screen.class, boolean.class},
                 titleScreen, false)) {
             return;
@@ -68,9 +71,14 @@ public final class PhoenixPauseScreen extends Screen {
             return;
         }
 
-        // Never pretend to have exited a world by merely opening the title
-        // screen. Keep the pause menu available so the player can resume safely.
-        System.err.println("[Phoenix Client] Could not find a compatible Minecraft disconnect method; "
+        // Last-resort vanilla path for adapters that do not expose a compatible
+        // disconnect overload. Keep this last to avoid the stuck progress flow
+        // on runtimes where the screen-aware overload is available.
+        if (tryInvokeClientMethod(minecraft, "method_72099", new Class<?>[0])) {
+            return;
+        }
+
+        System.err.println("[Phoenix Client] No compatible Minecraft disconnect method was found; "
                 + "kept the current world open instead of showing a false title screen.");
         minecraft.setScreen(this);
     }
