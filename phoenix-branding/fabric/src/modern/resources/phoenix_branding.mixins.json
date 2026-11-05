@@ -9,8 +9,7 @@
     "SplashOverlayMixin",
     "GameMenuScreenMixin",
     "ContainerPreviewTooltipMixin",
-    "EntityRendererMixin",
-    "LocalPlayerSkinMixinModern"
+    "EntityRendererMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }
