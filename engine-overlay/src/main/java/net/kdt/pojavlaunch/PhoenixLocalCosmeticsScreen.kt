@@ -87,20 +87,11 @@ private fun importLook(context:Context,dir:File,uri:Uri,kind:String):PhoenixLook
 @Composable
 fun PhoenixLocalCosmeticsScreen(context:Context,gameDir:File,accent:Color,panel:Color,muted:Color,textColor:Color){
  val items=remember(gameDir.absolutePath){mutableStateListOf<PhoenixLook>().apply{addAll(lookList(gameDir))}}
- var kind by remember{mutableStateOf("skin")};var notice by remember{mutableStateOf("Upload PNG files to this Minecraft profile.")};var previewSkinId by remember(gameDir.absolutePath){mutableStateOf<String?>(null)};var previewCapeId by remember(gameDir.absolutePath){mutableStateOf<String?>(null)}
- val selectedSkin=items.firstOrNull{it.kind=="skin"&&it.id==previewSkinId}?:items.firstOrNull{it.kind=="skin"}
- val selectedCape=items.firstOrNull{it.kind=="cape"&&it.id==previewCapeId}?:items.firstOrNull{it.kind=="cape"}
- val skinPath=selectedSkin?.let{File(File(lookRoot(gameDir),"skins"),it.file).absolutePath}
- val capePath=selectedCape?.let{File(File(lookRoot(gameDir),"capes"),it.file).absolutePath}
- val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->if(uri!=null)runCatching{val item=importLook(context,gameDir,uri,kind);val next=items.toList()+item;saveLooks(gameDir,next);items.clear();items.addAll(next);if(kind=="skin")previewSkinId=item.id else previewCapeId=item.id;notice="Saved "+item.name+"."}.onFailure{notice=it.message?:"Upload failed."}}
+ var kind by remember{mutableStateOf("skin")};var notice by remember{mutableStateOf("Upload PNG files to this Minecraft profile.")}
+ val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->if(uri!=null)runCatching{val item=importLook(context,gameDir,uri,kind);val next=items.toList()+item;saveLooks(gameDir,next);items.clear();items.addAll(next);notice="Saved "+item.name+". Tap EQUIP to apply it in Minecraft."}.onFailure{notice=it.message?:"Upload failed."}}
  Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
   Text("MY LOOKS",color=textColor,fontSize=24.sp,fontWeight=FontWeight.Black)
   Text("Custom skins and capes · saved per Minecraft profile",color=muted,fontSize=12.sp)
-  Text("3D PLAYER PREVIEW",color=accent,fontWeight=FontWeight.Bold,fontSize=12.sp)
-  Box(Modifier.fillMaxWidth().height(280.dp).background(panel,RoundedCornerShape(18.dp))){
-   PhoenixCharacterPreview(skinPath=skinPath,capePath=capePath,modifier=Modifier.fillMaxSize())
-  }
-  Text("Drag the character to rotate · "+(selectedSkin?.name?: "Default skin")+" · "+(selectedCape?.name?: "No cape"),color=muted,fontSize=11.sp)
   Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()){
    Button(onClick={kind="skin";picker.launch(arrayOf("image/*"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("＋ UPLOAD SKIN",color=Color.Black)}
    Button(onClick={kind="cape";picker.launch(arrayOf("image/*"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("＋ UPLOAD CAPE",color=Color.Black)}
@@ -112,13 +103,13 @@ fun PhoenixLocalCosmeticsScreen(context:Context,gameDir:File,accent:Color,panel:
    list.forEach{item->
     val active=equippedId(gameDir,type)==item.id
     Row(Modifier.fillMaxWidth().background(panel,RoundedCornerShape(14.dp)).padding(10.dp),verticalAlignment=Alignment.CenterVertically){
-     Column(Modifier.weight(1f).clickable{if(type=="skin")previewSkinId=item.id else previewCapeId=item.id}){Text(item.name,color=textColor,fontWeight=FontWeight.Bold);Text(if(active)"EQUIPPED" else if(type=="skin")"64×64 / legacy 64×32 · tap to preview" else "64×32 PNG · tap to preview",color=muted,fontSize=10.sp)}
+     Column(Modifier.weight(1f)){Text(item.name,color=textColor,fontWeight=FontWeight.Bold);Text(if(active)"EQUIPPED" else if(type=="skin")"64×64 / legacy 64×32 · tap to preview" else "64×32 PNG · tap to preview",color=muted,fontSize=10.sp)}
      TextButton(onClick={runCatching{if(active)unequipLook(gameDir,type) else equipLook(gameDir,item);notice=if(active)"Unequipped." else "Equipped "+item.name+"."}.onFailure{notice=it.message?:"Action failed."}}){Text(if(active)"UNEQUIP" else "EQUIP",color=accent)}
      TextButton(onClick={runCatching{if(active)unequipLook(gameDir,type);File(File(lookRoot(gameDir),if(type=="skin")"skins" else "capes"),item.file).delete();val next=items.filterNot{it.id==item.id};saveLooks(gameDir,next);items.clear();items.addAll(next);notice="Deleted "+item.name+"."}.onFailure{notice=it.message?:"Delete failed."}}){Text("DELETE",color=muted)}
     }
    }
   }
   Text(notice,color=muted,fontSize=11.sp)
-  Text("One skin and one cape can be equipped at once. Appearance is local to this Phoenix client; server plugins and account changes are not required.",color=muted,fontSize=11.sp)
+  Text("One skin and one cape can be equipped at once. Equipped files are applied by the Phoenix Fabric runtime. This is a local appearance and does not change your account.",color=muted,fontSize=11.sp)
  }
 }
