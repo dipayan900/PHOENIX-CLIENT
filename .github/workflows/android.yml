@@ -43,11 +43,24 @@ jobs:
           mkdir -p "$OUT"
           for MINOR in {1..11}; do
             MC_VERSION="1.21.$MINOR"
-            # The legacy SkinTextures mixin is valid only for 1.21.1.
-            # Remove it before compiling 1.21.2+; 1.21.11 installs its
-            # separately compiled modern adapter and matching mixin config below.
-            if [ "$MINOR" -ge 2 ]; then
+            # 1.21.1-1.21.8 use the legacy Identifier-based SkinTextures API.
+            # 1.21.9+ moved SkinTextures to entity.player and uses AssetInfo.
+            # Select a source implementation matching each version's mapped API.
+            if [ "$MINOR" -ge 9 ]; then
               rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
+              cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
+              if [ "$MINOR" -lt 11 ]; then
+                python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path('phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json')
+data = json.loads(p.read_text())
+client = data.setdefault('client', [])
+if 'LocalPlayerSkinMixinModern' not in client:
+    client.append('LocalPlayerSkinMixinModern')
+p.write_text(json.dumps(data, indent=2) + '\\n')
+PY
+              fi
             fi
             if [ "$MINOR" -eq 2 ]; then
               cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
