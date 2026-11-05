@@ -44,15 +44,43 @@ private fun equipLook(dir:File,item:PhoenixLook){
 }
 private fun unequipLook(dir:File,kind:String){val d=File(lookRoot(dir),"equipped");File(d,kind+".png").delete();File(d,kind+".id").delete()}
 private fun importLook(context:Context,dir:File,uri:Uri,kind:String):PhoenixLook{
- val b=BitmapFactory.Options().apply{inJustDecodeBounds=true}
- context.contentResolver.openInputStream(uri)?.use{BitmapFactory.decodeStream(it,null,b)}?:throw java.io.IOException("Cannot open PNG.")
- val valid=if(kind=="skin")b.outWidth==64&&(b.outHeight==64||b.outHeight==32) else b.outWidth==64&&b.outHeight==32
- if(!valid)throw java.io.IOException(if(kind=="skin")"Skin must be 64×64 or legacy 64×32 PNG." else "Cape must be 64×32 PNG.")
- val id=UUID.randomUUID().toString();val root=lookRoot(dir);val folder=File(root,if(kind=="skin")"skins" else "capes");if(!folder.exists()&&!folder.mkdirs())throw java.io.IOException("Cannot create upload folder.")
- val target=File(folder,id+".png");val temp=File(folder,id+".tmp");var bytes=0L
- context.contentResolver.openInputStream(uri)?.use{input->FileOutputStream(temp).use{out->val buf=ByteArray(8192);while(true){val n=input.read(buf);if(n<0)break;bytes+=n;if(bytes>2097152)throw java.io.IOException("PNG exceeds 2 MB.");out.write(buf,0,n)};out.fd.sync()}}?:throw java.io.IOException("Cannot read PNG.")
- if(bytes<8){temp.delete();throw java.io.IOException("Invalid PNG.")};if(!temp.renameTo(target))throw java.io.IOException("Cannot save PNG.")
- return PhoenixLook(id,if(kind=="skin")"Custom Skin" else "Custom Cape",kind,target.name)
+ val root=lookRoot(dir)
+ val folder=File(root,if(kind=="skin")"skins" else "capes")
+ if(!folder.exists()&&!folder.mkdirs())throw java.io.IOException("Cannot create upload folder.")
+ val id=UUID.randomUUID().toString()
+ val target=File(folder,id+".png")
+ val temp=File(folder,id+".tmp")
+ try{
+  var bytes=0L
+  context.contentResolver.openInputStream(uri)?.use{input->
+   FileOutputStream(temp).use{out->
+    val buf=ByteArray(8192)
+    while(true){
+     val n=input.read(buf)
+     if(n<0)break
+     bytes+=n
+     if(bytes>2097152)throw java.io.IOException("PNG exceeds 2 MB.")
+     out.write(buf,0,n)
+    }
+    out.fd.sync()
+   }
+  }?:throw java.io.IOException("Android could not read the selected file. Try choosing it again from Downloads or Files.")
+  if(bytes<8)throw java.io.IOException("The selected file is empty or not a valid PNG.")
+  val signature=ByteArray(8)
+  java.io.FileInputStream(temp).use{if(it.read(signature)!=8)throw java.io.IOException("Could not read PNG header.")}
+  val pngSignature=byteArrayOf(0x89.toByte(),0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A)
+  if(!signature.contentEquals(pngSignature))throw java.io.IOException("Please select a real PNG file, not JPG or WEBP.")
+  val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+  BitmapFactory.decodeFile(temp.absolutePath,bounds)
+  val valid=if(kind=="skin")bounds.outWidth==64&&(bounds.outHeight==64||bounds.outHeight==32) else bounds.outWidth==64&&bounds.outHeight==32
+  if(!valid)throw java.io.IOException(if(kind=="skin")"Skin PNG must be exactly 64×64 or legacy 64×32 pixels." else "Cape PNG must be exactly 64×32 pixels.")
+  if(!temp.renameTo(target))throw java.io.IOException("PNG was read but could not be saved to the Phoenix wardrobe.")
+  return PhoenixLook(id,if(kind=="skin")"Custom Skin" else "Custom Cape",kind,target.name)
+ }catch(e:Exception){
+  temp.delete()
+  target.delete()
+  throw e
+ }
 }
 
 @Composable
@@ -64,7 +92,7 @@ fun PhoenixLocalCosmeticsScreen(context:Context,gameDir:File,accent:Color,panel:
   Text("MY LOOKS",color=textColor,fontSize=24.sp,fontWeight=FontWeight.Black)
   Text("Custom skins and capes · saved per Minecraft profile",color=muted,fontSize=12.sp)
   Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()){
-   Button(onClick={kind="skin";picker.launch(arrayOf("image/png"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("＋ UPLOAD SKIN",color=Color.Black)}
+   Button(onClick={kind="skin";picker.launch(arrayOf("image/*"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("＋ UPLOAD SKIN",color=Color.Black)}
    Button(onClick={kind="cape";picker.launch(arrayOf("image/png"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=accent)){Text("＋ UPLOAD CAPE",color=Color.Black)}
   }
   listOf("skin" to "SKINS","cape" to "CAPES").forEach{(type,label)->
