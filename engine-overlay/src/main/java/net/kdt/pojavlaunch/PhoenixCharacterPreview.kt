@@ -1,6 +1,9 @@
 package net.kdt.pojavlaunch
 
 import android.content.Context
+import android.graphics.BitmapFactory
+import android.opengl.GLUtils
+import java.io.File
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
@@ -20,11 +23,11 @@ import kotlin.math.sin
 
 /** Real, lit OpenGL ES 2.0 mannequin preview. Drag horizontally to orbit the model. */
 @Composable
-fun PhoenixCharacterPreview(cosmeticId: String, modifier: Modifier = Modifier) {
+fun PhoenixCharacterPreview(cosmeticId: String = "phoenix", skinPath: String? = null, capePath: String? = null, modifier: Modifier = Modifier) {
     AndroidView(
         modifier = modifier,
-        factory = { context -> PhoenixCharacterGLView(context).apply { setCosmetic(cosmeticId) } },
-        update = { it.setCosmetic(cosmeticId) }
+        factory = { context -> PhoenixCharacterGLView(context).apply { setCosmetic(cosmeticId); setAppearance(skinPath, capePath) } },
+        update = { it.setCosmetic(cosmeticId); it.setAppearance(skinPath, capePath) }
     )
 }
 
@@ -51,6 +54,7 @@ private class PhoenixCharacterGLView(context: Context) : GLSurfaceView(context) 
     }
 
     fun setCosmetic(id: String) { previewRenderer.setCosmetic(id) }
+    fun setAppearance(skin: String?, cape: String?) { previewRenderer.setAppearance(skin, cape) }
 }
 
 private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
@@ -71,9 +75,20 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
     private var normalHandle = 0
     private var matrixHandle = 0
     private var colorHandle = 0
+    private var texCoordHandle = 0
+    private var samplerHandle = 0
+    private var useTextureHandle = 0
+    private var skinTexture = 0
+    private var capeTexture = 0
+    @Volatile private var requestedSkinPath: String? = null
+    @Volatile private var requestedCapePath: String? = null
+    private var loadedSkinPath: String? = null
+    private var loadedCapePath: String? = null
+    private lateinit var texCoords: FloatBuffer
 
     fun rotate(delta: Float) { angle = (angle + delta) % 360f }
     fun setCosmetic(id: String) { cosmetic = id }
+    fun setAppearance(skin: String?, cape: String?) { requestedSkinPath = skin; requestedCapePath = cape }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0.035f, 0.025f, 0.055f, 1f)
@@ -111,6 +126,9 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
         normalHandle = GLES20.glGetAttribLocation(program, "aNormal")
         matrixHandle = GLES20.glGetUniformLocation(program, "uMvp")
         colorHandle = GLES20.glGetUniformLocation(program, "uColor")
+        texCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
+        samplerHandle = GLES20.glGetUniformLocation(program, "uTexture")
+        useTextureHandle = GLES20.glGetUniformLocation(program, "uUseTexture")
 
         // 24 vertices (four per face) keep hard cube edges and correct face normals.
         val faces = arrayOf(
@@ -143,6 +161,7 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
             .asFloatBuffer().apply { put(data); position(0) }
         indices = ByteBuffer.allocateDirect(ix.size * 2).order(ByteOrder.nativeOrder())
             .asShortBuffer().apply { put(ix); position(0) }
+        texCoords = ByteBuffer.allocateDirect(24 * 2 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
     }
 
     private fun compile(type: Int, source: String): Int {
@@ -177,23 +196,23 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
         val accent = cosmeticColor(cosmetic)
         val t = System.nanoTime() / 1_000_000_000f
 
-        // Detailed player mannequin: layered torso, collar, limbs, face, hair and boots.
-        draw(0f, 1.08f, 0f, .62f, .78f, .34f, shirt)
-        draw(0f, 1.49f, 0f, .48f, .12f, .37f, accent)
-        draw(-.35f, 1.10f, 0f, .18f, .74f, .28f, skin, 0f, 0f, -3f)
-        draw(.35f, 1.10f, 0f, .18f, .74f, .28f, skin, 0f, 0f, 3f)
-        draw(-.35f, .70f, .02f, .20f, .20f, .30f, metal)
-        draw(.35f, .70f, .02f, .20f, .20f, .30f, metal)
-        draw(-.17f, .38f, 0f, .25f, .68f, .30f, pants)
-        draw(.17f, .38f, 0f, .25f, .68f, .30f, pants)
-        draw(-.17f, .06f, .07f, .28f, .15f, .39f, floatArrayOf(.075f,.065f,.085f,1f))
-        draw(.17f, .06f, .07f, .28f, .15f, .39f, floatArrayOf(.075f,.065f,.085f,1f))
-        draw(0f, 1.72f, 0f, .48f, .48f, .42f, skin)
-        draw(0f, 1.94f, -.005f, .49f, .15f, .43f, floatArrayOf(.18f,.11f,.075f,1f))
-        draw(-.12f, 1.72f, .214f, .045f, .055f, .025f, floatArrayOf(.12f,.10f,.12f,1f))
-        draw(.12f, 1.72f, .214f, .045f, .055f, .025f, floatArrayOf(.12f,.10f,.12f,1f))
-        draw(0f, 1.62f, .218f, .09f, .035f, .025f, floatArrayOf(.45f,.20f,.16f,1f))
-
+        // Minecraft-proportioned block player. Uploaded PNG atlases are mapped onto every body part.
+        if (skinTexture != 0) {
+            drawSkinBox(0f,1.77f,0f,.25f,.25f,.25f,HEAD_UV,skinTexture,64,64)
+            drawSkinBox(0f,1.10f,0f,.25f,.375f,.125f,TORSO_UV,skinTexture,64,64)
+            drawSkinBox(-.34f,1.10f,0f,.125f,.375f,.125f,RIGHT_ARM_UV,skinTexture,64,64)
+            drawSkinBox(.34f,1.10f,0f,.125f,.375f,.125f,LEFT_ARM_UV,skinTexture,64,64)
+            drawSkinBox(-.125f,.375f,0f,.125f,.375f,.125f,RIGHT_LEG_UV,skinTexture,64,64)
+            drawSkinBox(.125f,.375f,0f,.125f,.375f,.125f,LEFT_LEG_UV,skinTexture,64,64)
+        } else {
+            draw(0f,1.77f,0f,.25f,.25f,.25f,skin)
+            draw(0f,1.10f,0f,.25f,.375f,.125f,shirt)
+            draw(-.34f,1.10f,0f,.125f,.375f,.125f,skin)
+            draw(.34f,1.10f,0f,.125f,.375f,.125f,skin)
+            draw(-.125f,.375f,0f,.125f,.375f,.125f,pants)
+            draw(.125f,.375f,0f,.125f,.375f,.125f,pants)
+        }
+        if (capeTexture != 0) drawSkinBox(0f,1.08f,-.155f,.31f,.46f,.025f,CAPE_UV,capeTexture,64,32)
         when {
             cosmetic.endsWith("_cape") || cosmetic.contains("cape") -> drawCape(accent, t)
             cosmetic.contains("wing") || cosmetic.contains("glider") -> drawWings(accent, t, cosmetic)
@@ -210,6 +229,64 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
                 cosmetic.contains("pulse") || cosmetic.contains("burst") || cosmetic.contains("footsteps") -> drawAura(accent, t)
             else -> drawSignatureGear(accent, cosmetic)
         }
+    }
+
+    private fun refreshTexture(path: String?, isSkin: Boolean) {
+        val loaded = if (isSkin) loadedSkinPath else loadedCapePath
+        if (path == loaded) return
+        val old = if (isSkin) skinTexture else capeTexture
+        if (old != 0) GLES20.glDeleteTextures(1, intArrayOf(old), 0)
+        val texture = if (path.isNullOrBlank() || !File(path).isFile) 0 else runCatching {
+            val bitmap = BitmapFactory.decodeFile(path) ?: return@runCatching 0
+            val ids = IntArray(1)
+            GLES20.glGenTextures(1, ids, 0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, ids[0])
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MIN_FILTER,GLES20.GL_NEAREST)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MAG_FILTER,GLES20.GL_NEAREST)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_S,GLES20.GL_CLAMP_TO_EDGE)
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_T,GLES20.GL_CLAMP_TO_EDGE)
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D,0,bitmap,0)
+            bitmap.recycle()
+            ids[0]
+        }.getOrDefault(0)
+        if (isSkin) { skinTexture=texture; loadedSkinPath=path } else { capeTexture=texture; loadedCapePath=path }
+    }
+
+    private fun drawSkinBox(x:Float,y:Float,z:Float,sx:Float,sy:Float,sz:Float,uv:FloatArray,texture:Int,tw:Int,th:Int) {
+        val coords=FloatArray(48)
+        for(face in 0 until 6) {
+            val p=face*4
+            val l=uv[face*4]/tw; val top=uv[face*4+1]/th
+            val r=uv[face*4+2]/tw; val bottom=uv[face*4+3]/th
+            val vTop=1f-top; val vBottom=1f-bottom
+            val values=floatArrayOf(l,vBottom,r,vBottom,r,vTop,l,vTop)
+            for(i in 0 until 8) coords[face*8+i]=values[i]
+        }
+        texCoords.clear();texCoords.put(coords);texCoords.position(0)
+        Matrix.setIdentityM(part,0);Matrix.translateM(part,0,x,y,z);Matrix.scaleM(part,0,sx,sy,sz)
+        Matrix.multiplyMM(vp,0,model,0,part,0)
+        Matrix.multiplyMM(mvp,0,projection,0,view,0);Matrix.multiplyMM(mvp,0,mvp,0,vp,0)
+        GLES20.glUniformMatrix4fv(matrixHandle,1,false,mvp,0)
+        GLES20.glUniform1i(useTextureHandle,1);GLES20.glUniform1i(samplerHandle,0)
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,texture)
+        vertices.position(0);GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glVertexAttribPointer(positionHandle,3,GLES20.GL_FLOAT,false,24,vertices)
+        vertices.position(3);GLES20.glEnableVertexAttribArray(normalHandle)
+        GLES20.glVertexAttribPointer(normalHandle,3,GLES20.GL_FLOAT,false,24,vertices)
+        GLES20.glEnableVertexAttribArray(texCoordHandle)
+        GLES20.glVertexAttribPointer(texCoordHandle,2,GLES20.GL_FLOAT,false,0,texCoords)
+        vertices.position(0);indices.position(0);GLES20.glDrawElements(GLES20.GL_TRIANGLES,36,GLES20.GL_UNSIGNED_SHORT,indices)
+        GLES20.glUniform1i(useTextureHandle,0)
+    }
+
+    companion object {
+        private val HEAD_UV=floatArrayOf(8f,8f,16f,16f, 24f,8f,32f,16f, 0f,8f,8f,16f, 16f,8f,24f,16f, 8f,0f,16f,8f, 16f,0f,24f,8f)
+        private val TORSO_UV=floatArrayOf(20f,20f,28f,32f, 32f,20f,40f,32f, 16f,20f,20f,32f, 28f,20f,32f,32f, 20f,16f,28f,20f, 28f,16f,36f,20f)
+        private val RIGHT_ARM_UV=floatArrayOf(44f,20f,48f,32f, 52f,20f,56f,32f, 40f,20f,44f,32f, 48f,20f,52f,32f, 44f,16f,48f,20f, 48f,16f,52f,20f)
+        private val LEFT_ARM_UV=floatArrayOf(36f,52f,40f,64f, 44f,52f,48f,64f, 32f,52f,36f,64f, 40f,52f,44f,64f, 36f,48f,40f,52f, 40f,48f,44f,52f)
+        private val RIGHT_LEG_UV=floatArrayOf(4f,20f,8f,32f, 12f,20f,16f,32f, 0f,20f,4f,32f, 8f,20f,12f,32f, 4f,16f,8f,20f, 8f,16f,12f,20f)
+        private val LEFT_LEG_UV=floatArrayOf(20f,52f,24f,64f, 28f,52f,32f,64f, 16f,52f,20f,64f, 24f,52f,28f,64f, 20f,48f,24f,52f, 24f,48f,28f,52f)
+        private val CAPE_UV=floatArrayOf(0f,1f,1f,17f, 12f,1f,22f,17f, 0f,1f,1f,17f, 11f,1f,12f,17f, 1f,0f,11f,1f, 11f,0f,21f,1f)
     }
 
     private fun drawCape(c: FloatArray, t: Float) {
@@ -357,6 +434,7 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
         Matrix.multiplyMM(mvp, 0, projection, 0, view, 0)
         Matrix.multiplyMM(mvp, 0, mvp, 0, vp, 0)
         GLES20.glUniformMatrix4fv(matrixHandle, 1, false, mvp, 0)
+        GLES20.glUniform1i(useTextureHandle, 0)
         GLES20.glUniform4fv(colorHandle, 1, color, 0)
         vertices.position(0)
         GLES20.glEnableVertexAttribArray(positionHandle)
