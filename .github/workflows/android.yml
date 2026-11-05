@@ -46,12 +46,19 @@ jobs:
             # 1.21.1-1.21.8 use the legacy Identifier-based SkinTextures API.
             # 1.21.9+ moved SkinTextures to entity.player and uses AssetInfo.
             # Select a source implementation matching each version's mapped API.
+            if [ "$MINOR" -eq 2 ]; then
+              cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
+              # 1.21.2 retains the legacy SkinTextures API; re-enable its mixin
+              # because the modern base config intentionally omits that class.
+              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c.append("LocalPlayerSkinMixin") if "LocalPlayerSkinMixin" not in c else None; p.write_text(json.dumps(d, indent=2)+"\\n")'
+            fi
             if [ "$MINOR" -ge 9 ]; then
               rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
-              if [ "$MINOR" -lt 11 ]; then
-                python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c.append("LocalPlayerSkinMixinModern") if "LocalPlayerSkinMixinModern" not in c else None; p.write_text(json.dumps(d, indent=2)+"\n")'
-              fi
+              # Remove the legacy entry before registering the modern mixin.
+              # Otherwise Mixin fails at launch because the deleted class remains
+              # listed in the JSON for 1.21.9 and 1.21.10.
+              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("LocalPlayerSkinMixin","LocalPlayerSkinMixinModern")]; c.append("LocalPlayerSkinMixinModern"); d["client"]=c; p.write_text(json.dumps(d, indent=2)+"\\n")'
             fi
             if [ "$MINOR" -eq 2 ]; then
               cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
