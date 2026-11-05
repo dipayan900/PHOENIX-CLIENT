@@ -103,7 +103,7 @@ fun PhoenixLocalCosmeticsScreen(context:Context,gameDir:File,accent:Color,panel:
    list.forEach{item->
     val active=equippedId(gameDir,type)==item.id
     Row(Modifier.fillMaxWidth().background(panel,RoundedCornerShape(14.dp)).padding(10.dp),verticalAlignment=Alignment.CenterVertically){
-     Column(Modifier.weight(1f)){Text(item.name,color=textColor,fontWeight=FontWeight.Bold);Text(if(active)"EQUIPPED" else if(type=="skin")"64×64 / legacy 64×32 · tap to preview" else "64×32 PNG · tap to preview",color=muted,fontSize=10.sp)}
+     Column(Modifier.weight(1f)){Text(item.name,color=textColor,fontWeight=FontWeight.Bold);Text(if(active)"EQUIPPED" else if(type=="skin")"64×64 / legacy 64×32 PNG · custom skin" else "64×32 PNG · custom cape",color=muted,fontSize=10.sp)}
      TextButton(onClick={runCatching{if(active)unequipLook(gameDir,type) else equipLook(gameDir,item);notice=if(active)"Unequipped." else "Equipped "+item.name+"."}.onFailure{notice=it.message?:"Action failed."}}){Text(if(active)"UNEQUIP" else "EQUIP",color=accent)}
      TextButton(onClick={runCatching{if(active)unequipLook(gameDir,type);File(File(lookRoot(gameDir),if(type=="skin")"skins" else "capes"),item.file).delete();val next=items.filterNot{it.id==item.id};saveLooks(gameDir,next);items.clear();items.addAll(next);notice="Deleted "+item.name+"."}.onFailure{notice=it.message?:"Delete failed."}}){Text("DELETE",color=muted)}
     }
