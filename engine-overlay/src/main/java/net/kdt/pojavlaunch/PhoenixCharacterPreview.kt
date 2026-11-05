@@ -98,20 +98,27 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
             attribute vec3 aPosition;
             attribute vec3 aNormal;
             uniform mat4 uMvp;
+            attribute vec2 aTexCoord;
+            varying vec2 vTexCoord;
             varying float vLight;
             void main() {
                 vec3 n = normalize(aNormal);
                 vec3 lightDir = normalize(vec3(-0.45, 0.82, 0.58));
                 vLight = 0.34 + 0.66 * max(dot(n, lightDir), 0.0);
+                vTexCoord = aTexCoord;
                 gl_Position = uMvp * vec4(aPosition, 1.0);
             }
         """.trimIndent())
         val fragmentShader = compile(GLES20.GL_FRAGMENT_SHADER, """
             precision mediump float;
             uniform vec4 uColor;
+            uniform sampler2D uTexture;
+            uniform int uUseTexture;
+            varying vec2 vTexCoord;
             varying float vLight;
             void main() {
-                gl_FragColor = vec4(uColor.rgb * vLight, uColor.a);
+                vec4 base = (uUseTexture == 1) ? texture2D(uTexture, vTexCoord) : uColor;
+                gl_FragColor = vec4(base.rgb * vLight, base.a);
             }
         """.trimIndent())
         program = GLES20.glCreateProgram().also {
@@ -185,6 +192,8 @@ private class PhoenixCharacterRenderer : GLSurfaceView.Renderer {
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        refreshTexture(requestedSkinPath, true)
+        refreshTexture(requestedCapePath, false)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         GLES20.glUseProgram(program)
         Matrix.setIdentityM(model, 0)
