@@ -79,9 +79,11 @@ public final class PhoenixLocalAppearance {
             texture.setImage(image);
             texture.upload();
 
-            Identifier id = MinecraftClient.getInstance()
-                    .getTextureManager()
-                    .registerDynamicTexture("phoenix_local_" + kind, texture);
+            // Use the stable registration API shared by the supported Yarn
+            // versions. The selected 1.21.11 mappings do not expose
+            // registerDynamicTexture on TextureManager.
+            Identifier id = Identifier.of("phoenix", "local_" + kind);
+            MinecraftClient.getInstance().getTextureManager().registerTexture(id, texture);
 
             CACHE.put(key, new Entry(modified, length, id));
             System.out.println("[Phoenix] Applied local " + kind
