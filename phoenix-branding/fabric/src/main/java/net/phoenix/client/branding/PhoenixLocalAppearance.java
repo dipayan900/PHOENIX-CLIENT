@@ -43,14 +43,16 @@ public final class PhoenixLocalAppearance {
             File file = new File(new File(gameDir, "phoenix/cosmetics/equipped"),
                     kind + ".png").getCanonicalFile();
 
+            // Clear cache on unequip. This guarantees that re-equipping the
+            // same PNG immediately reloads it even if size/timestamp are unchanged.
             if (!file.isFile() || file.length() < 8 || file.length() > 2_097_152L) {
+                CACHE.remove(kind);
                 return null;
             }
 
-            String key = kind + ":" + file.getAbsolutePath();
             long modified = file.lastModified();
             long length = file.length();
-            Entry cached = CACHE.get(key);
+            Entry cached = CACHE.get(kind);
             if (cached != null && cached.modified() == modified && cached.length() == length) {
                 return cached.id();
             }
@@ -74,6 +76,17 @@ public final class PhoenixLocalAppearance {
                         "Phoenix " + kind, image.getWidth(), image.getHeight(), true);
             }
 
+            boolean validDimensions = "skin".equals(kind)
+                    ? image.getWidth() == 64 && (image.getHeight() == 64 || image.getHeight() == 32)
+                    : image.getWidth() == 64 && image.getHeight() == 32;
+            if (!validDimensions) {
+                image.close();
+                CACHE.remove(kind);
+                System.err.println("[Phoenix] Rejected local " + kind
+                        + " texture with invalid dimensions: " + file);
+                return null;
+            }
+
             // Direct calls are remapped by Fabric Loom to the runtime's
             // intermediary names (method_4526 / method_4617).
             texture.setImage(image);
@@ -85,11 +98,12 @@ public final class PhoenixLocalAppearance {
             Identifier id = Identifier.of("phoenix", "local_" + kind);
             MinecraftClient.getInstance().getTextureManager().registerTexture(id, texture);
 
-            CACHE.put(key, new Entry(modified, length, id));
+            CACHE.put(kind, new Entry(modified, length, id));
             System.out.println("[Phoenix] Applied local " + kind
                     + " texture from " + file + " as " + id);
             return id;
         } catch (Throwable error) {
+            CACHE.remove(kind);
             System.err.println("[Phoenix] local " + kind
                     + " texture unavailable: " + error);
             error.printStackTrace();
