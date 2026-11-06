@@ -1,0 +1,371 @@
+package net.phoenix.client.branding;
+
+import net.fabricmc.loader.api.FabricLoader;
+
+import net.minecraft.client.model.ModelData;
+import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelPartData;
+import net.minecraft.client.model.ModelTransform;
+import net.minecraft.client.model.TexturedModelData;
+import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayers;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.entity.feature.FeatureRenderer;
+import net.minecraft.client.render.entity.feature.FeatureRendererContext;
+import net.minecraft.client.render.entity.model.PlayerEntityModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
+import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.NativeImageBackedTexture;
+import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.function.Supplier;
+
+/**
+ * Procedural, layered 3D cosmetic meshes.  Separate mesh layers and material
+ * textures give the accessories visible depth instead of one flat silhouette.
+ */
+public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<PlayerEntityRenderState, PlayerEntityModel> {
+    private static final Identifier LOCAL_CAPE_TEXTURE = Identifier.of("phoenix", "local_cape");
+    private static long localCapeFingerprint = Long.MIN_VALUE;
+    private static long localCapeLastCheckMillis;
+    private static boolean localCapeChecked;
+    private static boolean localCapeAvailable;
+
+    private final ModelPart cape, capeTrim, capeLining, customCape;
+    private final ModelPart leftWing, rightWing, leftFeathers, rightFeathers;
+    private final ModelPart headwear, crown, halo, visor, faceMask, horns;
+    private final ModelPart backpack, packDetails;
+    private final ModelPart tailBase, tailMid, tailTip;
+    private final ModelPart leftBracer, rightBracer, shoulderPet;
+
+    public PhoenixCosmeticFeatureRendererModern(FeatureRendererContext<PlayerEntityRenderState, PlayerEntityModel> context) {
+        super(context);
+        ModelData data = new ModelData();
+        ModelPartData root = data.getRoot();
+
+        root.addChild("cape", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-5,0,0,10,15,1).cuboid(-4.5F,1,1,9,13,0.5F),
+                ModelTransform.of(0,0,2.2F, 0, 0, 0));
+        root.addChild("cape_trim", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-5.5F,0,0,1,16,1.5F).cuboid(4.5F,0,0,1,16,1.5F)
+                .cuboid(-5,15,0,10,1,1.5F), ModelTransform.of(0,0,2.2F, 0, 0, 0));
+        root.addChild("cape_lining", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-3.5F,2,1.1F,7,11,0.35F), ModelTransform.of(0,0,2.2F, 0, 0, 0));
+
+        root.addChild("left_wing", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-1,-2,-1,4,7,2).cuboid(0,1,-0.7F,5,8,1.4F)
+                .cuboid(2,5,-0.5F,5,7,1), ModelTransform.of(-4.5F,0,2, 0, 0, 0));
+        root.addChild("right_wing", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-3,-2,-1,4,7,2).cuboid(-5,1,-0.7F,5,8,1.4F)
+                .cuboid(-7,5,-0.5F,5,7,1), ModelTransform.of(4.5F,0,2, 0, 0, 0));
+        // Individually layered feather vanes create a visibly dimensional fan,
+        // rather than a single flat wing silhouette. Each feather has its own
+        // volume and sits at a slightly different depth.
+        root.addChild("left_feathers", ModelPartBuilder.create().uv(0,0)
+                .cuboid(0,2,-1.2F,2,8,1.8F).cuboid(2,3,-1.0F,2,9,1.7F)
+                .cuboid(4,4,-0.8F,2,9,1.6F).cuboid(6,5,-0.6F,2,8,1.5F)
+                .cuboid(8,7,-0.4F,2,7,1.4F).cuboid(1,8,-1.4F,2,7,1.8F)
+                .cuboid(3,10,-1.2F,2,7,1.7F).cuboid(5,11,-1.0F,2,6,1.6F)
+                .cuboid(7,12,-0.8F,2,5,1.5F).cuboid(9,13,-0.6F,2,4,1.4F)
+                .cuboid(-1,5,-0.8F,2,6,1.5F),
+                ModelTransform.of(-4.5F,0,2, 0, 0, 0));
+        root.addChild("right_feathers", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-2,2,-1.2F,2,8,1.8F).cuboid(-4,3,-1.0F,2,9,1.7F)
+                .cuboid(-6,4,-0.8F,2,9,1.6F).cuboid(-8,5,-0.6F,2,8,1.5F)
+                .cuboid(-10,7,-0.4F,2,7,1.4F).cuboid(-3,8,-1.4F,2,7,1.8F)
+                .cuboid(-5,10,-1.2F,2,7,1.7F).cuboid(-7,11,-1.0F,2,6,1.6F)
+                .cuboid(-9,12,-0.8F,2,5,1.5F).cuboid(-11,13,-0.6F,2,4,1.4F)
+                .cuboid(-1,5,-0.8F,2,6,1.5F),
+                ModelTransform.of(4.5F,0,2, 0, 0, 0));
+
+        root.addChild("headwear", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-4.5F,-9,-4.5F,9,1,9).cuboid(-2,-11,-2,4,2,4),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+        root.addChild("crown", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-4.5F,-9,-4.5F,9,1,9)
+                .cuboid(-4,-12,-1,1.5F,3,1.5F).cuboid(-1,-13,-1,2,4,2)
+                .cuboid(2.5F,-12,-1,1.5F,3,1.5F),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+        root.addChild("halo", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-4.5F,-12,-0.5F,9,0.8F,1)
+                .cuboid(-0.5F,-12,-4.5F,1,0.8F,9)
+                .cuboid(-3.5F,-12,-3.5F,1,0.8F,1)
+                .cuboid(2.5F,-12,-3.5F,1,0.8F,1)
+                .cuboid(-3.5F,-12,2.5F,1,0.8F,1)
+                .cuboid(2.5F,-12,2.5F,1,0.8F,1),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+        root.addChild("visor", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-4,-6,-4.7F,8,2,1).cuboid(-3.5F,-5,-4.8F,7,1,0.8F),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+        root.addChild("face_mask", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-3,-4,-4.65F,6,3,1).cuboid(-2.5F,-3.5F,-4.9F,5,1,0.6F),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+        root.addChild("horns", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-4,-8,-1,2,3,2).cuboid(-4.5F,-11,-1,1.5F,3,1.5F)
+                .cuboid(2,-8,-1,2,3,2).cuboid(3,-11,-1,1.5F,3,1.5F),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+
+        root.addChild("backpack", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-4,-3,2.5F,8,8,3).cuboid(-2,-5,3,4,2,2),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+        root.addChild("pack_details", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-3.5F,-2,5.6F,7,1,0.6F).cuboid(-3.5F,2,5.6F,7,1,0.6F)
+                .cuboid(-1,-1,5.7F,2,3,0.7F),
+                ModelTransform.of(0,0,0, 0, 0, 0));
+
+        ModelPartData tail = root.addChild("tail_base", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-1,0,0,2,5,2), ModelTransform.of(0,0,3, 0, 0, 0));
+        ModelPartData mid = tail.addChild("tail_mid", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-1,0,0,2,5,2), ModelTransform.of(0,5,0, 0, 0, 0));
+        mid.addChild("tail_tip", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-1,0,0,2,4,2).cuboid(-1.5F,3,0,3,2,3),
+                ModelTransform.of(0,5,0, 0, 0, 0));
+        root.addChild("left_bracer", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-2,5,-2,4,3,4).cuboid(-1.5F,4.5F,-1.5F,3,1,3),
+                ModelTransform.of(-5,2,0, 0, 0, 0));
+        root.addChild("right_bracer", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-2,5,-2,4,3,4).cuboid(-1.5F,4.5F,-1.5F,3,1,3),
+                ModelTransform.of(5,2,0, 0, 0, 0));
+        root.addChild("shoulder_pet", ModelPartBuilder.create().uv(0,0)
+                .cuboid(-2,-3,-2,4,4,4).cuboid(-1,-5,-1,2,2,2)
+                .cuboid(-2.5F,0,-1,1,2,2).cuboid(1.5F,0,-1,1,2,2),
+                ModelTransform.of(5,-2,0, 0, 0, 0));
+
+        ModelPart model = TexturedModelData.of(data,16,16).createModel();
+        cape=model.getChild("cape"); capeTrim=model.getChild("cape_trim"); capeLining=model.getChild("cape_lining");
+        ModelData customCapeData = new ModelData();
+        customCapeData.getRoot().addChild("custom_cape",
+                ModelPartBuilder.create().uv(0,0).cuboid(-5,0,0,10,16,1),
+                ModelTransform.of(0,0,2.2F, 0, 0, 0));
+        customCape = TexturedModelData.of(customCapeData,64,32).createModel().getChild("custom_cape");
+        leftWing=model.getChild("left_wing"); rightWing=model.getChild("right_wing");
+        leftFeathers=model.getChild("left_feathers"); rightFeathers=model.getChild("right_feathers");
+        headwear=model.getChild("headwear"); crown=model.getChild("crown"); halo=model.getChild("halo");
+        visor=model.getChild("visor"); faceMask=model.getChild("face_mask"); horns=model.getChild("horns");
+        backpack=model.getChild("backpack"); packDetails=model.getChild("pack_details");
+        tailBase=model.getChild("tail_base"); tailMid=tailBase.getChild("tail_mid"); tailTip=tailMid.getChild("tail_tip");
+        leftBracer=model.getChild("left_bracer"); rightBracer=model.getChild("right_bracer");
+        shoulderPet=model.getChild("shoulder_pet");
+    }
+
+    /**
+     * Resolve the currently equipped PNG from this Minecraft profile. The
+     * source image is kept at its original HD dimensions; the standard 64x32
+     * cape UV atlas scales proportionally for 128x64 through 1024x512.
+     */
+    private static Identifier loadLocalCapeTexture() {
+        long now = System.currentTimeMillis();
+        if (localCapeChecked && now - localCapeLastCheckMillis < 1000L) {
+            return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
+        }
+        localCapeLastCheckMillis = now;
+        Path capePath = FabricLoader.getInstance().getGameDir()
+                .resolve("phoenix").resolve("cosmetics").resolve("equipped").resolve("cape.png");
+        if (!Files.isRegularFile(capePath)) {
+            localCapeChecked = true;
+            localCapeFingerprint = Long.MIN_VALUE;
+            localCapeAvailable = false;
+            return null;
+        }
+
+        NativeImage image = null;
+        long fingerprint = Long.MIN_VALUE;
+        try {
+            fingerprint = Files.getLastModifiedTime(capePath).toMillis() * 31L
+                    + Files.size(capePath) + capePath.toAbsolutePath().toString().hashCode();
+            if (localCapeChecked && fingerprint == localCapeFingerprint) {
+                return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
+            }
+            try (InputStream input = Files.newInputStream(capePath)) {
+                image = NativeImage.read(input);
+            }
+            int width = image.getWidth();
+            int height = image.getHeight();
+            boolean valid = width >= 64 && width <= 1024 && height >= 32 && height <= 512
+                    && width % 64 == 0 && height % 32 == 0 && width / 64 == height / 32;
+            if (!valid) {
+                image.close();
+                image = null;
+                localCapeChecked = true;
+                localCapeFingerprint = fingerprint;
+                localCapeAvailable = false;
+                return null;
+            }
+            AbstractTexture texture = createNativeImageTexture(image);
+            image = null;
+            MinecraftClient.getInstance().getTextureManager().registerTexture(LOCAL_CAPE_TEXTURE, texture);
+            localCapeFingerprint = fingerprint;
+            localCapeChecked = true;
+            localCapeAvailable = true;
+            return LOCAL_CAPE_TEXTURE;
+        } catch (Exception error) {
+            if (image != null) image.close();
+            localCapeChecked = true;
+            localCapeAvailable = false;
+            localCapeFingerprint = fingerprint;
+            System.err.println("[Phoenix Client] Could not load local cape texture: " + error.getMessage());
+            return null;
+        }
+    }
+
+    private static AbstractTexture createNativeImageTexture(NativeImage image) throws Exception {
+        for (Constructor<?> constructor : NativeImageBackedTexture.class.getDeclaredConstructors()) {
+            Class<?>[] parameters = constructor.getParameterTypes();
+            constructor.setAccessible(true);
+            if (parameters.length == 1 && parameters[0].isAssignableFrom(NativeImage.class)) {
+                return (AbstractTexture) constructor.newInstance(image);
+            }
+            if (parameters.length == 2 && parameters[1].isAssignableFrom(NativeImage.class)) {
+                Object name = null;
+                if (parameters[0] == String.class) {
+                    name = "Phoenix local cape";
+                } else if (parameters[0].isAssignableFrom(Supplier.class)) {
+                    name = (Supplier<String>) () -> "Phoenix local cape";
+                }
+                if (name != null) return (AbstractTexture) constructor.newInstance(name, image);
+            }
+            if (parameters.length == 2 && parameters[0].isAssignableFrom(NativeImage.class)
+                    && (parameters[1] == boolean.class || parameters[1] == Boolean.class)) {
+                return (AbstractTexture) constructor.newInstance(image, true);
+            }
+        }
+        throw new IllegalStateException("No compatible NativeImageBackedTexture constructor was found.");
+    }
+
+    private static Identifier texture(String colour) {
+        return Identifier.of("minecraft","textures/block/"+colour+"_wool.png");
+    }
+    private static Identifier capeTexture(String id) {
+        return switch(id) {
+            case "frost_cape","ocean_cape" -> texture("light_blue");
+            case "nebula_cape","shadow_cape","galaxy_cape" -> texture("purple");
+            case "royal_cape","crimson_cape" -> texture("red");
+            case "aurora_cape" -> texture("lime");
+            case "moss_cape" -> texture("green");
+            case "royal_guard_cape" -> texture("yellow");
+            default -> texture("orange");
+        };
+    }
+    private static Identifier wingTexture(String id) {
+        return switch(id) {
+            case "frost_wings","celestial_wings","fairy_wings" -> texture("light_blue");
+            case "void_wings","dragon_wings" -> texture("purple");
+            case "pixel_glider" -> texture("white");
+            case "bat_wings" -> texture("black");
+            case "mechanical_wings" -> texture("gray");
+            default -> texture("orange");
+        };
+    }
+    private static Identifier detailTexture(String id) {
+        if (id.contains("frost") || id.contains("ice") || id.contains("celestial")) return texture("white");
+        if (id.contains("void") || id.contains("shadow") || id.contains("galaxy")) return texture("black");
+        if (id.contains("mechanical") || id.contains("robot")) return texture("light_gray");
+        if (id.contains("ocean") || id.contains("lunar") || id.contains("cyber")) return texture("cyan");
+        if (id.contains("royal") || id.contains("crimson") || id.contains("inferno")) return texture("yellow");
+        return texture("yellow");
+    }
+    private static Identifier headTexture(String id) {
+        return switch(id) {
+            case "starlight_halo","wizard_hat" -> texture("purple");
+            case "cyber_visor","respirator" -> texture("cyan");
+            case "cat_ears" -> texture("pink");
+            case "horns","pixel_shades" -> texture("black");
+            case "samurai_helmet","oni_mask","scarf_red" -> texture("red");
+            case "crown_ice" -> texture("light_blue");
+            case "astronaut_helmet" -> texture("gray");
+            case "fox_mask" -> texture("orange");
+            case "halo_lunar" -> texture("white");
+            default -> texture("yellow");
+        };
+    }
+
+    @Override public void render(MatrixStack matrices, OrderedRenderCommandQueue queue, int light,
+            PlayerEntityRenderState state, float limbAngle, float limbDistance) {
+        var world = MinecraftClient.getInstance().world;
+        if (world == null || state.invisible) return;
+        var entity = world.getEntityById(state.id);
+        if (!(entity instanceof AbstractClientPlayerEntity player)) return;
+        PhoenixLoadoutState.Loadout l=PhoenixLoadoutState.get(player.getUuid());
+        Identifier uploadedCape = player == MinecraftClient.getInstance().player
+                ? loadLocalCapeTexture() : null;
+        if (uploadedCape != null || (l != null && !l.cape().isEmpty())) {
+            matrices.push();
+            float sway=(float)Math.sin(state.age*0.08F);
+            float pitch=0.08F+sway*0.035F+Math.min(0.5F,limbDistance*0.12F);
+            if (uploadedCape != null) {
+                customCape.pitch=pitch;
+                customCape.yaw=0;
+                customCape.roll=sway*0.025F;
+                queue.submitModelPart(customCape, matrices, RenderLayers.entityCutoutNoCull(uploadedCape), light, OverlayTexture.DEFAULT_UV, null);
+            } else {
+                cape.pitch=pitch;
+                cape.yaw=0; cape.roll=sway*0.025F;
+                queue.submitModelPart(cape, matrices, RenderLayers.entityCutoutNoCull(capeTexture(l.cape())), light, OverlayTexture.DEFAULT_UV, null);
+                queue.submitModelPart(capeTrim, matrices, RenderLayers.entityCutoutNoCull(detailTexture(l.cape())), light, OverlayTexture.DEFAULT_UV, null);
+                queue.submitModelPart(capeLining, matrices, RenderLayers.entityCutoutNoCull(texture("white")), light, OverlayTexture.DEFAULT_UV, null);
+            }
+            matrices.pop();
+        }
+        if(l==null) return;
+        if(!l.wings().isEmpty()) {
+            matrices.push();
+            float flap=(float)Math.sin(state.age*0.18F)*0.32F;
+            leftWing.roll=-0.18F-flap; rightWing.roll=0.18F+flap;
+            leftFeathers.roll=leftWing.roll*0.82F; rightFeathers.roll=rightWing.roll*0.82F;
+            leftWing.pitch=0.04F; rightWing.pitch=0.04F;
+            queue.submitModelPart(leftWing, matrices, RenderLayers.entityCutoutNoCull(wingTexture(l.wings())), light, OverlayTexture.DEFAULT_UV, null);
+            queue.submitModelPart(rightWing, matrices, RenderLayers.entityCutoutNoCull(wingTexture(l.wings())), light, OverlayTexture.DEFAULT_UV, null);
+            queue.submitModelPart(leftFeathers, matrices, RenderLayers.entityCutoutNoCull(detailTexture(l.wings())), light, OverlayTexture.DEFAULT_UV, null);
+            queue.submitModelPart(rightFeathers, matrices, RenderLayers.entityCutoutNoCull(detailTexture(l.wings())), light, OverlayTexture.DEFAULT_UV, null);
+            matrices.pop();
+        }
+        if(!l.head().isEmpty()) {
+            matrices.push();
+            String id=l.head();
+            var layer=RenderLayers.entityCutoutNoCull(headTexture(id));
+            if(id.contains("halo")) {
+                halo.yaw=state.age*0.035F;
+                queue.submitModelPart(halo, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+            } else if(id.contains("crown")) {
+                queue.submitModelPart(crown, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+            } else if(id.contains("horn")) {
+                queue.submitModelPart(horns, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+            } else if(id.contains("visor") || id.contains("shades")) {
+                queue.submitModelPart(visor, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+            } else if(id.contains("mask") || id.contains("respirator")) {
+                queue.submitModelPart(faceMask, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+            } else {
+                queue.submitModelPart(headwear, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+            }
+            matrices.pop();
+        }
+        if(!l.back().isEmpty()) {
+            matrices.push();
+            String id=l.back();
+            if(id.endsWith("_tail")) {
+                float sway=(float)Math.sin(state.age*0.16F);
+                tailBase.roll=sway*0.18F; tailMid.roll=sway*0.28F+0.12F; tailTip.roll=sway*0.38F+0.2F;
+                queue.submitModelPart(tailBase, matrices, RenderLayers.entityCutoutNoCull(id.equals("fox_tail")?texture("orange"):texture("red")), light, OverlayTexture.DEFAULT_UV, null);
+            } else if(id.equals("robot_arm") || id.equals("crystal_bracers")) {
+                var layer=RenderLayers.entityCutoutNoCull(id.equals("robot_arm")?texture("gray"):texture("light_blue"));
+                queue.submitModelPart(leftBracer, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+                queue.submitModelPart(rightBracer, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
+            } else if(id.startsWith("shoulder_")) {
+                queue.submitModelPart(shoulderPet, matrices, RenderLayers.entityCutoutNoCull(texture("orange")), light, OverlayTexture.DEFAULT_UV, null);
+            } else {
+                queue.submitModelPart(backpack, matrices, RenderLayers.entityCutoutNoCull(texture("brown")), light, OverlayTexture.DEFAULT_UV, null);
+                queue.submitModelPart(packDetails, matrices, RenderLayers.entityCutoutNoCull(texture("yellow")), light, OverlayTexture.DEFAULT_UV, null);
+            }
+            matrices.pop();
+        }
+    }
+}
+}
