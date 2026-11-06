@@ -1,5 +1,7 @@
 package net.phoenix.client.branding;
 
+import net.fabricmc.loader.api.FabricLoader;
+
 import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.model.ModelPartBuilder;
