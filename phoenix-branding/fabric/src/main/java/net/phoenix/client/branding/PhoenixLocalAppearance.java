@@ -67,7 +67,10 @@ public final class PhoenixLocalAppearance {
             Class<?>[] p = constructor.getParameterTypes();
             if (p.length == 1 && p[0] == NativeImage.class) {
                 constructor.setAccessible(true);
-                return (NativeImageBackedTexture) constructor.newInstance(image);
+                NativeImageBackedTexture texture =
+                        (NativeImageBackedTexture) constructor.newInstance(image);
+                texture.upload();
+                return texture;
             }
             if (p.length == 2 && p[1] == NativeImage.class) {
                 Object name = null;
@@ -78,7 +81,10 @@ public final class PhoenixLocalAppearance {
                 }
                 if (name != null) {
                     constructor.setAccessible(true);
-                    return (NativeImageBackedTexture) constructor.newInstance(name, image);
+                    NativeImageBackedTexture texture =
+                            (NativeImageBackedTexture) constructor.newInstance(name, image);
+                    texture.upload();
+                    return texture;
                 }
             }
         }
