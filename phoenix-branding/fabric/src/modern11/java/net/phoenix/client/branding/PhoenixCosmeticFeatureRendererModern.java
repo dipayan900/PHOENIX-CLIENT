@@ -354,6 +354,8 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
                 float sway=(float)Math.sin(state.age*0.16F);
                 tailBase.roll=sway*0.18F; tailMid.roll=sway*0.28F+0.12F; tailTip.roll=sway*0.38F+0.2F;
                 queue.submitModelPart(tailBase, matrices, RenderLayers.entityCutoutNoCull(id.equals("fox_tail")?texture("orange"):texture("red")), light, OverlayTexture.DEFAULT_UV, null);
+                queue.submitModelPart(tailMid, matrices, RenderLayers.entityCutoutNoCull(id.equals("fox_tail")?texture("orange"):texture("red")), light, OverlayTexture.DEFAULT_UV, null);
+                queue.submitModelPart(tailTip, matrices, RenderLayers.entityCutoutNoCull(id.equals("fox_tail")?texture("orange"):texture("red")), light, OverlayTexture.DEFAULT_UV, null);
             } else if(id.equals("robot_arm") || id.equals("crystal_bracers")) {
                 var layer=RenderLayers.entityCutoutNoCull(id.equals("robot_arm")?texture("gray"):texture("light_blue"));
                 queue.submitModelPart(leftBracer, matrices, layer, light, OverlayTexture.DEFAULT_UV, null);
