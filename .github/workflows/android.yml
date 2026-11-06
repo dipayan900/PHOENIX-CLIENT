@@ -123,6 +123,19 @@ jobs:
             done
             unzip -p "$JAR" phoenix_branding.mixins.json | grep -Fq '"ScreenAccessorMixin"'
             python3 -c 'import json,sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); c=json.loads(z.read("phoenix_branding.mixins.json")); p=c["package"].replace(".","/").rstrip("/"); missing=[f"{p}/{m.replace(chr(46), chr(47))}.class" for m in c.get("client",[]) if f"{p}/{m.replace(chr(46), chr(47))}.class" not in z.namelist()]; assert not missing, "Mixin classes missing from Phoenix adapter: "+", ".join(missing)' "$JAR"
+            if [ "$MINOR" -ge 2 ]; then
+              grep -Fxq 'net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              grep -Fxq 'net/phoenix/client/branding/mixin/LivingEntityRendererAccessor.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              unzip -p "$JAR" phoenix_branding.mixins.json | grep -Fq '"LivingEntityRendererAccessor"'
+            fi
+            if [ "$MINOR" -ge 9 ]; then
+              grep -Fxq 'net/phoenix/client/branding/PhoenixLocalAppearance.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              grep -Fxq 'net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              javap -classpath "$JAR" -p net.phoenix.client.branding.PhoenixLocalAppearance > "$RUNNER_TEMP/phoenix-local-appearance.txt"
+              grep -Fq 'skin();' "$RUNNER_TEMP/phoenix-local-appearance.txt"
+              grep -Fq 'cape();' "$RUNNER_TEMP/phoenix-local-appearance.txt"
+              echo "Verified local skin and cape texture loader is packaged for $MC_VERSION."
+            fi
             if [ "$MINOR" -eq 11 ]; then
               javap -classpath "$JAR" -p net.phoenix.client.branding.mixin.EntityRendererMixin > "$RUNNER_TEMP/phoenix-entity-renderer-mixin.txt"
               grep -F 'phoenix$showLivingHealthLabels(' "$RUNNER_TEMP/phoenix-entity-renderer-mixin.txt" | grep -Fq 'double'
