@@ -1,5 +1,7 @@
 package net.phoenix.client.branding;
 
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.model.ModelPartBuilder;
@@ -8,6 +10,9 @@ import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.model.TexturedModelData;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.FeatureRenderer;
@@ -16,12 +21,23 @@ import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 
+import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.function.Supplier;
+
 /**
  * Procedural, layered 3D cosmetic meshes.  Separate mesh layers and material
  * textures give the accessories visible depth instead of one flat silhouette.
  */
 public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>> {
-    private final ModelPart cape, capeTrim, capeLining;
+    private static final Identifier LOCAL_CAPE_TEXTURE = Identifier.of("phoenix", "local_cape");
+    private static long localCapeFingerprint = Long.MIN_VALUE;
+    private static boolean localCapeChecked;
+    private static boolean localCapeAvailable;
+
+    private final ModelPart cape, capeTrim, capeLining, customCape;
     private final ModelPart leftWing, rightWing, leftFeathers, rightFeathers;
     private final ModelPart headwear, crown, halo, visor, faceMask, horns;
     private final ModelPart backpack, packDetails;
@@ -123,6 +139,14 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
 
         ModelPart model = TexturedModelData.of(data,16,16).createModel();
         cape=model.getChild("cape"); capeTrim=model.getChild("cape_trim"); capeLining=model.getChild("cape_lining");
+
+        // Minecraft's standard cape UV atlas is 64x32. UVs are normalized by
+        // the texture dimensions, so 2:1 HD variants retain the same mapping.
+        ModelData customCapeData = new ModelData();
+        customCapeData.getRoot().addChild("custom_cape",
+                ModelPartBuilder.create().uv(0,0).cuboid(-5,0,0,10,16,1),
+                ModelTransform.pivot(0,0,2.2F));
+        customCape = TexturedModelData.of(customCapeData,64,32).createModel().getChild("custom_cape");
         leftWing=model.getChild("left_wing"); rightWing=model.getChild("right_wing");
         leftFeathers=model.getChild("left_feathers"); rightFeathers=model.getChild("right_feathers");
         headwear=model.getChild("headwear"); crown=model.getChild("crown"); halo=model.getChild("halo");
@@ -135,6 +159,91 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
 
     private static Identifier texture(String colour) {
         return Identifier.of("minecraft","textures/block/"+colour+"_wool.png");
+    }
+
+    /**
+     * Load the equipped local cape directly from the active game directory.
+     * The PNG is never resized or recompressed. A fingerprint avoids decoding
+     * the image every frame, and invalid files safely fall back to the normal
+     * Phoenix cosmetic cape.
+     */
+    private static Identifier loadLocalCapeTexture() {
+        Path capePath = FabricLoader.getInstance().getGameDir()
+                .resolve("phoenix").resolve("cosmetics").resolve("equipped").resolve("cape.png");
+        if (!Files.isRegularFile(capePath)) {
+            localCapeChecked = true;
+            localCapeFingerprint = Long.MIN_VALUE;
+            localCapeAvailable = false;
+            return null;
+        }
+
+        NativeImage image = null;
+        try {
+            long fingerprint = Files.getLastModifiedTime(capePath).toMillis() * 31L + Files.size(capePath);
+            if (localCapeChecked && fingerprint == localCapeFingerprint) {
+                return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
+            }
+
+            try (InputStream input = Files.newInputStream(capePath)) {
+                image = NativeImage.read(input);
+            }
+            int width = image.getWidth();
+            int height = image.getHeight();
+            boolean valid = width >= 64 && width <= 1024 && height >= 32 && height <= 512
+                    && width % 64 == 0 && height % 32 == 0 && width / 64 == height / 32;
+            if (!valid) {
+                image.close();
+                image = null;
+                localCapeChecked = true;
+                localCapeFingerprint = fingerprint;
+                localCapeAvailable = false;
+                return null;
+            }
+
+            AbstractTexture texture = createNativeImageTexture(image);
+            image = null; // NativeImageBackedTexture owns the image from here.
+            MinecraftClient.getInstance().getTextureManager().registerTexture(LOCAL_CAPE_TEXTURE, texture);
+            localCapeFingerprint = fingerprint;
+            localCapeChecked = true;
+            localCapeAvailable = true;
+            return LOCAL_CAPE_TEXTURE;
+        } catch (Exception error) {
+            if (image != null) image.close();
+            localCapeChecked = true;
+            localCapeAvailable = false;
+            localCapeFingerprint = Long.MIN_VALUE;
+            System.err.println("[Phoenix Client] Could not load local cape texture: " + error.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * NativeImageBackedTexture's constructor changed between supported
+     * Minecraft mappings. Resolve the compatible constructor reflectively so
+     * one source adapter can build against the full 1.21.1-1.21.11 range.
+     */
+    private static AbstractTexture createNativeImageTexture(NativeImage image) throws Exception {
+        for (Constructor<?> constructor : NativeImageBackedTexture.class.getDeclaredConstructors()) {
+            Class<?>[] parameters = constructor.getParameterTypes();
+            constructor.setAccessible(true);
+            if (parameters.length == 1 && parameters[0].isAssignableFrom(NativeImage.class)) {
+                return (AbstractTexture) constructor.newInstance(image);
+            }
+            if (parameters.length == 2 && parameters[1].isAssignableFrom(NativeImage.class)) {
+                Object name = null;
+                if (parameters[0] == String.class) {
+                    name = "Phoenix local cape";
+                } else if (parameters[0].isAssignableFrom(Supplier.class)) {
+                    name = (Supplier<String>) () -> "Phoenix local cape";
+                }
+                if (name != null) return (AbstractTexture) constructor.newInstance(name, image);
+            }
+            if (parameters.length == 2 && parameters[0].isAssignableFrom(NativeImage.class)
+                    && (parameters[1] == boolean.class || parameters[1] == Boolean.class)) {
+                return (AbstractTexture) constructor.newInstance(image, true);
+            }
+        }
+        throw new IllegalStateException("No compatible NativeImageBackedTexture constructor was found.");
     }
     private static Identifier capeTexture(String id) {
         return switch(id) {
@@ -184,19 +293,30 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
             AbstractClientPlayerEntity player, float limbAngle, float limbDistance, float tickDelta,
             float animationProgress, float headYaw, float headPitch) {
         PhoenixLoadoutState.Loadout l=PhoenixLoadoutState.get(player.getUuid());
-        if(l==null || player.isInvisible()) return;
+        if(player.isInvisible()) return;
 
-        if(!l.cape().isEmpty()) {
+        Identifier uploadedCape = loadLocalCapeTexture();
+        String equippedCape = l == null ? "" : l.cape();
+        if(uploadedCape != null || !equippedCape.isEmpty()) {
             matrices.push();
             float sway=(float)Math.sin((player.age+tickDelta)*0.08F);
-            cape.pitch=0.08F+sway*0.035F+Math.min(0.5F,limbDistance*0.12F);
-            cape.yaw=0; cape.roll=sway*0.025F;
-            var base=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(capeTexture(l.cape())));
-            cape.render(matrices,base,light,OverlayTexture.DEFAULT_UV);
-            capeTrim.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(detailTexture(l.cape()))),light,OverlayTexture.DEFAULT_UV);
-            capeLining.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("white"))),light,OverlayTexture.DEFAULT_UV);
+            float pitch=0.08F+sway*0.035F+Math.min(0.5F,limbDistance*0.12F);
+            if(uploadedCape != null) {
+                customCape.pitch=pitch;
+                customCape.yaw=0;
+                customCape.roll=sway*0.025F;
+                customCape.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(uploadedCape)),light,OverlayTexture.DEFAULT_UV);
+            } else {
+                cape.pitch=pitch;
+                cape.yaw=0; cape.roll=sway*0.025F;
+                var base=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(capeTexture(equippedCape)));
+                cape.render(matrices,base,light,OverlayTexture.DEFAULT_UV);
+                capeTrim.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(detailTexture(equippedCape))),light,OverlayTexture.DEFAULT_UV);
+                capeLining.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("white"))),light,OverlayTexture.DEFAULT_UV);
+            }
             matrices.pop();
         }
+        if(l==null) return;
         if(!l.wings().isEmpty()) {
             matrices.push();
             float flap=(float)Math.sin((player.age+tickDelta)*0.18F)*0.32F;
