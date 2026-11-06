@@ -27,7 +27,7 @@ java { withSourcesJar(); toolchain { languageVersion = JavaLanguageVersion.of(21
 // The integrated 1.21.9+ adapters use the render-state API. Do not compile
 // legacy entity-model renderers/mixins alongside their modern replacements.
 if (project.hasProperty('phoenixIntegratedAdapters') &&
-        project.minecraft_version in ['1.21.9', '1.21.10', '1.21.11']) {
+        project.minecraft_version != '1.21.1') {
     sourceSets.main.java.exclude 'net/phoenix/client/branding/PhoenixCosmeticFeatureRenderer.java'
     sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityRendererMixin.java'
     sourceSets.main.java.exclude 'net/phoenix/client/branding/mixin/PlayerEntityModelEmoteMixin.java'
