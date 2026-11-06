@@ -11,7 +11,10 @@
     "ContainerPreviewTooltipMixin",
     "EntityRendererMixin",
     "PlayerEntityRendererMixinModern",
-    "LocalPlayerSkinMixinModern"
+    "LocalPlayerSkinMixinModern",
+    "LivingEntityRendererAccessor"
   ],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
