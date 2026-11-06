@@ -370,4 +370,3 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
         }
     }
 }
-}
