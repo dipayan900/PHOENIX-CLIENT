@@ -10,6 +10,7 @@
     "GameMenuScreenMixin",
     "ContainerPreviewTooltipMixin",
     "EntityRendererMixin",
+    "PlayerEntityRendererMixinModern",
     "LocalPlayerSkinMixinModern"
   ],
   "injectors": { "defaultRequire": 1 }
