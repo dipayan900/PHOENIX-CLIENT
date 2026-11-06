@@ -186,7 +186,8 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
         NativeImage image = null;
         long fingerprint = Long.MIN_VALUE;
         try {
-            fingerprint = Files.getLastModifiedTime(capePath).toMillis() * 31L + Files.size(capePath);
+            fingerprint = Files.getLastModifiedTime(capePath).toMillis() * 31L
+                    + Files.size(capePath) + capePath.toAbsolutePath().toString().hashCode();
             if (localCapeChecked && fingerprint == localCapeFingerprint) {
                 return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
             }
@@ -302,7 +303,10 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
         PhoenixLoadoutState.Loadout l=PhoenixLoadoutState.get(player.getUuid());
         if(player.isInvisible()) return;
 
-        Identifier uploadedCape = loadLocalCapeTexture();
+        // Local uploads belong only to this device's player; never paint the
+        // owner's private cape onto other players in multiplayer.
+        Identifier uploadedCape = player == MinecraftClient.getInstance().player
+                ? loadLocalCapeTexture() : null;
         String equippedCape = l == null ? "" : l.cape();
         if(uploadedCape != null || !equippedCape.isEmpty()) {
             matrices.push();
