@@ -1,6 +1,5 @@
 package net.phoenix.client.branding;
 
-import net.fabricmc.loader.api.FabricLoader;
 
 import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
@@ -19,26 +18,12 @@ import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import java.io.InputStream;
-import java.lang.reflect.Constructor;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.function.Supplier;
 
 /**
  * Procedural, layered 3D cosmetic meshes.  Separate mesh layers and material
  * textures give the accessories visible depth instead of one flat silhouette.
  */
 public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<PlayerEntityRenderState, PlayerEntityModel> {
-    private static final Identifier LOCAL_CAPE_TEXTURE = Identifier.of("phoenix", "local_cape");
-    private static long localCapeFingerprint = Long.MIN_VALUE;
-    private static long localCapeLastCheckMillis;
-    private static boolean localCapeChecked;
-    private static boolean localCapeAvailable;
-
     private final ModelPart cape, capeTrim, capeLining, customCape;
     private final ModelPart leftWing, rightWing, leftFeathers, rightFeathers;
     private final ModelPart headwear, crown, halo, visor, faceMask, horns;
@@ -156,90 +141,6 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
         shoulderPet=model.getChild("shoulder_pet");
     }
 
-    /**
-     * Resolve the currently equipped PNG from this Minecraft profile. The
-     * source image is kept at its original HD dimensions; the standard 64x32
-     * cape UV atlas scales proportionally for 128x64 through 1024x512.
-     */
-    private static Identifier loadLocalCapeTexture() {
-        long now = System.currentTimeMillis();
-        if (localCapeChecked && now - localCapeLastCheckMillis < 1000L) {
-            return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
-        }
-        localCapeLastCheckMillis = now;
-        Path capePath = FabricLoader.getInstance().getGameDir()
-                .resolve("phoenix").resolve("cosmetics").resolve("equipped").resolve("cape.png");
-        if (!Files.isRegularFile(capePath)) {
-            localCapeChecked = true;
-            localCapeFingerprint = Long.MIN_VALUE;
-            localCapeAvailable = false;
-            return null;
-        }
-
-        NativeImage image = null;
-        long fingerprint = Long.MIN_VALUE;
-        try {
-            fingerprint = Files.getLastModifiedTime(capePath).toMillis() * 31L
-                    + Files.size(capePath) + capePath.toAbsolutePath().toString().hashCode();
-            if (localCapeChecked && fingerprint == localCapeFingerprint) {
-                return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
-            }
-            try (InputStream input = Files.newInputStream(capePath)) {
-                image = NativeImage.read(input);
-            }
-            int width = image.getWidth();
-            int height = image.getHeight();
-            boolean valid = width >= 64 && width <= 1024 && height >= 32 && height <= 512
-                    && width % 64 == 0 && height % 32 == 0 && width / 64 == height / 32;
-            if (!valid) {
-                image.close();
-                image = null;
-                localCapeChecked = true;
-                localCapeFingerprint = fingerprint;
-                localCapeAvailable = false;
-                return null;
-            }
-            AbstractTexture texture = createNativeImageTexture(image);
-            image = null;
-            MinecraftClient.getInstance().getTextureManager().registerTexture(LOCAL_CAPE_TEXTURE, texture);
-            localCapeFingerprint = fingerprint;
-            localCapeChecked = true;
-            localCapeAvailable = true;
-            return LOCAL_CAPE_TEXTURE;
-        } catch (Exception error) {
-            if (image != null) image.close();
-            localCapeChecked = true;
-            localCapeAvailable = false;
-            localCapeFingerprint = fingerprint;
-            System.err.println("[Phoenix Client] Could not load local cape texture: " + error.getMessage());
-            return null;
-        }
-    }
-
-    private static AbstractTexture createNativeImageTexture(NativeImage image) throws Exception {
-        for (Constructor<?> constructor : NativeImageBackedTexture.class.getDeclaredConstructors()) {
-            Class<?>[] parameters = constructor.getParameterTypes();
-            constructor.setAccessible(true);
-            if (parameters.length == 1 && parameters[0].isAssignableFrom(NativeImage.class)) {
-                return (AbstractTexture) constructor.newInstance(image);
-            }
-            if (parameters.length == 2 && parameters[1].isAssignableFrom(NativeImage.class)) {
-                Object name = null;
-                if (parameters[0] == String.class) {
-                    name = "Phoenix local cape";
-                } else if (parameters[0].isAssignableFrom(Supplier.class)) {
-                    name = (Supplier<String>) () -> "Phoenix local cape";
-                }
-                if (name != null) return (AbstractTexture) constructor.newInstance(name, image);
-            }
-            if (parameters.length == 2 && parameters[0].isAssignableFrom(NativeImage.class)
-                    && (parameters[1] == boolean.class || parameters[1] == Boolean.class)) {
-                return (AbstractTexture) constructor.newInstance(image, true);
-            }
-        }
-        throw new IllegalStateException("No compatible NativeImageBackedTexture constructor was found.");
-    }
-
     private static Identifier texture(String colour) {
         return Identifier.of("minecraft","textures/block/"+colour+"_wool.png");
     }
@@ -295,7 +196,7 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
         if (!(entity instanceof AbstractClientPlayerEntity player)) return;
         PhoenixLoadoutState.Loadout l=PhoenixLoadoutState.get(player.getUuid());
         Identifier uploadedCape = player == MinecraftClient.getInstance().player
-                ? loadLocalCapeTexture() : null;
+                ? PhoenixLocalAppearance.cape() : null;
         if (uploadedCape != null || (l != null && !l.cape().isEmpty())) {
             matrices.push();
             float sway=(float)Math.sin(state.age*0.08F);
