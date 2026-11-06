@@ -53,6 +53,7 @@ jobs:
               cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
               cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
               cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java
+              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/mixin/LivingEntityRendererAccessor.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LivingEntityRendererAccessor.java
               # Keep the legacy local-skin hook for 1.21.2-1.21.8; 1.21.9+
               # selects the newer SkinTextures hook in the block below.
               python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("PlayerEntityRendererMixin","PlayerEntityRendererMixinModern","LocalPlayerSkinMixin","LocalPlayerSkinMixinModern")]; c.extend(["PlayerEntityRendererMixinModern","LocalPlayerSkinMixin"]); d["client"]=c; p.write_text(json.dumps(d, indent=2)+chr(10))'
