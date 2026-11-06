@@ -60,7 +60,9 @@ jobs:
             if [ "$MINOR" -ge 9 ]; then
               rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
-              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
+              # 1.21.9+ uses OrderedRenderCommandQueue; 1.21.9/1.21.10
+              # use RenderLayer, while 1.21.11 selects its RenderLayers variant below.
+              cp phoenix-branding/fabric/src/modern9/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
               cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java
               # Swap both player mixins to their modern render-state versions.
               python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("PlayerEntityRendererMixin","PlayerEntityRendererMixinModern","LocalPlayerSkinMixin","LocalPlayerSkinMixinModern")]; c.extend(["PlayerEntityRendererMixinModern","LocalPlayerSkinMixinModern"]); d["client"]=c; p.write_text(json.dumps(d, indent=2)+chr(10))'
