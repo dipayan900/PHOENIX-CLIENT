@@ -34,6 +34,7 @@ import java.util.function.Supplier;
 public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<AbstractClientPlayerEntity, PlayerEntityModel<AbstractClientPlayerEntity>> {
     private static final Identifier LOCAL_CAPE_TEXTURE = Identifier.of("phoenix", "local_cape");
     private static long localCapeFingerprint = Long.MIN_VALUE;
+    private static long localCapeLastCheckMillis;
     private static boolean localCapeChecked;
     private static boolean localCapeAvailable;
 
@@ -168,6 +169,11 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
      * Phoenix cosmetic cape.
      */
     private static Identifier loadLocalCapeTexture() {
+        long now = System.currentTimeMillis();
+        if (localCapeChecked && now - localCapeLastCheckMillis < 1000L) {
+            return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
+        }
+        localCapeLastCheckMillis = now;
         Path capePath = FabricLoader.getInstance().getGameDir()
                 .resolve("phoenix").resolve("cosmetics").resolve("equipped").resolve("cape.png");
         if (!Files.isRegularFile(capePath)) {
@@ -178,8 +184,9 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
         }
 
         NativeImage image = null;
+        long fingerprint = Long.MIN_VALUE;
         try {
-            long fingerprint = Files.getLastModifiedTime(capePath).toMillis() * 31L + Files.size(capePath);
+            fingerprint = Files.getLastModifiedTime(capePath).toMillis() * 31L + Files.size(capePath);
             if (localCapeChecked && fingerprint == localCapeFingerprint) {
                 return localCapeAvailable ? LOCAL_CAPE_TEXTURE : null;
             }
@@ -211,7 +218,7 @@ public final class PhoenixCosmeticFeatureRenderer extends FeatureRenderer<Abstra
             if (image != null) image.close();
             localCapeChecked = true;
             localCapeAvailable = false;
-            localCapeFingerprint = Long.MIN_VALUE;
+            localCapeFingerprint = fingerprint;
             System.err.println("[Phoenix Client] Could not load local cape texture: " + error.getMessage());
             return null;
         }
