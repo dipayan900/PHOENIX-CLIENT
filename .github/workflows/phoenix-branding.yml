@@ -22,6 +22,10 @@ jobs:
           set -euo pipefail
           rm -f src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
           cp src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
+          # 1.21.11 changed FeatureRenderer to the ordered command-queue API.
+          # The standalone add-on build compiles src/modern, so replace that
+          # renderer with the 1.21.11-specific implementation before compiling.
+          cp src/modern11/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java src/modern/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
           cp src/modern11/resources/phoenix_branding.mixins.json src/main/resources/phoenix_branding.mixins.json
           test ! -e src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
           grep -q '"LocalPlayerSkinMixinModern"' src/main/resources/phoenix_branding.mixins.json
