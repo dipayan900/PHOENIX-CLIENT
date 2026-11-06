@@ -1829,17 +1829,17 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         packStatus = "Downloading ${result.title}..."
                                         Thread {
                                             try {
-                                                val folder = if (packType == "shader") "shaderpacks" else "resourcepacks"
+                                                val folder = if (result.packType == "shader") "shaderpacks" else "resourcepacks"
                                                 val installed = installPhoenixPack(result, folder, result.engineProfileId)
                                                 activity.runOnUiThread {
                                                     if (folder == "shaderpacks") {
                                                         shaderPacks.clear()
-                                                        shaderPacks.addAll(listPhoenixContentFiles(active.engineProfileId, folder))
+                                                        shaderPacks.addAll(listPhoenixContentFiles(result.engineProfileId, folder))
                                                     } else {
                                                         resourcePacks.clear()
-                                                        resourcePacks.addAll(listPhoenixContentFiles(active.engineProfileId, folder))
+                                                        resourcePacks.addAll(listPhoenixContentFiles(result.engineProfileId, folder))
                                                     }
-                                                    packStatus = "Installed $installed. Open the in-game pack menu to enable it."
+                                                    packStatus = "Installed $installed for Minecraft ${result.minecraftVersion}. Open the in-game pack menu to enable it."
                                                     packBusy = false
                                                 }
                                             } catch (error: Exception) {
