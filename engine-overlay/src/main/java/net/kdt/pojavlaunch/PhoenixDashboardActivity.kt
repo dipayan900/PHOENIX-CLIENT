@@ -806,12 +806,8 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var modBusy by remember { mutableStateOf(false) }
     var packQuery by remember { mutableStateOf("") }
     var packType by remember { mutableStateOf("resourcepack") }
-    var packMinecraftVersion by remember(active.id, active.version) {
-        mutableStateOf(Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version)
-    }
     var packStatus by remember { mutableStateOf("Search Modrinth for resource packs or shader packs compatible with this profile.") }
     var packBusy by remember { mutableStateOf(false) }
-    val packResults = remember(active.engineProfileId) { mutableStateListOf<PhoenixPackResult>() }
     var pendingContentRemoval by remember { mutableStateOf<Pair<String, String>?>(null) }
     val totalRamMb = remember { Tools.getTotalDeviceMemory(context) }
     val freeRamMb = remember { Tools.getFreeDeviceMemory(context) }
@@ -867,6 +863,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var toolboxStatus by remember { mutableStateOf("Manage resource packs, shader ZIPs and inspect saved worlds for the active profile.") }
     var editingId by remember { mutableStateOf<String?>(null) }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
+    var packMinecraftVersion by remember(active.id, active.version) {
+        mutableStateOf(Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version)
+    }
+    val packResults = remember(active.engineProfileId) { mutableStateListOf<PhoenixPackResult>() }
     val studioAccent = when (themeChoice) { "FROST" -> Color(0xFF63C9FF); "VIOLET" -> Color(0xFFB38CFF); "MATRIX" -> Color(0xFF69E59A); else -> PhoenixOrange }
     val animatedAccent by animateColorAsState(targetValue = studioAccent, animationSpec = if (visualAnimations && !reducedMotion) tween(durationMillis = 320) else snap(), label = "phoenix-theme-accent")
     val useDarkAppearance = when (appearanceChoice) { "DARK" -> true; "LIGHT" -> false; else -> systemDark }
