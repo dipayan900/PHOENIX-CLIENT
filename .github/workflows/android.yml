@@ -46,11 +46,16 @@ jobs:
             # 1.21.1-1.21.8 use the legacy Identifier-based SkinTextures API.
             # 1.21.9+ moved SkinTextures to entity.player and uses AssetInfo.
             # Select a source implementation matching each version's mapped API.
-            if [ "$MINOR" -eq 2 ]; then
+            if [ "$MINOR" -ge 2 ]; then
+              # Minecraft 1.21.2 introduced the player render-state FeatureRenderer API.
+              # Use the render-state cosmetic layer for 1.21.2-1.21.10; 1.21.11
+              # replaces VertexConsumerProvider with OrderedRenderCommandQueue below.
               cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
-              # 1.21.2 uses the legacy player-render-state API. Keep the legacy
-              # cosmetic renderer registered, not the later state-based adapter.
-              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("PlayerEntityRendererMixin","PlayerEntityRendererMixinModern","LocalPlayerSkinMixin")]; c.extend(["PlayerEntityRendererMixin","LocalPlayerSkinMixin"]); d["client"]=c; p.write_text(json.dumps(d, indent=2)+chr(10))'
+              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
+              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java
+              # Keep the legacy local-skin hook for 1.21.2-1.21.8; 1.21.9+
+              # selects the newer SkinTextures hook in the block below.
+              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("PlayerEntityRendererMixin","PlayerEntityRendererMixinModern","LocalPlayerSkinMixin","LocalPlayerSkinMixinModern")]; c.extend(["PlayerEntityRendererMixinModern","LocalPlayerSkinMixin"]); d["client"]=c; p.write_text(json.dumps(d, indent=2)+chr(10))'
             fi
             if [ "$MINOR" -ge 9 ]; then
               rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
