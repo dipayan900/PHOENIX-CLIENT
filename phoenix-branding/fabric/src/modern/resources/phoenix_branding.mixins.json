@@ -10,7 +10,10 @@
     "GameMenuScreenMixin",
     "ContainerPreviewTooltipMixin",
     "EntityRendererMixin",
-    "PlayerEntityRendererMixinModern"
+    "PlayerEntityRendererMixinModern",
+    "LivingEntityRendererAccessor"
   ],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
