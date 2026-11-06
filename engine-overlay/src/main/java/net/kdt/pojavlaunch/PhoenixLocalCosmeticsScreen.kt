@@ -60,7 +60,8 @@ private fun importLook(context:Context,dir:File,uri:Uri,kind:String):PhoenixLook
      val n=input.read(buf)
      if(n<0)break
      bytes+=n
-     if(bytes>2097152)throw java.io.IOException("PNG exceeds 2 MB.")
+     val maxBytes=if(kind=="cape")8L*1024L*1024L else 2L*1024L*1024L
+     if(bytes>maxBytes)throw java.io.IOException(if(kind=="cape")"Cape PNG exceeds the 8 MB safety limit." else "Skin PNG exceeds 2 MB.")
      out.write(buf,0,n)
     }
     out.fd.sync()
@@ -73,8 +74,18 @@ private fun importLook(context:Context,dir:File,uri:Uri,kind:String):PhoenixLook
   if(!signature.contentEquals(pngSignature))throw java.io.IOException("Please select a real PNG file, not JPG or WEBP.")
   val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
   BitmapFactory.decodeFile(temp.absolutePath,bounds)
-  val valid=if(kind=="skin")bounds.outWidth==64&&(bounds.outHeight==64||bounds.outHeight==32) else bounds.outWidth==64&&bounds.outHeight==32
-  if(!valid)throw java.io.IOException(if(kind=="skin")"Skin PNG must be exactly 64×64 or legacy 64×32 pixels." else "Cape PNG must be exactly 64×32 pixels.")
+  val valid=if(kind=="skin") {
+   bounds.outWidth==64&&(bounds.outHeight==64||bounds.outHeight==32)
+  } else {
+   val width=bounds.outWidth
+   val height=bounds.outHeight
+   width in 64..1024 && height in 32..512 &&
+    width%64==0 && height%32==0 && width/64==height/32
+  }
+  if(!valid)throw java.io.IOException(
+   if(kind=="skin")"Skin PNG must be exactly 64×64 or legacy 64×32 pixels."
+   else "Cape PNG must use the standard 2:1 layout: 64×32, 128×64, 256×128, 512×256 or 1024×512."
+  )
   if(!temp.renameTo(target))throw java.io.IOException("PNG was read but could not be saved to the Phoenix wardrobe.")
   return PhoenixLook(id,if(kind=="skin")"Custom Skin" else "Custom Cape",kind,target.name)
  }catch(e:Exception){
@@ -103,13 +114,13 @@ fun PhoenixLocalCosmeticsScreen(context:Context,gameDir:File,accent:Color,panel:
    list.forEach{item->
     val active=equippedId(gameDir,type)==item.id
     Row(Modifier.fillMaxWidth().background(panel,RoundedCornerShape(14.dp)).padding(10.dp),verticalAlignment=Alignment.CenterVertically){
-     Column(Modifier.weight(1f)){Text(item.name,color=textColor,fontWeight=FontWeight.Bold);Text(if(active)"EQUIPPED" else if(type=="skin")"64×64 / legacy 64×32 PNG · custom skin" else "64×32 PNG · custom cape",color=muted,fontSize=10.sp)}
+     Column(Modifier.weight(1f)){Text(item.name,color=textColor,fontWeight=FontWeight.Bold);Text(if(active)"EQUIPPED" else if(type=="skin")"64×64 / legacy 64×32 PNG · custom skin" else "HD PNG · 64×32 to 1024×512 · 2:1 layout",color=muted,fontSize=10.sp)}
      TextButton(onClick={runCatching{if(active)unequipLook(gameDir,type) else equipLook(gameDir,item);notice=if(active)"Unequipped." else "Equipped "+item.name+"."}.onFailure{notice=it.message?:"Action failed."}}){Text(if(active)"UNEQUIP" else "EQUIP",color=accent)}
      TextButton(onClick={runCatching{if(active)unequipLook(gameDir,type);File(File(lookRoot(gameDir),if(type=="skin")"skins" else "capes"),item.file).delete();val next=items.filterNot{it.id==item.id};saveLooks(gameDir,next);items.clear();items.addAll(next);notice="Deleted "+item.name+"."}.onFailure{notice=it.message?:"Delete failed."}}){Text("DELETE",color=muted)}
     }
    }
   }
   Text(notice,color=muted,fontSize=11.sp)
-  Text("One skin and one cape can be equipped at once. Equipped files are applied by the Phoenix Fabric runtime. This is a local appearance and does not change your account.",color=muted,fontSize=11.sp)
+  Text("One skin and one cape can be equipped at once. Cape PNGs are kept at their original resolution (up to 1024×512); no resize or recompression is applied. This is a local appearance and does not change your account.",color=muted,fontSize=11.sp)
  }
 }

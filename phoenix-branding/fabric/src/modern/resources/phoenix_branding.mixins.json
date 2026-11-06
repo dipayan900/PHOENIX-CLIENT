@@ -9,7 +9,11 @@
     "SplashOverlayMixin",
     "GameMenuScreenMixin",
     "ContainerPreviewTooltipMixin",
-    "EntityRendererMixin"
+    "EntityRendererMixin",
+    "PlayerEntityRendererMixinModern",
+    "LivingEntityRendererAccessor"
   ],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

@@ -10,6 +10,7 @@
     "GameMenuScreenMixin",
     "ContainerPreviewTooltipMixin",
     "EntityRendererMixin",
+    "PlayerEntityRendererMixin",
     "LocalPlayerSkinMixin"
   ],
   "injectors": {

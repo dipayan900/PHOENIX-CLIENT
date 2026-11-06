@@ -1,5 +1,6 @@
 package net.phoenix.client.branding;
 
+
 import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.model.ModelPartBuilder;
@@ -23,7 +24,7 @@ import net.minecraft.util.Identifier;
  * textures give the accessories visible depth instead of one flat silhouette.
  */
 public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<PlayerEntityRenderState, PlayerEntityModel> {
-    private final ModelPart cape, capeTrim, capeLining;
+    private final ModelPart cape, capeTrim, capeLining, customCape;
     private final ModelPart leftWing, rightWing, leftFeathers, rightFeathers;
     private final ModelPart headwear, crown, halo, visor, faceMask, horns;
     private final ModelPart backpack, packDetails;
@@ -125,6 +126,11 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
 
         ModelPart model = TexturedModelData.of(data,16,16).createModel();
         cape=model.getChild("cape"); capeTrim=model.getChild("cape_trim"); capeLining=model.getChild("cape_lining");
+        ModelData customCapeData = new ModelData();
+        customCapeData.getRoot().addChild("custom_cape",
+                ModelPartBuilder.create().uv(0,0).cuboid(-5,0,0,10,16,1),
+                ModelTransform.of(0,0,2.2F, 0, 0, 0));
+        customCape = TexturedModelData.of(customCapeData,64,32).createModel().getChild("custom_cape");
         leftWing=model.getChild("left_wing"); rightWing=model.getChild("right_wing");
         leftFeathers=model.getChild("left_feathers"); rightFeathers=model.getChild("right_feathers");
         headwear=model.getChild("headwear"); crown=model.getChild("crown"); halo=model.getChild("halo");
@@ -189,19 +195,28 @@ public final class PhoenixCosmeticFeatureRendererModern extends FeatureRenderer<
         var entity = world.getEntityById(state.id);
         if (!(entity instanceof AbstractClientPlayerEntity player)) return;
         PhoenixLoadoutState.Loadout l=PhoenixLoadoutState.get(player.getUuid());
-        if(l==null) return;
-
-        if(!l.cape().isEmpty()) {
+        Identifier uploadedCape = player == MinecraftClient.getInstance().player
+                ? PhoenixLocalAppearance.cape() : null;
+        if (uploadedCape != null || (l != null && !l.cape().isEmpty())) {
             matrices.push();
             float sway=(float)Math.sin(state.age*0.08F);
-            cape.pitch=0.08F+sway*0.035F+Math.min(0.5F,limbDistance*0.12F);
-            cape.yaw=0; cape.roll=sway*0.025F;
-            var base=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(capeTexture(l.cape())));
-            cape.render(matrices,base,light,OverlayTexture.DEFAULT_UV);
-            capeTrim.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(detailTexture(l.cape()))),light,OverlayTexture.DEFAULT_UV);
-            capeLining.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("white"))),light,OverlayTexture.DEFAULT_UV);
+            float pitch=0.08F+sway*0.035F+Math.min(0.5F,limbDistance*0.12F);
+            if (uploadedCape != null) {
+                customCape.pitch=pitch;
+                customCape.yaw=0;
+                customCape.roll=sway*0.025F;
+                customCape.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(uploadedCape)),light,OverlayTexture.DEFAULT_UV);
+            } else {
+                cape.pitch=pitch;
+                cape.yaw=0; cape.roll=sway*0.025F;
+                var base=vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(capeTexture(l.cape())));
+                cape.render(matrices,base,light,OverlayTexture.DEFAULT_UV);
+                capeTrim.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(detailTexture(l.cape()))),light,OverlayTexture.DEFAULT_UV);
+                capeLining.render(matrices,vertices.getBuffer(RenderLayer.getEntityCutoutNoCull(texture("white"))),light,OverlayTexture.DEFAULT_UV);
+            }
             matrices.pop();
         }
+        if(l==null) return;
         if(!l.wings().isEmpty()) {
             matrices.push();
             float flap=(float)Math.sin(state.age*0.18F)*0.32F;

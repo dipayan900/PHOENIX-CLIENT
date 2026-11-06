@@ -46,19 +46,27 @@ jobs:
             # 1.21.1-1.21.8 use the legacy Identifier-based SkinTextures API.
             # 1.21.9+ moved SkinTextures to entity.player and uses AssetInfo.
             # Select a source implementation matching each version's mapped API.
-            if [ "$MINOR" -eq 2 ]; then
+            if [ "$MINOR" -ge 2 ]; then
+              # Minecraft 1.21.2 introduced the player render-state FeatureRenderer API.
+              # Use the render-state cosmetic layer for 1.21.2-1.21.10; 1.21.11
+              # replaces VertexConsumerProvider with OrderedRenderCommandQueue below.
               cp phoenix-branding/fabric/src/modern/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
-              # 1.21.2 retains the legacy SkinTextures API; re-enable its mixin
-              # because the modern base config intentionally omits that class.
-              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c.append("LocalPlayerSkinMixin") if "LocalPlayerSkinMixin" not in c else None; p.write_text(json.dumps(d, indent=2)+chr(10))'
+              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
+              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java
+              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/mixin/LivingEntityRendererAccessor.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LivingEntityRendererAccessor.java
+              # Keep the legacy local-skin hook for 1.21.2-1.21.8; 1.21.9+
+              # selects the newer SkinTextures hook in the block below.
+              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("PlayerEntityRendererMixin","PlayerEntityRendererMixinModern","LocalPlayerSkinMixin","LocalPlayerSkinMixinModern")]; c.extend(["PlayerEntityRendererMixinModern","LocalPlayerSkinMixin"]); d["client"]=c; p.write_text(json.dumps(d, indent=2)+chr(10))'
             fi
             if [ "$MINOR" -ge 9 ]; then
               rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
-              # Remove the legacy entry before registering the modern mixin.
-              # Otherwise Mixin fails at launch because the deleted class remains
-              # listed in the JSON for 1.21.9 and 1.21.10.
-              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("LocalPlayerSkinMixin","LocalPlayerSkinMixinModern")]; c.append("LocalPlayerSkinMixinModern"); d["client"]=c; p.write_text(json.dumps(d, indent=2)+chr(10))'
+              # 1.21.9+ uses OrderedRenderCommandQueue; 1.21.9/1.21.10
+              # use RenderLayer, while 1.21.11 selects its RenderLayers variant below.
+              cp phoenix-branding/fabric/src/modern9/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
+              cp phoenix-branding/fabric/src/modern/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/PlayerEntityRendererMixinModern.java
+              # Swap both player mixins to their modern render-state versions.
+              python3 -c 'import json,pathlib; p=pathlib.Path("phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json"); d=json.loads(p.read_text()); c=d.setdefault("client", []); c=[x for x in c if x not in ("PlayerEntityRendererMixin","PlayerEntityRendererMixinModern","LocalPlayerSkinMixin","LocalPlayerSkinMixinModern")]; c.extend(["PlayerEntityRendererMixinModern","LocalPlayerSkinMixinModern"]); d["client"]=c; p.write_text(json.dumps(d, indent=2)+chr(10))'
             fi
             if [ "$MINOR" -eq 6 ]; then
               cp phoenix-branding/fabric/src/modern6/java/net/phoenix/client/branding/PhoenixHud.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixHud.java
@@ -73,6 +81,9 @@ jobs:
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java
               rm -f phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixin.java
               cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.java
+              # Minecraft 1.21.11 uses ordered render commands and RenderLayers;
+              # keep the 1.21.9/1.21.10 VertexConsumer renderer isolated from this adapter.
+              cp phoenix-branding/fabric/src/modern11/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.java
               cp phoenix-branding/fabric/src/modern11/resources/phoenix_branding.mixins.json phoenix-branding/fabric/src/main/resources/phoenix_branding.mixins.json
               grep -Fq 'Entity entity, double squaredDistance,' phoenix-branding/fabric/src/main/java/net/phoenix/client/branding/mixin/EntityRendererMixin.java
             fi
@@ -112,6 +123,19 @@ jobs:
             done
             unzip -p "$JAR" phoenix_branding.mixins.json | grep -Fq '"ScreenAccessorMixin"'
             python3 -c 'import json,sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); c=json.loads(z.read("phoenix_branding.mixins.json")); p=c["package"].replace(".","/").rstrip("/"); missing=[f"{p}/{m.replace(chr(46), chr(47))}.class" for m in c.get("client",[]) if f"{p}/{m.replace(chr(46), chr(47))}.class" not in z.namelist()]; assert not missing, "Mixin classes missing from Phoenix adapter: "+", ".join(missing)' "$JAR"
+            if [ "$MINOR" -ge 2 ]; then
+              grep -Fxq 'net/phoenix/client/branding/PhoenixCosmeticFeatureRendererModern.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              grep -Fxq 'net/phoenix/client/branding/mixin/LivingEntityRendererAccessor.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              unzip -p "$JAR" phoenix_branding.mixins.json | grep -Fq '"LivingEntityRendererAccessor"'
+            fi
+            if [ "$MINOR" -ge 9 ]; then
+              grep -Fxq 'net/phoenix/client/branding/PhoenixLocalAppearance.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              grep -Fxq 'net/phoenix/client/branding/mixin/LocalPlayerSkinMixinModern.class' "$RUNNER_TEMP/phoenix-jar-contents.txt"
+              javap -classpath "$JAR" -p net.phoenix.client.branding.PhoenixLocalAppearance > "$RUNNER_TEMP/phoenix-local-appearance.txt"
+              grep -Fq 'skin();' "$RUNNER_TEMP/phoenix-local-appearance.txt"
+              grep -Fq 'cape();' "$RUNNER_TEMP/phoenix-local-appearance.txt"
+              echo "Verified local skin and cape texture loader is packaged for $MC_VERSION."
+            fi
             if [ "$MINOR" -eq 11 ]; then
               javap -classpath "$JAR" -p net.phoenix.client.branding.mixin.EntityRendererMixin > "$RUNNER_TEMP/phoenix-entity-renderer-mixin.txt"
               grep -F 'phoenix$showLivingHealthLabels(' "$RUNNER_TEMP/phoenix-entity-renderer-mixin.txt" | grep -Fq 'double'

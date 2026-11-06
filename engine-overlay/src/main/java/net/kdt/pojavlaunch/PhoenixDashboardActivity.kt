@@ -72,7 +72,10 @@ private data class PhoenixPackResult(
     val title: String,
     val description: String,
     val downloads: Long,
-    val slug: String
+    val slug: String,
+    val minecraftVersion: String,
+    val packType: String,
+    val engineProfileId: String
 )
 
 private data class PhoenixInstalledMod(val fileName: String, val sizeBytes: Long, val enabled: Boolean)
@@ -462,11 +465,13 @@ private fun searchPhoenixMods(query: String, minecraftVersion: String, loader: S
 }
 
 
-private fun searchPhoenixPacks(query: String, minecraftVersion: String, packType: String): List<PhoenixPackResult> {
+private fun searchPhoenixPacks(query: String, minecraftVersion: String, packType: String, engineProfileId: String): List<PhoenixPackResult> {
+    val exactVersion = normalizePhoenixMinecraftVersion(minecraftVersion)
     if (packType !in setOf("resourcepack", "shader")) throw java.io.IOException("Unsupported pack category.")
+    if (engineProfileId.isBlank()) throw java.io.IOException("Select a valid Minecraft profile first.")
     val facets = JSONArray()
         .put(JSONArray().put("project_type:$packType"))
-        .put(JSONArray().put("versions:$minecraftVersion"))
+        .put(JSONArray().put("versions:$exactVersion"))
     val encodedFacets = URLEncoder.encode(facets.toString(), "UTF-8")
     val encodedQuery = URLEncoder.encode(query, "UTF-8")
     val data = modrinthJson("https://api.modrinth.com/v2/search?query=$encodedQuery&facets=$encodedFacets&index=downloads&limit=20")
@@ -479,22 +484,50 @@ private fun searchPhoenixPacks(query: String, minecraftVersion: String, packType
                 title = hit.optString("title", "Untitled pack"),
                 description = hit.optString("description", ""),
                 downloads = hit.optLong("downloads", 0),
-                slug = hit.optString("slug", "")
+                slug = hit.optString("slug", ""),
+                minecraftVersion = exactVersion,
+                packType = packType,
+                engineProfileId = engineProfileId
             ))
         }
     }
 }
 
-private fun installPhoenixPack(pack: PhoenixPackResult, minecraftVersion: String, folderName: String, engineProfileId: String): String {
-    if (folderName !in setOf("resourcepacks", "shaderpacks")) throw java.io.IOException("Unsupported pack folder.")
+private fun installPhoenixPack(pack: PhoenixPackResult, folderName: String, engineProfileId: String): String {
+    val minecraftVersion = normalizePhoenixMinecraftVersion(pack.minecraftVersion)
+    val expectedFolder = when (pack.packType) {
+        "resourcepack" -> "resourcepacks"
+        "shader" -> "shaderpacks"
+        else -> throw java.io.IOException("Unsupported Modrinth pack type.")
+    }
+    if (folderName != expectedFolder) throw java.io.IOException("Pack type does not match the selected install folder.")
+    if (pack.projectId.isBlank() || pack.projectId.any { !it.isLetterOrDigit() }) {
+        throw java.io.IOException("The selected Modrinth project ID is invalid.")
+    }
+    if (engineProfileId != pack.engineProfileId || engineProfileId.isBlank()) {
+        throw java.io.IOException("The active Minecraft profile changed. Search again before installing.")
+    }
     if (LauncherProfiles.mainProfileJson == null) LauncherProfiles.load()
     val profile = LauncherProfiles.mainProfileJson.profiles[engineProfileId]
         ?: throw java.io.IOException("Select a valid game profile before installing packs.")
     val versions = URLEncoder.encode(JSONArray().put(minecraftVersion).toString(), "UTF-8")
     val versionArray = modrinthJsonArray("https://api.modrinth.com/v2/project/${pack.projectId}/version?game_versions=$versions")
-    if (versionArray.length() == 0) throw java.io.IOException("No release is available for Minecraft $minecraftVersion.")
-    val release = versionArray.getJSONObject(0)
-    val files = release.optJSONArray("files") ?: throw java.io.IOException("This project has no downloadable files.")
+    var release: JSONObject? = null
+    var fallbackRelease: JSONObject? = null
+    for (i in 0 until versionArray.length()) {
+        val candidate = versionArray.optJSONObject(i) ?: continue
+        val supported = candidate.optJSONArray("game_versions") ?: continue
+        var matchesVersion = false
+        for (j in 0 until supported.length()) {
+            if (supported.optString(j) == minecraftVersion) { matchesVersion = true; break }
+        }
+        if (!matchesVersion) continue
+        if (candidate.optString("version_type") == "release") { release = candidate; break }
+        if (fallbackRelease == null) fallbackRelease = candidate
+    }
+    val selectedRelease = release ?: fallbackRelease
+        ?: throw java.io.IOException("No Modrinth release is available for Minecraft $minecraftVersion.")
+    val files = selectedRelease.optJSONArray("files") ?: throw java.io.IOException("This project has no downloadable files.")
     var chosen: JSONObject? = null
     for (i in 0 until files.length()) {
         val file = files.optJSONObject(i) ?: continue
@@ -506,21 +539,40 @@ private fun installPhoenixPack(pack: PhoenixPackResult, minecraftVersion: String
     val rawName = selected.optString("filename", pack.slug + ".zip")
     if (!downloadUrl.startsWith("https://") || !rawName.endsWith(".zip", true))
         throw java.io.IOException("The selected release is not a valid ZIP pack.")
-    val directory = File(Tools.getGameDirPath(profile), folderName)
+    val directory = File(Tools.getGameDirPath(profile), folderName).canonicalFile
     if (!directory.exists() && !directory.mkdirs()) throw java.io.IOException("Cannot create the $folderName folder.")
     if (!directory.isDirectory) throw java.io.IOException("The $folderName path is not a folder.")
     val safeName = rawName.replace(Regex("[^A-Za-z0-9._-]"), "_")
-    var destination = File(directory, safeName)
+    var destination = File(directory, safeName).canonicalFile
+    if (destination.parentFile != directory) throw java.io.IOException("Invalid pack filename.")
     if (destination.exists()) destination = File(directory, safeName.removeSuffix(".zip") + "-phoenix-" + System.currentTimeMillis() + ".zip")
     val connection = URL(downloadUrl).openConnection() as HttpURLConnection
     connection.connectTimeout = 15000
     connection.readTimeout = 60000
     connection.setRequestProperty("User-Agent", "PhoenixClient/1.0 (https://github.com/dipayan900/PHOENIX-CLIENT)")
     val temporary = File(directory, destination.name + ".part")
+    val maxDownloadBytes = 100L * 1024L * 1024L
     try {
         if (connection.responseCode !in 200..299) throw java.io.IOException("Pack download failed: HTTP ${connection.responseCode}")
-        connection.inputStream.use { input -> FileOutputStream(temporary).use { output -> input.copyTo(output) } }
+        if (connection.contentLengthLong > maxDownloadBytes) throw java.io.IOException("This pack exceeds Phoenix's 100 MB download safety limit.")
+        connection.inputStream.use { input ->
+            FileOutputStream(temporary).use { output ->
+                val buffer = ByteArray(16384)
+                var total = 0L
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    if (total > maxDownloadBytes) throw java.io.IOException("This pack exceeds Phoenix's 100 MB download safety limit.")
+                    output.write(buffer, 0, count)
+                }
+                output.fd.sync()
+            }
+        }
         if (temporary.length() <= 0L) throw java.io.IOException("The downloaded pack was empty.")
+        java.util.zip.ZipFile(temporary).use { zip ->
+            if (!zip.entries().hasMoreElements()) throw java.io.IOException("The downloaded ZIP contains no files.")
+        }
         if (!temporary.renameTo(destination)) throw java.io.IOException("Could not move the pack into $folderName.")
     } catch (error: Exception) {
         temporary.delete()
@@ -756,7 +808,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var packType by remember { mutableStateOf("resourcepack") }
     var packStatus by remember { mutableStateOf("Search Modrinth for resource packs or shader packs compatible with this profile.") }
     var packBusy by remember { mutableStateOf(false) }
-    val packResults = remember { mutableStateListOf<PhoenixPackResult>() }
     var pendingContentRemoval by remember { mutableStateOf<Pair<String, String>?>(null) }
     val totalRamMb = remember { Tools.getTotalDeviceMemory(context) }
     val freeRamMb = remember { Tools.getFreeDeviceMemory(context) }
@@ -812,6 +863,10 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
     var toolboxStatus by remember { mutableStateOf("Manage resource packs, shader ZIPs and inspect saved worlds for the active profile.") }
     var editingId by remember { mutableStateOf<String?>(null) }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.first()
+    var packMinecraftVersion by remember(active.id, active.version) {
+        mutableStateOf(Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version)
+    }
+    val packResults = remember(active.engineProfileId) { mutableStateListOf<PhoenixPackResult>() }
     val studioAccent = when (themeChoice) { "FROST" -> Color(0xFF63C9FF); "VIOLET" -> Color(0xFFB38CFF); "MATRIX" -> Color(0xFF69E59A); else -> PhoenixOrange }
     val animatedAccent by animateColorAsState(targetValue = studioAccent, animationSpec = if (visualAnimations && !reducedMotion) tween(durationMillis = 320) else snap(), label = "phoenix-theme-accent")
     val useDarkAppearance = when (appearanceChoice) { "DARK" -> true; "LIGHT" -> false; else -> systemDark }
@@ -1720,20 +1775,31 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                     label = { Text(if (packType == "shader") "Search shaders" else "Search resource packs") },
                                     placeholder = { Text(if (packType == "shader") "Complementary, BSL..." else "Faithful, Fresh Animations...") }
                                 )
-                                val packVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
-                                Text("Minecraft $packVersion", color = appearanceMuted, fontSize = 11.sp)
+                                val packVersion = runCatching { normalizePhoenixMinecraftVersion(packMinecraftVersion) }.getOrNull()
+                                OutlinedTextField(
+                                    value = packMinecraftVersion,
+                                    onValueChange = { packMinecraftVersion = it.take(24) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    label = { Text("Minecraft version") },
+                                    placeholder = { Text("e.g. 1.21.11") },
+                                    supportingText = {
+                                        Text(if (packVersion == null) "Enter a valid version such as 1.21.11." else "Only Modrinth releases for Minecraft $packVersion will be shown.")
+                                    }
+                                )
                                 Button(
-                                    enabled = !packBusy && packQuery.isNotBlank(),
+                                    enabled = !packBusy && packQuery.isNotBlank() && packVersion != null,
                                     onClick = {
+                                        val requestedVersion = packVersion ?: return@Button
                                         packBusy = true
-                                        packStatus = "Searching Modrinth..."
+                                        packStatus = "Searching Modrinth for Minecraft $requestedVersion..."
                                         Thread {
                                             try {
-                                                val found = searchPhoenixPacks(packQuery.trim(), packVersion, packType)
+                                                val found = searchPhoenixPacks(packQuery.trim(), requestedVersion, packType, active.engineProfileId)
                                                 activity.runOnUiThread {
                                                     packResults.clear()
                                                     packResults.addAll(found)
-                                                    packStatus = if (found.isEmpty()) "No matching packs found for Minecraft $packVersion." else "Found ${found.size} projects."
+                                                    packStatus = if (found.isEmpty()) "No matching packs found for Minecraft $requestedVersion." else "Found ${found.size} projects for Minecraft $requestedVersion."
                                                     packBusy = false
                                                 }
                                             } catch (error: Exception) {
@@ -1748,7 +1814,6 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                             }
                         }
                         items(packResults, key = { "pack-search-" + it.projectId }) { result ->
-                            val selectedPackVersion = Regex("\\d+\\.\\d+(\\.\\d+)?").find(active.version)?.value ?: active.version
                             Column(
                                 Modifier.fillMaxWidth().background(appearancePanel, RoundedCornerShape(15.dp)).padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1756,6 +1821,7 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                 Text(result.title, color = appearanceText, fontWeight = FontWeight.Bold)
                                 Text(result.description, color = appearanceMuted, fontSize = 11.sp, maxLines = 3)
                                 Text("${result.downloads} downloads · ${result.slug}", color = animatedAccent, fontSize = 10.sp)
+                                Text("Minecraft ${result.minecraftVersion} · ${if (result.packType == "shader") "Shader pack" else "Resource pack"}", color = appearanceMuted, fontSize = 10.sp)
                                 Button(
                                     enabled = !packBusy,
                                     onClick = {
@@ -1763,17 +1829,17 @@ private fun PhoenixDashboard(activity: PhoenixDashboardActivity) {
                                         packStatus = "Downloading ${result.title}..."
                                         Thread {
                                             try {
-                                                val folder = if (packType == "shader") "shaderpacks" else "resourcepacks"
-                                                val installed = installPhoenixPack(result, selectedPackVersion, folder, active.engineProfileId)
+                                                val folder = if (result.packType == "shader") "shaderpacks" else "resourcepacks"
+                                                val installed = installPhoenixPack(result, folder, result.engineProfileId)
                                                 activity.runOnUiThread {
                                                     if (folder == "shaderpacks") {
                                                         shaderPacks.clear()
-                                                        shaderPacks.addAll(listPhoenixContentFiles(active.engineProfileId, folder))
+                                                        shaderPacks.addAll(listPhoenixContentFiles(result.engineProfileId, folder))
                                                     } else {
                                                         resourcePacks.clear()
-                                                        resourcePacks.addAll(listPhoenixContentFiles(active.engineProfileId, folder))
+                                                        resourcePacks.addAll(listPhoenixContentFiles(result.engineProfileId, folder))
                                                     }
-                                                    packStatus = "Installed $installed. Open the in-game pack menu to enable it."
+                                                    packStatus = "Installed $installed for Minecraft ${result.minecraftVersion}. Open the in-game pack menu to enable it."
                                                     packBusy = false
                                                 }
                                             } catch (error: Exception) {
