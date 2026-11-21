@@ -13,6 +13,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,6 +30,9 @@ public final class TerrainCache {
     private static final int SAMPLE_STEP = 4;
     private static final Set<String> CAPTURED = ConcurrentHashMap.newKeySet();
     private static final AtomicInteger CAPTURED_CHUNKS = new AtomicInteger();
+    private static final Collection<SurfaceSample> SURFACE_SAMPLES = new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+    public record SurfaceSample(int x, int y, int z, String blockId) {}
     private static Path cacheRoot;
 
     private TerrainCache() {}
@@ -49,7 +55,7 @@ public final class TerrainCache {
         int chunkX = chunk.getPos().x;
         int chunkZ = chunk.getPos().z;
         String worldKey = worldKey(client);
-        String dimension = world.dimension().location().toString().replace(':', '_');
+        String dimension = world.dimension().identifier().toString().replace(':', '_');
         String cacheKey = worldKey + "/" + dimension + "/" + chunkX + "_" + chunkZ;
         if (!CAPTURED.add(cacheKey)) return;
 
@@ -57,7 +63,7 @@ public final class TerrainCache {
         data.append("# Brutal_XD Distant Terrain surface samples\n");
         data.append("# chunkX=").append(chunkX)
                 .append(",chunkZ=").append(chunkZ)
-                .append(",dimension=").append(world.dimension().location())
+                .append(",dimension=").append(world.dimension().identifier())
                 .append('\n');
 
         for (int localZ = 0; localZ < 16; localZ += SAMPLE_STEP) {
@@ -69,6 +75,8 @@ public final class TerrainCache {
                         chunkZ * 16 + localZ);
                 String blockId = BuiltInRegistries.BLOCK.getKey(chunk.getBlockState(pos).getBlock())
                         .toString();
+                SURFACE_SAMPLES.add(new SurfaceSample(chunkX * 16 + localX, surfaceY,
+                        chunkZ * 16 + localZ, blockId));
 
                 data.append(localX).append(',')
                         .append(localZ).append(',')
@@ -97,6 +105,10 @@ public final class TerrainCache {
                 ? "singleplayer"
                 : client.getCurrentServer().ip;
         return Integer.toHexString(identity.hashCode());
+    }
+
+    public static Collection<SurfaceSample> getSurfaceSamples() {
+        return List.copyOf(SURFACE_SAMPLES);
     }
 
     public static int getCapturedChunkCount() {
