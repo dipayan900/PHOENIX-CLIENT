@@ -79,10 +79,18 @@ public final class TerrainLodRenderer {
                     || Math.floorMod(sample.z(), stride * 4) != 0) continue;
 
             float size = 4.0f * stride;
-            float y = sample.y() + 0.02f;
+            float y00 = sample.y();
+            TerrainCache.SurfaceSample east = TerrainCache.getSurfaceSample(sample.x() + (int) size, sample.z());
+            TerrainCache.SurfaceSample south = TerrainCache.getSurfaceSample(sample.x(), sample.z() + (int) size);
+            TerrainCache.SurfaceSample diagonal = TerrainCache.getSurfaceSample(
+                    sample.x() + (int) size, sample.z() + (int) size);
+            float y10 = east == null ? y00 : east.y();
+            float y01 = south == null ? y00 : south.y();
+            float y11 = diagonal == null ? (y10 + y01) * 0.5f : diagonal.y();
             float[] color = colorFor(sample.blockId(), chunkDistance);
-            addQuad(builder, matrix, sample.x(), y, sample.z(),
-                    sample.x() + size, sample.z() + size, color);
+            addQuad(builder, matrix, sample.x(), sample.z(), sample.x() + size,
+                    sample.z() + size, y00 + 0.02f, y10 + 0.02f,
+                    y11 + 0.02f, y01 + 0.02f, color);
             if (++tiles >= MAX_TILES_PER_FRAME) break;
         }
 
@@ -130,12 +138,13 @@ public final class TerrainLodRenderer {
     }
 
     private static void addQuad(BufferBuilder out, Matrix4fc matrix,
-                                float x0, float y, float z0, float x1, float z1,
+                                float x0, float z0, float x1, float z1,
+                                float y00, float y10, float y11, float y01,
                                 float[] color) {
-        out.addVertex(matrix, x0, y, z0).setColor(color[0], color[1], color[2], 1);
-        out.addVertex(matrix, x0, y, z1).setColor(color[0], color[1], color[2], 1);
-        out.addVertex(matrix, x1, y, z1).setColor(color[0], color[1], color[2], 1);
-        out.addVertex(matrix, x1, y, z0).setColor(color[0], color[1], color[2], 1);
+        out.addVertex(matrix, x0, y00, z0).setColor(color[0], color[1], color[2], 1);
+        out.addVertex(matrix, x0, y01, z1).setColor(color[0], color[1], color[2], 1);
+        out.addVertex(matrix, x1, y11, z1).setColor(color[0], color[1], color[2], 1);
+        out.addVertex(matrix, x1, y10, z0).setColor(color[0], color[1], color[2], 1);
     }
 
     private static float[] colorFor(String block, double distance) {
