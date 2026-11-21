@@ -12,11 +12,10 @@ public final class PhantomPrivacyClient implements ClientModInitializer {
     public void onInitializeClient() {
         PhantomPrivacyConfig.load();
 
-        // Poll the physical F9 key directly. This avoids keybinding registration,
-        // category conflicts, and keybinding-consumption issues in launcher clients.
+        // Poll the physical F9 key directly, without relying on keybinding registration.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             boolean f9Down = InputUtil.isKeyPressed(
-                    client.getWindow().getHandle(),
+                    client.getWindow(),
                     GLFW.GLFW_KEY_F9
             );
 
