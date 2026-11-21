@@ -56,6 +56,8 @@ public final class TerrainLodRenderer {
         if (!TerrainSettings.enabled || client.level == null || client.player == null) return;
 
         Vec3 camera = context.worldState().cameraRenderState.pos;
+        context.matrices().pushPose();
+        context.matrices().translate(-camera.x, -camera.y, -camera.z);
         BufferBuilder builder = new BufferBuilder(
                 ALLOCATOR, TERRAIN_PIPELINE.getVertexFormatMode(),
                 TERRAIN_PIPELINE.getVertexFormat());
@@ -82,6 +84,7 @@ public final class TerrainLodRenderer {
             if (++tiles >= MAX_TILES_PER_FRAME) break;
         }
 
+        context.matrices().popPose();
         if (tiles == 0) {
             builder.discard();
             return;
