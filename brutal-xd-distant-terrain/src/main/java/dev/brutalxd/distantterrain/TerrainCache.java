@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +36,8 @@ public final class TerrainCache {
     private static final AtomicInteger CAPTURED_CHUNKS = new AtomicInteger();
     private static final AtomicInteger SAMPLE_COUNT = new AtomicInteger();
     private static final Collection<SurfaceSample> SURFACE_SAMPLES = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentHashMap<Long, ConcurrentLinkedQueue<SurfaceSample>> SPATIAL_BUCKETS = new ConcurrentHashMap<>();
+    private static final int BUCKET_BLOCKS = 512;
 
     public record SurfaceSample(int x, int y, int z, String blockId) {}
 
@@ -65,6 +68,7 @@ public final class TerrainCache {
         activeCacheKey = key;
         long generation = ++worldGeneration;
         SURFACE_SAMPLES.clear();
+        SPATIAL_BUCKETS.clear();
         SAMPLE_KEYS.clear();
         CAPTURED.clear();
         SAMPLE_COUNT.set(0);
@@ -183,7 +187,11 @@ public final class TerrainCache {
         String sampleKey = sample.x() + ":" + sample.z();
         if (SAMPLE_KEYS.add(sampleKey)) {
             int count = SAMPLE_COUNT.incrementAndGet();
-            if (count <= MAX_IN_MEMORY_SAMPLES) SURFACE_SAMPLES.add(sample);
+            if (count <= MAX_IN_MEMORY_SAMPLES) {
+                SURFACE_SAMPLES.add(sample);
+                long bucket = bucketKey(sample.x(), sample.z());
+                SPATIAL_BUCKETS.computeIfAbsent(bucket, ignored -> new ConcurrentLinkedQueue<>()).add(sample);
+            }
             else {
                 SAMPLE_KEYS.remove(sampleKey);
                 SAMPLE_COUNT.decrementAndGet();
@@ -210,6 +218,29 @@ public final class TerrainCache {
         String identity = client.getCurrentServer() == null
                 ? "unknown_server" : client.getCurrentServer().ip;
         return "server_" + Integer.toUnsignedString(identity.hashCode(), 16);
+    }
+
+
+    /** Returns only spatial buckets intersecting the requested square radius. */
+    public static Collection<SurfaceSample> getSurfaceSamplesNear(int centerX, int centerZ, int radiusBlocks) {
+        int minX = Math.floorDiv(centerX - radiusBlocks, BUCKET_BLOCKS);
+        int maxX = Math.floorDiv(centerX + radiusBlocks, BUCKET_BLOCKS);
+        int minZ = Math.floorDiv(centerZ - radiusBlocks, BUCKET_BLOCKS);
+        int maxZ = Math.floorDiv(centerZ + radiusBlocks, BUCKET_BLOCKS);
+        List<SurfaceSample> visible = new ArrayList<>();
+        for (int bx = minX; bx <= maxX; bx++) {
+            for (int bz = minZ; bz <= maxZ; bz++) {
+                Collection<SurfaceSample> bucket = SPATIAL_BUCKETS.get(bucketKey(bx * BUCKET_BLOCKS, bz * BUCKET_BLOCKS));
+                if (bucket != null) visible.addAll(bucket);
+            }
+        }
+        return visible;
+    }
+
+    private static long bucketKey(int x, int z) {
+        long bx = Math.floorDiv(x, BUCKET_BLOCKS);
+        long bz = Math.floorDiv(z, BUCKET_BLOCKS);
+        return (bx << 32) ^ (bz & 0xffffffffL);
     }
 
     public static Collection<SurfaceSample> getSurfaceSamples() {
