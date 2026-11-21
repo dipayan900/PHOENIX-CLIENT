@@ -129,6 +129,11 @@ public final class PhantomPrivacyScreen extends Screen {
         context.drawCenteredTextWithShadow(this.textRenderer,
                 Text.literal("Tap a mod row to switch between VISIBLE and HIDDEN"),
                 this.width / 2, this.height - 57, 0x8FE3A0);
+        if (visible.isEmpty()) {
+            context.drawCenteredTextWithShadow(this.textRenderer,
+                    Text.literal("No installed mods match this search."),
+                    this.width / 2, this.height / 2, 0xFFFFFF);
+        }
     }
 
     @Override
