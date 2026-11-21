@@ -23,16 +23,15 @@ public final class BrutalDistantTerrainClient implements ClientModInitializer {
                 (graphics, tickCounter) -> {
                     Minecraft client = Minecraft.getInstance();
                     if (client.player == null || client.options.hideGui) return;
-
                     String status = "Brutal_XD Distant Terrain | "
                             + TerrainCache.getCapturedChunkCount() + " cached chunks"
-                            + " | target " + DEFAULT_DISTANCE_CHUNKS + " chunks";
+                            + " | " + TerrainCache.getSampleCount() + " samples"
+                            + " | " + TerrainSettings.distanceChunks + " chunk target";
                     graphics.drawString(client.font, status, 6, 6, 0xFFE8A34A, true);
                 }
         );
 
         System.out.println("[Brutal_XD Distant Terrain] Client initialized. "
-                + "Balanced profile; configured target distance: "
-                + DEFAULT_DISTANCE_CHUNKS + " chunks.");
+                + "Configured target distance: " + TerrainSettings.distanceChunks + " chunks.");
     }
 }
