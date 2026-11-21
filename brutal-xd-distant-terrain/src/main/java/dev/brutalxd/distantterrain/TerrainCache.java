@@ -22,21 +22,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * Stores compact surface samples from chunks already received by the client.
- * Previously explored samples are restored when the player returns to the
- * same server and dimension. This never requests or force-loads remote chunks.
+ * Persistent record of terrain that the vanilla client has already received.
+ * Disk I/O is performed away from the render/client thread. This cache never
+ * requests chunks from a server and never force-loads terrain.
  */
 public final class TerrainCache {
     private static final int SAMPLE_STEP = 4;
+    private static final int MAX_IN_MEMORY_SAMPLES = 750_000;
     private static final Set<String> CAPTURED = ConcurrentHashMap.newKeySet();
     private static final Set<String> SAMPLE_KEYS = ConcurrentHashMap.newKeySet();
     private static final AtomicInteger CAPTURED_CHUNKS = new AtomicInteger();
+    private static final AtomicInteger SAMPLE_COUNT = new AtomicInteger();
     private static final Collection<SurfaceSample> SURFACE_SAMPLES = new ConcurrentLinkedQueue<>();
 
     public record SurfaceSample(int x, int y, int z, String blockId) {}
 
     private static Path cacheRoot;
     private static volatile String activeCacheKey = "";
+    private static volatile long worldGeneration;
 
     private TerrainCache() {}
 
@@ -51,30 +54,31 @@ public final class TerrainCache {
         }
     }
 
-    /** Switches the active in-memory terrain set and restores its disk cache off-thread. */
-    public static void activateWorld(Minecraft client, ClientLevel world) {
+    /** Activate a server/dimension namespace and restore its data asynchronously. */
+    public static synchronized void activateWorld(Minecraft client, ClientLevel world) {
         if (cacheRoot == null) initialize();
-        String worldKey = worldKey(client);
-        String dimension = world.dimension().identifier().toString().replace(':', '_');
-        String key = worldKey + "/" + dimension;
+        String key = worldKey(client) + "/" +
+                world.dimension().identifier().toString().replace(':', '_');
         if (key.equals(activeCacheKey)) return;
 
         activeCacheKey = key;
+        long generation = ++worldGeneration;
         SURFACE_SAMPLES.clear();
         SAMPLE_KEYS.clear();
         CAPTURED.clear();
+        SAMPLE_COUNT.set(0);
         CAPTURED_CHUNKS.set(0);
 
-        Path folder = cacheRoot.resolve(worldKey).resolve(dimension);
-        CompletableFuture.runAsync(() -> restore(folder, key));
+        Path folder = cacheRoot.resolve(key);
+        CompletableFuture.runAsync(() -> restore(folder, key, generation));
     }
 
-    private static void restore(Path folder, String key) {
+    private static void restore(Path folder, String key, long generation) {
         if (!Files.isDirectory(folder)) return;
         int restoredChunks = 0;
         try (Stream<Path> files = Files.list(folder)) {
             for (Path file : files.filter(p -> p.getFileName().toString().endsWith(".csv")).toList()) {
-                if (!key.equals(activeCacheKey)) return;
+                if (!isCurrent(key, generation)) return;
                 String name = file.getFileName().toString();
                 String[] coords = name.substring(0, name.length() - 4).split("_");
                 if (coords.length != 2) continue;
@@ -90,6 +94,7 @@ public final class TerrainCache {
 
                 boolean validChunk = false;
                 for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
+                    if (!isCurrent(key, generation)) return;
                     if (line.isBlank() || line.startsWith("#")) continue;
                     String[] values = line.split(",", 4);
                     if (values.length != 4) continue;
@@ -97,16 +102,16 @@ public final class TerrainCache {
                         int localX = Integer.parseInt(values[0]);
                         int localZ = Integer.parseInt(values[1]);
                         int y = Integer.parseInt(values[2]);
-                        int x = chunkX * 16 + localX;
-                        int z = chunkZ * 16 + localZ;
-                        addSample(new SurfaceSample(x, y, z, values[3]));
+                        if (localX < 0 || localX >= 16 || localZ < 0 || localZ >= 16) continue;
+                        addSample(key, generation, new SurfaceSample(
+                                chunkX * 16 + localX, y, chunkZ * 16 + localZ, values[3]));
                         validChunk = true;
                     } catch (NumberFormatException ignored) {
-                        // Ignore malformed rows without discarding the rest of the chunk.
+                        // Ignore a damaged row, preserving other valid samples.
                     }
                 }
                 if (validChunk) {
-                    CAPTURED.add(key + "/" + chunkX + "_" + chunkZ);
+                    CAPTURED.add(chunkKey(key, chunkX, chunkZ));
                     restoredChunks++;
                 }
             }
@@ -114,65 +119,96 @@ public final class TerrainCache {
             System.err.println("[Brutal_XD Distant Terrain] Cache restore failed: "
                     + exception.getMessage());
         }
-        if (key.equals(activeCacheKey)) CAPTURED_CHUNKS.set(restoredChunks);
+        if (isCurrent(key, generation)) CAPTURED_CHUNKS.set(restoredChunks);
     }
 
     public static void capture(Minecraft client, ClientLevel world, LevelChunk chunk) {
         activateWorld(client, world);
-
+        String key = activeCacheKey;
+        long generation = worldGeneration;
         int chunkX = chunk.getPos().x;
         int chunkZ = chunk.getPos().z;
-        String worldKey = worldKey(client);
-        String dimension = world.dimension().identifier().toString().replace(':', '_');
-        String cacheKey = worldKey + "/" + dimension + "/" + chunkX + "_" + chunkZ;
-        if (!CAPTURED.add(cacheKey)) return;
+        String id = chunkKey(key, chunkX, chunkZ);
+        if (!CAPTURED.add(id)) return;
 
-        StringBuilder data = new StringBuilder(1024);
+        // Snapshot block data immediately while the chunk is valid; only file I/O
+        // is moved to the worker thread.
+        StringBuilder data = new StringBuilder(2048);
         data.append("# Brutal_XD Distant Terrain surface samples\n");
-        data.append("# chunkX=").append(chunkX).append(",chunkZ=").append(chunkZ)
-                .append(",dimension=").append(world.dimension().identifier()).append('\n');
+        data.append("# format=1,chunkX=").append(chunkX).append(",chunkZ=")
+                .append(chunkZ).append('\n');
 
         for (int localZ = 0; localZ < 16; localZ += SAMPLE_STEP) {
             for (int localX = 0; localX < 16; localX += SAMPLE_STEP) {
                 int surfaceY = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, localX, localZ);
                 if (surfaceY <= world.getMinY()) continue;
-
                 BlockPos pos = new BlockPos(chunkX * 16 + localX, surfaceY - 1,
                         chunkZ * 16 + localZ);
                 String blockId = BuiltInRegistries.BLOCK.getKey(
                         chunk.getBlockState(pos).getBlock()).toString();
-                addSample(new SurfaceSample(chunkX * 16 + localX, surfaceY,
-                        chunkZ * 16 + localZ, blockId));
-
+                addSample(key, generation, new SurfaceSample(
+                        chunkX * 16 + localX, surfaceY, chunkZ * 16 + localZ, blockId));
                 data.append(localX).append(',').append(localZ).append(',')
                         .append(surfaceY).append(',').append(blockId).append('\n');
             }
         }
 
-        Path dimensionFolder = cacheRoot.resolve(worldKey).resolve(dimension);
-        Path output = dimensionFolder.resolve(chunkX + "_" + chunkZ + ".csv");
-        try {
-            Files.createDirectories(dimensionFolder);
-            Files.writeString(output, data, StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-            CAPTURED_CHUNKS.incrementAndGet();
-        } catch (IOException exception) {
-            CAPTURED.remove(cacheKey);
-            System.err.println("[Brutal_XD Distant Terrain] Cache write failed: "
-                    + exception.getMessage());
+        Path folder = cacheRoot.resolve(key);
+        Path output = folder.resolve(chunkX + "_" + chunkZ + ".csv");
+        String snapshot = data.toString();
+        CompletableFuture.runAsync(() -> {
+            if (!isCurrent(key, generation)) return;
+            try {
+                Files.createDirectories(folder);
+                Path temporary = output.resolveSibling(output.getFileName() + ".tmp");
+                Files.writeString(temporary, snapshot, StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                try {
+                    Files.move(temporary, output, java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                            java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                } catch (IOException atomicMoveUnsupported) {
+                    Files.move(temporary, output, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+                if (isCurrent(key, generation)) CAPTURED_CHUNKS.incrementAndGet();
+            } catch (IOException exception) {
+                CAPTURED.remove(id);
+                System.err.println("[Brutal_XD Distant Terrain] Cache write failed: "
+                        + exception.getMessage());
+            }
+        });
+    }
+
+    private static void addSample(String key, long generation, SurfaceSample sample) {
+        if (!isCurrent(key, generation) || SAMPLE_COUNT.get() >= MAX_IN_MEMORY_SAMPLES) return;
+        String sampleKey = sample.x() + ":" + sample.z();
+        if (SAMPLE_KEYS.add(sampleKey)) {
+            int count = SAMPLE_COUNT.incrementAndGet();
+            if (count <= MAX_IN_MEMORY_SAMPLES) SURFACE_SAMPLES.add(sample);
+            else {
+                SAMPLE_KEYS.remove(sampleKey);
+                SAMPLE_COUNT.decrementAndGet();
+            }
         }
     }
 
-    private static void addSample(SurfaceSample sample) {
-        String key = sample.x() + ":" + sample.z();
-        if (SAMPLE_KEYS.add(key)) SURFACE_SAMPLES.add(sample);
+    private static boolean isCurrent(String key, long generation) {
+        return generation == worldGeneration && key.equals(activeCacheKey);
+    }
+
+    private static String chunkKey(String key, int x, int z) {
+        return key + "/" + x + "_" + z;
     }
 
     private static String worldKey(Minecraft client) {
+        // Include the integrated world's save identity where available; the old
+        // shared "singleplayer" namespace caused unrelated saves to overlap.
+        if (client.getSingleplayerServer() != null) {
+            String save = client.getSingleplayerServer().getWorldData().getLevelName();
+            return "singleplayer_" + Integer.toUnsignedString(save.hashCode(), 16);
+        }
         String identity = client.getCurrentServer() == null
-                ? "singleplayer"
-                : client.getCurrentServer().ip;
-        return Integer.toHexString(identity.hashCode());
+                ? "unknown_server" : client.getCurrentServer().ip;
+        return "server_" + Integer.toUnsignedString(identity.hashCode(), 16);
     }
 
     public static Collection<SurfaceSample> getSurfaceSamples() {
@@ -181,5 +217,9 @@ public final class TerrainCache {
 
     public static int getCapturedChunkCount() {
         return CAPTURED_CHUNKS.get();
+    }
+
+    public static int getSampleCount() {
+        return SAMPLE_COUNT.get();
     }
 }
