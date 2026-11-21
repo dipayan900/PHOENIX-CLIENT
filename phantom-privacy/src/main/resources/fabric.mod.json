@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "phantomprivacy",
+  "version": "${version}",
+  "name": "Phantom Privacy",
+  "description": "A local Mod Menu display filter. Hidden entries remain installed and loaded.",
+  "authors": ["Brutal_XD aka DIPAYAN"],
+  "contact": {
+    "sources": "https://github.com/dipayan900/PHOENIX-CLIENT/tree/phantom-privacy-build/phantom-privacy"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.brutalxd.phantomprivacy.PhantomPrivacyClient"]
+  },
+  "mixins": ["phantomprivacy.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*",
+    "modmenu": ">=17.0.0"
+  }
+}
