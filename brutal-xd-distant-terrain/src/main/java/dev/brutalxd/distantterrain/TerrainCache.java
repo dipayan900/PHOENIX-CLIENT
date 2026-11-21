@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.storage.LevelResource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -119,7 +120,7 @@ public final class TerrainCache {
             System.err.println("[Brutal_XD Distant Terrain] Cache restore failed: "
                     + exception.getMessage());
         }
-        if (isCurrent(key, generation)) CAPTURED_CHUNKS.set(restoredChunks);
+        if (isCurrent(key, generation)) CAPTURED_CHUNKS.set(CAPTURED.size());
     }
 
     public static void capture(Minecraft client, ClientLevel world, LevelChunk chunk) {
@@ -157,7 +158,6 @@ public final class TerrainCache {
         Path output = folder.resolve(chunkX + "_" + chunkZ + ".csv");
         String snapshot = data.toString();
         CompletableFuture.runAsync(() -> {
-            if (!isCurrent(key, generation)) return;
             try {
                 Files.createDirectories(folder);
                 Path temporary = output.resolveSibling(output.getFileName() + ".tmp");
@@ -169,7 +169,7 @@ public final class TerrainCache {
                 } catch (IOException atomicMoveUnsupported) {
                     Files.move(temporary, output, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 }
-                if (isCurrent(key, generation)) CAPTURED_CHUNKS.incrementAndGet();
+                CAPTURED_CHUNKS.incrementAndGet();
             } catch (IOException exception) {
                 CAPTURED.remove(id);
                 System.err.println("[Brutal_XD Distant Terrain] Cache write failed: "
@@ -203,8 +203,9 @@ public final class TerrainCache {
         // Include the integrated world's save identity where available; the old
         // shared "singleplayer" namespace caused unrelated saves to overlap.
         if (client.getSingleplayerServer() != null) {
-            String save = client.getSingleplayerServer().getWorldData().getLevelName();
-            return "singleplayer_" + Integer.toUnsignedString(save.hashCode(), 16);
+            String savePath = client.getSingleplayerServer().getWorldPath(LevelResource.ROOT)
+                    .toAbsolutePath().normalize().toString();
+            return "singleplayer_" + Integer.toUnsignedString(savePath.hashCode(), 16);
         }
         String identity = client.getCurrentServer() == null
                 ? "unknown_server" : client.getCurrentServer().ip;
@@ -212,7 +213,9 @@ public final class TerrainCache {
     }
 
     public static Collection<SurfaceSample> getSurfaceSamples() {
-        return List.copyOf(SURFACE_SAMPLES);
+        // ConcurrentLinkedQueue provides a weakly-consistent iterator. Avoid a
+        // full 100k+ element copy on every render frame.
+        return SURFACE_SAMPLES;
     }
 
     public static int getCapturedChunkCount() {
