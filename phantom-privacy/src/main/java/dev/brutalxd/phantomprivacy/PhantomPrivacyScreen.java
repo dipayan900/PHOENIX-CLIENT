@@ -87,26 +87,30 @@ public final class PhantomPrivacyScreen extends Screen {
         }
 
         int footerY = this.height - 48;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Previous"), button -> {
+        addDrawableChild(ButtonWidget.builder(Text.literal("Prev"), button -> {
             page = Math.max(0, page - 1);
             clearAndInit();
-        }).dimensions(left, footerY, 82, 20).build());
+        }).dimensions(left, footerY, 48, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal((page + 1) + " / " + pageCount), button -> {})
-                .dimensions(left + 88, footerY, 72, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal((page + 1) + "/" + pageCount), button -> {})
+                .dimensions(left + 51, footerY, 42, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Next"), button -> {
             page = Math.min(pageCount - 1, page + 1);
             clearAndInit();
-        }).dimensions(left + 166, footerY, 70, 20).build());
+        }).dimensions(left + 96, footerY, 48, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Save"), button -> {
             PhantomPrivacyConfig.setHiddenIds(pendingHiddenIds);
             close();
-        }).dimensions(left + contentWidth - 154, footerY, 72, 20).build());
+        }).dimensions(left + contentWidth - 99, footerY, 48, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), button -> close())
-                .dimensions(left + contentWidth - 76, footerY, 76, 20).build());
+                .dimensions(left + contentWidth - 48, footerY, 48, 20).build());
+
+        if (visible.isEmpty()) {
+            // No row buttons are needed when the search has no matches.
+        }
     }
 
     @Override
