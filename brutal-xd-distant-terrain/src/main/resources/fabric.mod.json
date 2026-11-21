@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "brutal_xd_distant_terrain",
+  "version": "${version}",
+  "name": "Brutal_XD Distant Terrain",
+  "description": "An Android-first distant-terrain research mod with a persistent explored-terrain cache.",
+  "authors": ["Brutal_XD aka DIPAYAN"],
+  "contact": {
+    "sources": "https://github.com/dipayan900/PHOENIX-CLIENT"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.brutalxd.distantterrain.BrutalDistantTerrainClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

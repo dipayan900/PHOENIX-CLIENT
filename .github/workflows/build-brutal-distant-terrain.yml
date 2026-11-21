@@ -1,0 +1,32 @@
+name: Build Brutal_XD Distant Terrain
+
+on:
+  push:
+    paths:
+      - "brutal-xd-distant-terrain/**"
+      - ".github/workflows/build-brutal-distant-terrain.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: brutal-xd-distant-terrain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.2.1"
+      - name: Build mod
+        run: gradle build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brutal-xd-distant-terrain-alpha
+          path: brutal-xd-distant-terrain/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 14
