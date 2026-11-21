@@ -64,7 +64,9 @@ public final class TerrainLodRenderer {
         Matrix4fc matrix = context.matrices().last().pose();
         int tiles = 0;
 
-        for (TerrainCache.SurfaceSample sample : TerrainCache.getSurfaceSamples()) {
+        int radiusBlocks = TerrainSettings.distanceChunks * 16;
+        for (TerrainCache.SurfaceSample sample : TerrainCache.getSurfaceSamplesNear(
+                (int) camera.x, (int) camera.z, radiusBlocks)) {
             double dx = sample.x() - camera.x;
             double dz = sample.z() - camera.z;
             double chunkDistance = Math.sqrt(dx * dx + dz * dz) / 16.0;
