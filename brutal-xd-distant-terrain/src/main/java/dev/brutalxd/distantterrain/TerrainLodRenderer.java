@@ -86,7 +86,7 @@ public final class TerrainLodRenderer {
 
         context.matrices().popPose();
         if (tiles == 0) {
-            builder.discard();
+            // No vertices were emitted; skip this frame without building a mesh.
             return;
         }
 
