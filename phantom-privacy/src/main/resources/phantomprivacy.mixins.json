@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "package": "dev.brutalxd.phantomprivacy.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["ModListWidgetMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
