@@ -50,7 +50,7 @@ public final class PhantomPrivacyScreen extends Screen {
                 Text.literal("Only Mod Menu entries are filtered; mods remain loaded."),
                 this.width / 2, this.height / 2 + 4, 0x8FE3A0);
         context.drawCenteredTextWithShadow(this.textRenderer,
-                Text.literal("Default shortcut: Shift + = (the + key on US keyboards)"),
+                Text.literal("Shortcut: Page Up"),
                 this.width / 2, this.height / 2 + 58, 0xB8B8B8);
     }
 
