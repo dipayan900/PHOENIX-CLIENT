@@ -175,7 +175,7 @@ public final class TerrainCache {
                 } catch (IOException atomicMoveUnsupported) {
                     Files.move(temporary, output, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 }
-                CAPTURED_CHUNKS.incrementAndGet();
+                if (isCurrent(key, generation)) CAPTURED_CHUNKS.incrementAndGet();
             } catch (IOException exception) {
                 CAPTURED.remove(id);
                 System.err.println("[Brutal_XD Distant Terrain] Cache write failed: "
