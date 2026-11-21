@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ public final class PhantomPrivacyConfig {
             Arrays.stream(value.split(","))
                     .map(String::trim)
                     .filter(id -> !id.isEmpty())
+                    .map(id -> id.toLowerCase(Locale.ROOT))
                     .forEach(HIDDEN::add);
         } catch (IOException exception) {
             System.err.println("[Phantom Privacy] Could not read config: " + exception.getMessage());
@@ -41,15 +43,24 @@ public final class PhantomPrivacyConfig {
     }
 
     public static synchronized boolean isHidden(String modId) {
-        return "phantomprivacy".equals(modId) || HIDDEN.contains(modId);
+        return modId != null && HIDDEN.contains(modId.toLowerCase(Locale.ROOT));
     }
 
     public static synchronized void setHiddenIds(String commaSeparatedIds) {
-        HIDDEN.clear();
-        HIDDEN.add("phantomprivacy");
-        Arrays.stream(commaSeparatedIds.split(","))
+        Set<String> ids = Arrays.stream(commaSeparatedIds.split(","))
                 .map(String::trim)
                 .filter(id -> !id.isEmpty())
+                .map(id -> id.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        setHiddenIds(ids);
+    }
+
+    public static synchronized void setHiddenIds(Set<String> ids) {
+        HIDDEN.clear();
+        HIDDEN.add("phantomprivacy");
+        ids.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .map(id -> id.trim().toLowerCase(Locale.ROOT))
                 .forEach(HIDDEN::add);
         save();
     }
