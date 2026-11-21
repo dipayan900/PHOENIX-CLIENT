@@ -40,7 +40,8 @@ public final class PhantomPrivacyScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context, mouseX, mouseY, delta);
+        // Screen.render already draws the screen background. Calling renderBackground
+        // here as well causes Minecraft 1.21.11 to blur twice in one frame and crash.
         super.render(context, mouseX, mouseY, delta);
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, this.height / 2 - 64, 0xFFFFFF);
         context.drawCenteredTextWithShadow(this.textRenderer,
