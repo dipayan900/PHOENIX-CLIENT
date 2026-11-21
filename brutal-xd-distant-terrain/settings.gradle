@@ -5,11 +5,15 @@ pluginManagement {
         mavenCentral()
     }
 }
+
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // Fabric Loom injects its remapped-mod repository at project level.
+    // PREFER_PROJECT allows Loom's repository while retaining these defaults.
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         maven { url = "https://maven.fabricmc.net/" }
         mavenCentral()
     }
 }
+
 rootProject.name = "Brutal_XD-Distant-Terrain"
