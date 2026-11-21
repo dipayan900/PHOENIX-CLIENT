@@ -13,18 +13,23 @@ public final class PhantomPrivacyClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         PhantomPrivacyConfig.load();
+
+        // GLFW_KEY_PAGE_UP is the physical Page Up key (not the shifted '=' key).
         openConfig = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.phantomprivacy.open_config",
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_EQUAL,
+                GLFW.GLFW_KEY_PAGE_UP,
                 KeyBinding.Category.MISC
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openConfig.wasPressed()) {
-                if (client.currentScreen == null) {
-                    client.setScreen(new PhantomPrivacyScreen(null));
+                if (client.currentScreen instanceof PhantomPrivacyScreen) {
+                    continue;
                 }
+                // Keep the current screen as the parent so the config can be opened
+                // from gameplay, the pause menu, or Mod Menu and returned to safely.
+                client.setScreen(new PhantomPrivacyScreen(client.currentScreen));
             }
         });
     }
