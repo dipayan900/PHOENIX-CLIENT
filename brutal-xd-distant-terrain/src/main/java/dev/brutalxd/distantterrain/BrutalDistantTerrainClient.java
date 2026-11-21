@@ -13,6 +13,8 @@ public final class BrutalDistantTerrainClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         TerrainCache.initialize();
+        TerrainSettings.initialize();
+        TerrainLodRenderer.initialize();
         ClientChunkEvents.CHUNK_LOAD.register((world, chunk) ->
                 TerrainCache.capture(Minecraft.getInstance(), world, chunk));
 
