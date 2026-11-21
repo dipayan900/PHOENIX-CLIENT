@@ -28,7 +28,7 @@ public final class TerrainSettings {
                 Identifier.fromNamespaceAndPath(BrutalDistantTerrainClient.MOD_ID, "controls"));
         openSettings = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.brutal_xd_distant_terrain.open_settings",
-                InputConstants.Type.KEYSYM, InputConstants.KEY_O, category));
+                InputConstants.Type.KEYSYM, InputConstants.KEY_F11, category));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openSettings.consumeClick()) {
                 if (client.player != null) client.setScreen(new TerrainConfigScreen(client.screen));
