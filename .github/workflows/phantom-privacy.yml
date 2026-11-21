@@ -1,0 +1,32 @@
+name: Build Phantom Privacy
+
+on:
+  push:
+    branches: [phantom-privacy-build]
+    paths:
+      - "phantom-privacy/**"
+      - ".github/workflows/phantom-privacy.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14"
+      - name: Build mod
+        working-directory: phantom-privacy
+        run: gradle --no-daemon clean build
+      - name: Upload mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: phantom-privacy-minecraft-1.21.11
+          path: phantom-privacy/build/libs/phantom-privacy-*.jar
+          if-no-files-found: error
+          retention-days: 30
