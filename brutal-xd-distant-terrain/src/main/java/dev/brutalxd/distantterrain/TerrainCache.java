@@ -33,6 +33,7 @@ public final class TerrainCache {
     private static final int MAX_IN_MEMORY_SAMPLES = 750_000;
     private static final Set<String> CAPTURED = ConcurrentHashMap.newKeySet();
     private static final Set<String> SAMPLE_KEYS = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<Long, SurfaceSample> SAMPLE_BY_POSITION = new ConcurrentHashMap<>();
     private static final AtomicInteger CAPTURED_CHUNKS = new AtomicInteger();
     private static final AtomicInteger SAMPLE_COUNT = new AtomicInteger();
     private static final Collection<SurfaceSample> SURFACE_SAMPLES = new ConcurrentLinkedQueue<>();
@@ -70,6 +71,7 @@ public final class TerrainCache {
         SURFACE_SAMPLES.clear();
         SPATIAL_BUCKETS.clear();
         SAMPLE_KEYS.clear();
+        SAMPLE_BY_POSITION.clear();
         CAPTURED.clear();
         SAMPLE_COUNT.set(0);
         CAPTURED_CHUNKS.set(0);
@@ -191,6 +193,7 @@ public final class TerrainCache {
                 SURFACE_SAMPLES.add(sample);
                 long bucket = bucketKey(sample.x(), sample.z());
                 SPATIAL_BUCKETS.computeIfAbsent(bucket, ignored -> new ConcurrentLinkedQueue<>()).add(sample);
+                SAMPLE_BY_POSITION.putIfAbsent(positionKey(sample.x(), sample.z()), sample);
             }
             else {
                 SAMPLE_KEYS.remove(sampleKey);
@@ -235,6 +238,15 @@ public final class TerrainCache {
             }
         }
         return visible;
+    }
+
+
+    public static SurfaceSample getSurfaceSample(int x, int z) {
+        return SAMPLE_BY_POSITION.get(positionKey(x, z));
+    }
+
+    private static long positionKey(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xffffffffL);
     }
 
     private static long bucketKey(int x, int z) {
