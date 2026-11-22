@@ -178,7 +178,7 @@ public final class TerrainLodRenderer {
             var atlas = client.getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
             pass.bindTexture("Sampler0", atlas.getTextureView(),
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST, true));
-            pass.bindTexture("Sampler2", client.gameRenderer.lightmap(),
+            pass.bindTexture("Sampler2", client.gameRenderer.lightTexture().getTextureView(),
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
             pass.drawIndexed(0, 0, drawState.indexCount(), 1);
         }
@@ -192,7 +192,8 @@ public final class TerrainLodRenderer {
                 Identifier identifier = Identifier.tryParse(id);
                 if (identifier == null) return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
                         .getBlockModel(Blocks.STONE.defaultBlockState()).particleIcon();
-                Block block = BuiltInRegistries.BLOCK.get(identifier);
+                Block block = BuiltInRegistries.BLOCK.get(identifier)
+                        .map(reference -> reference.value()).orElse(Blocks.STONE);
                 BlockState state = block.defaultBlockState();
                 BlockStateModel model = Minecraft.getInstance().getBlockRenderer()
                         .getBlockModelShaper().getBlockModel(state);
