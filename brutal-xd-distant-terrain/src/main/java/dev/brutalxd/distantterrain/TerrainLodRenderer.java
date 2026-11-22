@@ -2,6 +2,9 @@ package dev.brutalxd.distantterrain;
 
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -44,6 +47,7 @@ public final class TerrainLodRenderer {
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
     private static final int MAX_TILES_PER_FRAME = 8192;
     private static MappableRingBuffer vertexBuffer;
+    private record Candidate(TerrainCache.SurfaceSample sample, double distance) {}
 
     private TerrainLodRenderer() {}
 
@@ -65,19 +69,29 @@ public final class TerrainLodRenderer {
         int tiles = 0;
 
         int radiusBlocks = TerrainSettings.distanceChunks * 16;
+        // Select the nearest visible tiles first. The previous queue-order cutoff
+        // could spend the entire per-frame budget on old terrain at the edge of
+        // the cache, leaving holes around the player.
+        List<Candidate> candidates = new ArrayList<>();
         for (TerrainCache.SurfaceSample sample : TerrainCache.getSurfaceSamplesNear(
                 (int) camera.x, (int) camera.z, radiusBlocks)) {
             double dx = sample.x() - camera.x;
             double dz = sample.z() - camera.z;
             double chunkDistance = Math.sqrt(dx * dx + dz * dz) / 16.0;
             if (chunkDistance > TerrainSettings.distanceChunks) continue;
-
-            // Increase tile footprint with distance to reduce far-field geometry.
             int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
                     : chunkDistance < 256 ? 4 : 8;
             if (Math.floorMod(sample.x(), stride * 4) != 0
                     || Math.floorMod(sample.z(), stride * 4) != 0) continue;
+            candidates.add(new Candidate(sample, chunkDistance));
+        }
+        candidates.sort(Comparator.comparingDouble(Candidate::distance));
 
+        for (Candidate candidate : candidates) {
+            TerrainCache.SurfaceSample sample = candidate.sample();
+            double chunkDistance = candidate.distance();
+            int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
+                    : chunkDistance < 256 ? 4 : 8;
             float size = 4.0f * stride;
             float y00 = sample.y();
             TerrainCache.SurfaceSample east = TerrainCache.getSurfaceSample(sample.x() + (int) size, sample.z());
@@ -151,7 +165,7 @@ public final class TerrainLodRenderer {
         float r = 0.34f, g = 0.58f, b = 0.27f;
         if (block.contains("water") || block.contains("ice")) {
             r = 0.22f; g = 0.43f; b = 0.72f;
-        } else if (block.contains("sand") || block.contains(" sandstone")) {
+        } else if (block.contains("sand") || block.contains("sandstone")) {
             r = 0.72f; g = 0.65f; b = 0.42f;
         } else if (block.contains("snow") || block.contains("quartz")) {
             r = 0.78f; g = 0.80f; b = 0.79f;
