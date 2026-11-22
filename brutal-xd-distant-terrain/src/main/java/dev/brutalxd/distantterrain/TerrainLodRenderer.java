@@ -5,6 +5,7 @@ import java.util.OptionalInt;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
@@ -72,7 +73,8 @@ public final class TerrainLodRenderer {
     private static final Vector4f COLOR_MODULATOR = new Vector4f(1, 1, 1, 1);
     private static final Vector3f MODEL_OFFSET = new Vector3f();
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
-    private static final int MAX_TILES_PER_FRAME = 8192;
+    private static final int MAX_TILES_PER_FRAME = 2048;
+    private static final int MAX_CACHED_CANDIDATES = 24000;
     private static MappableRingBuffer vertexBuffer;
     private record Candidate(TerrainCache.SurfaceSample sample, double distance) {}
     private record MeshPoint(float x, float y, float z, float u, float v) {}
@@ -109,7 +111,12 @@ public final class TerrainLodRenderer {
                 || sampleCount != cachedSampleCount
                 || TerrainSettings.distanceChunks != cachedDistanceChunks) {
             int radiusBlocks = TerrainSettings.distanceChunks * 16;
-            List<Candidate> candidates = new ArrayList<>();
+            // Keep only the nearest candidates. Sorting every cached column can
+            // allocate hundreds of thousands of objects on mobile when the user
+            // selects the 512-chunk target. A bounded max-heap keeps both memory
+            // use and sort cost predictable while preserving nearest terrain first.
+            PriorityQueue<Candidate> nearest = new PriorityQueue<>(
+                    Comparator.comparingDouble(Candidate::distance).reversed());
             for (TerrainCache.SurfaceSample sample : TerrainCache.getSurfaceSamplesNear(
                     centerX, centerZ, radiusBlocks)) {
                 double dx = sample.x() - centerX;
@@ -119,8 +126,15 @@ public final class TerrainLodRenderer {
                 int stride = strideForDistance(chunkDistance);
                 if (Math.floorMod(sample.x(), stride) != 0
                         || Math.floorMod(sample.z(), stride) != 0) continue;
-                candidates.add(new Candidate(sample, chunkDistance));
+                Candidate candidate = new Candidate(sample, chunkDistance);
+                if (nearest.size() < MAX_CACHED_CANDIDATES) {
+                    nearest.offer(candidate);
+                } else if (chunkDistance < nearest.peek().distance()) {
+                    nearest.poll();
+                    nearest.offer(candidate);
+                }
             }
+            List<Candidate> candidates = new ArrayList<>(nearest);
             candidates.sort(Comparator.comparingDouble(Candidate::distance));
             cachedCandidates = candidates;
             cachedCenterX = centerX;
