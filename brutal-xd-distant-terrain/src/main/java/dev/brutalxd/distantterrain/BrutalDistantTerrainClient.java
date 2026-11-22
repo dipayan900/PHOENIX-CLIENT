@@ -16,9 +16,11 @@ public final class BrutalDistantTerrainClient implements ClientModInitializer {
         VoxelChunkCache.initialize();
         TerrainSettings.initialize();
         TerrainLodRenderer.initialize();
+        VoxelTerrainRenderer.initialize();
         ClientChunkEvents.CHUNK_LOAD.register((world, chunk) -> {
             TerrainCache.capture(Minecraft.getInstance(), world, chunk);
             VoxelChunkCache.capture(world, chunk);
+            VoxelTerrainRenderer.invalidateAround(chunk.getPos().x, chunk.getPos().z);
         });
 
         HudElementRegistry.addLast(
