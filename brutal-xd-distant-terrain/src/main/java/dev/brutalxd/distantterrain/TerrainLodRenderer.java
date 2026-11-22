@@ -117,8 +117,8 @@ public final class TerrainLodRenderer {
                 double chunkDistance = Math.sqrt(dx * dx + dz * dz) / 16.0;
                 if (chunkDistance > TerrainSettings.distanceChunks) continue;
                 int stride = strideForDistance(chunkDistance);
-                if (Math.floorMod(sample.x(), stride * 2) != 0
-                        || Math.floorMod(sample.z(), stride * 2) != 0) continue;
+                if (Math.floorMod(sample.x(), stride) != 0
+                        || Math.floorMod(sample.z(), stride) != 0) continue;
                 candidates.add(new Candidate(sample, chunkDistance));
             }
             candidates.sort(Comparator.comparingDouble(Candidate::distance));
@@ -133,7 +133,7 @@ public final class TerrainLodRenderer {
             TerrainCache.SurfaceSample sample = candidate.sample();
             double chunkDistance = candidate.distance();
             int stride = strideForDistance(chunkDistance);
-            float size = 2.0f * stride;
+            float size = 1.0f * stride;
             float y00 = sample.y();
             TerrainCache.SurfaceSample east = TerrainCache.getSurfaceSample(sample.x() + (int) size, sample.z());
             TerrainCache.SurfaceSample south = TerrainCache.getSurfaceSample(sample.x(), sample.z() + (int) size);
@@ -247,7 +247,7 @@ public final class TerrainLodRenderer {
                                        int cameraX, int cameraZ) {
         TextureAtlasSprite sprite = sprites.top();
         float size = x1 - x0;
-        int stride = Math.max(1, Math.round(size / 2.0f));
+        int stride = Math.max(1, Math.round(size));
         float midX = (x0 + x1) * 0.5f;
         float midZ = (z0 + z1) * 0.5f;
         float midY = (y00 + y10 + y11 + y01) * 0.25f;
