@@ -200,8 +200,8 @@ public final class VoxelTerrainRenderer {
                     });
 
                     for (Direction face : Direction.values()) {
-                        if (isOccluding(chunk, x + face.getStepX(), y + face.getStepY(),
-                                z + face.getStepZ())) continue;
+                        if (shouldSkipFace(blockState, chunk, x + face.getStepX(), y + face.getStepY(),
+                                z + face.getStepZ(), face)) continue;
                         for (BlockModelPart part : parts) {
                             for (BakedQuad quad : part.getQuads(face)) {
                                 emitBakedQuad(builder, identity, x, y, z, quad);
@@ -233,8 +233,9 @@ public final class VoxelTerrainRenderer {
         }
     }
 
-    private static boolean isOccluding(VoxelChunkCache.VoxelChunk chunk,
-                                       int x, int y, int z) {
+    private static boolean shouldSkipFace(BlockState current,
+                                           VoxelChunkCache.VoxelChunk chunk,
+                                           int x, int y, int z, Direction face) {
         if (y < chunk.minY() || y >= chunk.minY() + chunk.height()) return false;
         VoxelChunkCache.VoxelChunk source = chunk;
         int localX = x, localZ = z;
@@ -246,8 +247,8 @@ public final class VoxelTerrainRenderer {
             localX = Math.floorMod(x, 16);
             localZ = Math.floorMod(z, 16);
         }
-        if (source.blockAt(localX, y, localZ) == 0) return false;
-        return source.stateAt(localX, y, localZ).isSolidRender();
+        BlockState neighbor = source.stateAt(localX, y, localZ);
+        return current.skipRendering(neighbor, face);
     }
 
     private static void emitBakedQuad(BufferBuilder out, Matrix4fc matrix,
