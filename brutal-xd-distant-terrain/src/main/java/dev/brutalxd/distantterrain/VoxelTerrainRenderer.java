@@ -221,7 +221,14 @@ public final class VoxelTerrainRenderer {
         if (mesh == null) return new ChunkMesh(chunk, null, null,
                 VertexFormat.IndexType.SHORT, 0);
         try {
+            // Build the QUADS index data before uploading it. Without sortQuads,
+            // MeshData.indexBuffer() is null and VertexFormat.uploadImmediateIndexBuffer
+            // throws on first world render.
+            mesh.sortQuads(ALLOCATOR, RenderSystem.getProjectionType().vertexSorting());
             MeshData.DrawState state = mesh.drawState();
+            if (mesh.indexBuffer() == null || state.indexCount() <= 0) {
+                return new ChunkMesh(chunk, null, null, state.indexType(), 0);
+            }
             GpuBuffer vertices = RenderSystem.getDevice().createBuffer(
                     () -> "Brutal_XD voxel chunk vertices",
                     GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer());
