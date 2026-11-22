@@ -53,7 +53,20 @@ import org.lwjgl.system.MemoryUtil;
  */
 public final class TerrainLodRenderer {
     private static final RenderPipeline TERRAIN_PIPELINE = RenderPipelines.SOLID_BLOCK;
-    private static final Map<String, TextureAtlasSprite> TOP_SPRITES = new ConcurrentHashMap<>();
+    private static final Map<String, BlockSprites> BLOCK_SPRITES = new ConcurrentHashMap<>();
+    private record BlockSprites(TextureAtlasSprite top, TextureAtlasSprite north,
+                                TextureAtlasSprite east, TextureAtlasSprite south,
+                                TextureAtlasSprite west) {
+        TextureAtlasSprite side(Direction direction) {
+            return switch (direction) {
+                case NORTH -> north;
+                case EAST -> east;
+                case SOUTH -> south;
+                case WEST -> west;
+                default -> top;
+            };
+        }
+    }
     private static final ByteBufferBuilder ALLOCATOR =
             new ByteBufferBuilder(RenderType.SMALL_BUFFER_SIZE);
     private static final Vector4f COLOR_MODULATOR = new Vector4f(1, 1, 1, 1);
@@ -130,10 +143,11 @@ public final class TerrainLodRenderer {
             float y01 = south == null ? y00 : south.y();
             float y11 = diagonal == null ? (y10 + y01) * 0.5f : diagonal.y();
             float[] color = colorFor(sample.blockId(), chunkDistance);
-            TextureAtlasSprite sprite = topSprite(sample.blockId());
+            BlockSprites sprites = blockSprites(sample.blockId());
+            TextureAtlasSprite sprite = sprites.top();
             addTerrainCell(builder, matrix, sample.x(), sample.z(), sample.x() + size,
                     sample.z() + size, y00 + 0.02f, y10 + 0.02f,
-                    y11 + 0.02f, y01 + 0.02f, color, sprite, centerX, centerZ);
+                    y11 + 0.02f, y01 + 0.02f, color, sprites, centerX, centerZ);
             if (++tiles >= MAX_TILES_PER_FRAME) break;
         }
 
@@ -185,29 +199,38 @@ public final class TerrainLodRenderer {
         vertexBuffer.rotate();
     }
 
-    private static TextureAtlasSprite topSprite(String blockId) {
-        return TOP_SPRITES.computeIfAbsent(blockId, id -> {
+    private static BlockSprites blockSprites(String blockId) {
+        return BLOCK_SPRITES.computeIfAbsent(blockId, id -> {
             try {
                 Identifier identifier = Identifier.tryParse(id);
-                if (identifier == null) return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
-                        .getBlockModel(Blocks.STONE.defaultBlockState()).particleIcon();
-                Block block = BuiltInRegistries.BLOCK.get(identifier)
-                        .map(reference -> reference.value()).orElse(Blocks.STONE);
-                BlockState state = block.defaultBlockState();
+                Block fallback = Blocks.STONE;
+                Block block = identifier == null ? fallback : BuiltInRegistries.BLOCK
+                        .get(identifier).map(reference -> reference.value()).orElse(fallback);
                 BlockStateModel model = Minecraft.getInstance().getBlockRenderer()
-                        .getBlockModelShaper().getBlockModel(state);
+                        .getBlockModelShaper().getBlockModel(block.defaultBlockState());
                 List<BlockModelPart> parts = new ArrayList<>();
                 model.collectParts(RandomSource.create(42L), parts);
-                for (BlockModelPart part : parts) {
-                    List<BakedQuad> quads = part.getQuads(Direction.UP);
-                    if (!quads.isEmpty()) return quads.get(0).sprite();
-                }
-                return model.particleIcon();
+                TextureAtlasSprite particle = model.particleIcon();
+                return new BlockSprites(faceSprite(parts, Direction.UP, particle),
+                        faceSprite(parts, Direction.NORTH, particle),
+                        faceSprite(parts, Direction.EAST, particle),
+                        faceSprite(parts, Direction.SOUTH, particle),
+                        faceSprite(parts, Direction.WEST, particle));
             } catch (Throwable ignored) {
-                return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
-                        .getBlockModel(Blocks.STONE.defaultBlockState()).particleIcon();
+                TextureAtlasSprite fallback = Minecraft.getInstance().getBlockRenderer()
+                        .getBlockModelShaper().getBlockModel(Blocks.STONE.defaultBlockState()).particleIcon();
+                return new BlockSprites(fallback, fallback, fallback, fallback, fallback);
             }
         });
+    }
+
+    private static TextureAtlasSprite faceSprite(List<BlockModelPart> parts, Direction face,
+                                                  TextureAtlasSprite fallback) {
+        for (BlockModelPart part : parts) {
+            List<BakedQuad> quads = part.getQuads(face);
+            if (!quads.isEmpty()) return quads.get(0).sprite();
+        }
+        return fallback;
     }
 
     /**
@@ -220,8 +243,9 @@ public final class TerrainLodRenderer {
     private static void addTerrainCell(BufferBuilder out, Matrix4fc matrix,
                                        float x0, float z0, float x1, float z1,
                                        float y00, float y10, float y11, float y01,
-                                       float[] color, TextureAtlasSprite sprite,
+                                       float[] color, BlockSprites sprites,
                                        int cameraX, int cameraZ) {
+        TextureAtlasSprite sprite = sprites.top();
         float size = x1 - x0;
         int stride = Math.max(1, Math.round(size / 2.0f));
         float midX = (x0 + x1) * 0.5f;
@@ -255,13 +279,13 @@ public final class TerrainLodRenderer {
 
         float floor = Math.min(Math.min(y00, y10), Math.min(y11, y01)) - 8.0f;
         addTexturedQuad(out, matrix, x0, z0, x1, z0,
-                y00, y10, floor, floor, color, sprite, 0, 0, -1);
+                y00, y10, floor, floor, color, sprites.side(Direction.NORTH), 0, 0, -1);
         addTexturedQuad(out, matrix, x1, z0, x1, z1,
-                y10, y11, floor, floor, color, sprite, 1, 0, 0);
+                y10, y11, floor, floor, color, sprites.side(Direction.EAST), 1, 0, 0);
         addTexturedQuad(out, matrix, x1, z1, x0, z1,
-                y11, y01, floor, floor, color, sprite, 0, 0, 1);
+                y11, y01, floor, floor, color, sprites.side(Direction.SOUTH), 0, 0, 1);
         addTexturedQuad(out, matrix, x0, z1, x0, z0,
-                y01, y00, floor, floor, color, sprite, -1, 0, 0);
+                y01, y00, floor, floor, color, sprites.side(Direction.WEST), -1, 0, 0);
     }
 
     private static int strideForDistance(double distance) {
