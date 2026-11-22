@@ -73,7 +73,7 @@ public final class TerrainLodRenderer {
     private static final Vector4f COLOR_MODULATOR = new Vector4f(1, 1, 1, 1);
     private static final Vector3f MODEL_OFFSET = new Vector3f();
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
-    private static final int MAX_TILES_PER_FRAME = 2048;
+    private static final int MAX_TILES_PER_FRAME = 8192;
     private static final int MAX_CACHED_CANDIDATES = 24000;
     private static MappableRingBuffer vertexBuffer;
     private record Candidate(TerrainCache.SurfaceSample sample, double distance) {}
