@@ -74,8 +74,8 @@ public final class TerrainLodRenderer {
     private static final Vector4f COLOR_MODULATOR = new Vector4f(1, 1, 1, 1);
     private static final Vector3f MODEL_OFFSET = new Vector3f();
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
-    private static final int MAX_TILES_PER_FRAME = 8192;
-    private static final int MAX_CACHED_CANDIDATES = 24000;
+    private static final int MAX_TILES_PER_FRAME = 4096;
+    private static final int MAX_CACHED_CANDIDATES = 4096;
     private static MappableRingBuffer vertexBuffer;
     private record Candidate(TerrainCache.SurfaceSample sample, double distance) {}
     private record MeshPoint(float x, float y, float z, float u, float v) {}
@@ -124,6 +124,9 @@ public final class TerrainLodRenderer {
                 double dz = sample.z() - centerZ;
                 double chunkDistance = Math.sqrt(dx * dx + dz * dz) / 16.0;
                 if (chunkDistance > TerrainSettings.distanceChunks) continue;
+                // The voxel renderer owns the 8-chunk near field. Keep the surface
+                // LOD outside that radius so the two passes do not z-fight.
+                if (chunkDistance <= 8.5) continue;
                 int stride = strideForDistance(chunkDistance);
                 if (Math.floorMod(sample.x(), stride) != 0
                         || Math.floorMod(sample.z(), stride) != 0) continue;
