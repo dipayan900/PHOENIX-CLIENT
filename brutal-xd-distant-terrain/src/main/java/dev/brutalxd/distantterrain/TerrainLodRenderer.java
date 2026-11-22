@@ -258,21 +258,8 @@ public final class TerrainLodRenderer {
     }
 
     private static float[] colorFor(String block, double distance) {
-        float r = 0.34f, g = 0.58f, b = 0.27f;
-        if (block.contains("water") || block.contains("ice")) {
-            r = 0.22f; g = 0.43f; b = 0.72f;
-        } else if (block.contains("sand") || block.contains("sandstone")) {
-            r = 0.72f; g = 0.65f; b = 0.42f;
-        } else if (block.contains("snow") || block.contains("quartz")) {
-            r = 0.78f; g = 0.80f; b = 0.79f;
-        } else if (block.contains("stone") || block.contains("deepslate")) {
-            r = 0.43f; g = 0.43f; b = 0.42f;
-        } else if (block.contains("leaves") || block.contains("moss")) {
-            r = 0.20f; g = 0.43f; b = 0.19f;
-        }
-        float fade = (float) Math.min(1.0, distance / 512.0);
-        float fog = 0.48f + fade * 0.42f;
-        return new float[]{r * fog + 0.48f * (1 - fog),
-                g * fog + 0.55f * (1 - fog), b * fog + 0.62f * (1 - fog)};
-    }
-}
+        // The atlas already contains the block's real colour. Apply only a
+        // neutral distance fade so grass, stone and sand are not tinted twice.
+        float fog = 0.96f - (float) Math.min(0.38, distance / 512.0 * 0.38);
+        return new float[]{fog, fog, fog};
+    }}
