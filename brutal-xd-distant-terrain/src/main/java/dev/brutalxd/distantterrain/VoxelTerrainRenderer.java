@@ -253,7 +253,7 @@ public final class VoxelTerrainRenderer {
 
     private static void emitBakedQuad(BufferBuilder out, Matrix4fc matrix,
                                       int blockX, int blockY, int blockZ, BakedQuad quad) {
-        Direction face = quad.face();
+        Direction face = quad.direction();
         float nx = face.getStepX(), ny = face.getStepY(), nz = face.getStepZ();
         TextureAtlasSprite sprite = quad.sprite();
         for (int i = 0; i < 4; i++) {
