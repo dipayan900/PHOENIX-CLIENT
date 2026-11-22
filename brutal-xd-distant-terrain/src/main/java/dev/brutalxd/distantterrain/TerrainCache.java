@@ -160,7 +160,7 @@ public final class TerrainCache {
             }
         }
 
-        Path folder = cacheRoot.resolve("surface-v2").resolve(key);
+        Path folder = cacheRoot.resolve("surface-v3").resolve(key);
         Path output = folder.resolve(chunkX + "_" + chunkZ + ".csv");
         String snapshot = data.toString();
         CompletableFuture.runAsync(() -> {
