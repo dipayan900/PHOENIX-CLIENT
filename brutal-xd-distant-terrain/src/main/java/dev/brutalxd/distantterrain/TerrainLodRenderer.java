@@ -55,7 +55,7 @@ import org.lwjgl.system.MemoryUtil;
 public final class TerrainLodRenderer {
     private static final RenderPipeline TERRAIN_PIPELINE = RenderPipelines.SOLID_BLOCK;
     private static final Map<String, BlockSprites> BLOCK_SPRITES = new ConcurrentHashMap<>();
-    private record BlockSprites(TextureAtlasSprite top, TextureAtlasSprite north,
+    private record BlockSprites(TextureAtlasSprite top, TextureAtlasSprite bottom, TextureAtlasSprite north,
                                 TextureAtlasSprite east, TextureAtlasSprite south,
                                 TextureAtlasSprite west) {
         TextureAtlasSprite side(Direction direction) {
@@ -64,6 +64,7 @@ public final class TerrainLodRenderer {
                 case EAST -> east;
                 case SOUTH -> south;
                 case WEST -> west;
+                case DOWN -> bottom;
                 default -> top;
             };
         }
@@ -215,8 +216,7 @@ public final class TerrainLodRenderer {
 
     public static TextureAtlasSprite faceSpriteFor(String blockId, Direction direction) {
         BlockSprites sprites = blockSprites(blockId);
-        return direction == Direction.UP ? sprites.top()
-                : direction == Direction.DOWN ? sprites.top() : sprites.side(direction);
+        return direction == Direction.UP ? sprites.top() : sprites.side(direction);
     }
 
     private static BlockSprites blockSprites(String blockId) {
@@ -232,6 +232,7 @@ public final class TerrainLodRenderer {
                 model.collectParts(RandomSource.create(42L), parts);
                 TextureAtlasSprite particle = model.particleIcon();
                 return new BlockSprites(faceSprite(parts, Direction.UP, particle),
+                        faceSprite(parts, Direction.DOWN, particle),
                         faceSprite(parts, Direction.NORTH, particle),
                         faceSprite(parts, Direction.EAST, particle),
                         faceSprite(parts, Direction.SOUTH, particle),
@@ -239,7 +240,7 @@ public final class TerrainLodRenderer {
             } catch (Throwable ignored) {
                 TextureAtlasSprite fallback = Minecraft.getInstance().getBlockRenderer()
                         .getBlockModelShaper().getBlockModel(Blocks.STONE.defaultBlockState()).particleIcon();
-                return new BlockSprites(fallback, fallback, fallback, fallback, fallback);
+                return new BlockSprites(fallback, fallback, fallback, fallback, fallback, fallback);
             }
         });
     }
