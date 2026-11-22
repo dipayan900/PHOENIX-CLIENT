@@ -26,9 +26,10 @@ public final class TerrainConfigScreen extends Screen {
 
         distanceButton = this.addRenderableWidget(Button.builder(distanceLabel(), button -> {
             TerrainSettings.distanceChunks = switch (TerrainSettings.distanceChunks) {
+                case 64 -> 128;
                 case 128 -> 256;
                 case 256 -> 512;
-                default -> 128;
+                default -> 64;
             };
             button.setMessage(distanceLabel());
             TerrainSettings.save();
@@ -50,8 +51,11 @@ public final class TerrainConfigScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 72, 0xFFE8A34A);
-        graphics.drawCenteredString(this.font, "Balanced profile · Android-friendly surface LOD",
+        graphics.drawCenteredString(this.font, "Android-friendly explored-terrain LOD",
                 this.width / 2, this.height / 2 - 54, 0xFFCCCCCC);
+        graphics.drawCenteredString(this.font, TerrainCache.getSampleCount()
+                        + " surface samples · " + TerrainCache.getCapturedChunkCount() + " cached chunks",
+                this.width / 2, this.height / 2 + 58, 0xFFAAAAAA);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
