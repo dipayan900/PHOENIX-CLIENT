@@ -92,8 +92,8 @@ public final class TerrainLodRenderer {
                 if (chunkDistance > TerrainSettings.distanceChunks) continue;
                 int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
                         : chunkDistance < 256 ? 4 : 8;
-                if (Math.floorMod(sample.x(), stride * 4) != 0
-                        || Math.floorMod(sample.z(), stride * 4) != 0) continue;
+                if (Math.floorMod(sample.x(), stride * 2) != 0
+                        || Math.floorMod(sample.z(), stride * 2) != 0) continue;
                 candidates.add(new Candidate(sample, chunkDistance));
             }
             candidates.sort(Comparator.comparingDouble(Candidate::distance));
@@ -109,7 +109,7 @@ public final class TerrainLodRenderer {
             double chunkDistance = candidate.distance();
             int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
                     : chunkDistance < 256 ? 4 : 8;
-            float size = 4.0f * stride;
+            float size = 2.0f * stride;
             float y00 = sample.y();
             TerrainCache.SurfaceSample east = TerrainCache.getSurfaceSample(sample.x() + (int) size, sample.z());
             TerrainCache.SurfaceSample south = TerrainCache.getSurfaceSample(sample.x(), sample.z() + (int) size);
