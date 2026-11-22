@@ -19,8 +19,14 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import org.joml.Vector3fc;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -51,6 +57,7 @@ public final class VoxelTerrainRenderer {
     private static final int DETAIL_RADIUS = 8;
     private static final int MAX_GPU_CHUNKS = 32;
     private static final Map<Long, ChunkMesh> MESHES = new ConcurrentHashMap<>();
+    private static final Map<BlockState, List<BlockModelPart>> MODEL_PARTS = new ConcurrentHashMap<>();
 
     private record ChunkMesh(VoxelChunkCache.VoxelChunk source, GpuBuffer vertices,
                              GpuBuffer indices, VertexFormat.IndexType indexType,
@@ -70,6 +77,7 @@ public final class VoxelTerrainRenderer {
     public static void clear() {
         for (ChunkMesh mesh : MESHES.values()) mesh.close();
         MESHES.clear();
+        MODEL_PARTS.clear();
     }
 
     public static void invalidateAround(int chunkX, int chunkZ) {
@@ -181,16 +189,29 @@ public final class VoxelTerrainRenderer {
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
                     if (chunk.blockAt(x, y, z) == 0) continue;
-                    String blockId = chunk.blockIdAt(x, y, z);
-                    if (blockId.equals("minecraft:air")) continue;
+                    BlockState blockState = chunk.stateAt(x, y, z);
+                    if (blockState.isAir()) continue;
+                    List<BlockModelPart> parts = MODEL_PARTS.computeIfAbsent(blockState, state -> {
+                        BlockStateModel model = Minecraft.getInstance().getBlockRenderer()
+                                .getBlockModelShaper().getBlockModel(state);
+                        List<BlockModelPart> collected = new ArrayList<>();
+                        model.collectParts(RandomSource.create(42L), collected);
+                        return List.copyOf(collected);
+                    });
 
                     for (Direction face : Direction.values()) {
-                        int nx = x + face.getStepX();
-                        int ny = y + face.getStepY();
-                        int nz = z + face.getStepZ();
-                        if (isOccupied(chunk, nx, ny, nz)) continue;
-                        TextureAtlasSprite sprite = TerrainLodRenderer.faceSpriteFor(blockId, face);
-                        emitFace(builder, identity, x, y, z, face, sprite);
+                        if (isOccluding(chunk, x + face.getStepX(), y + face.getStepY(),
+                                z + face.getStepZ())) continue;
+                        for (BlockModelPart part : parts) {
+                            for (BakedQuad quad : part.getQuads(face)) {
+                                emitBakedQuad(builder, identity, x, y, z, quad);
+                            }
+                        }
+                    }
+                    for (BlockModelPart part : parts) {
+                        for (BakedQuad quad : part.getQuads(null)) {
+                            emitBakedQuad(builder, identity, x, y, z, quad);
+                        }
                     }
                 }
             }
@@ -212,16 +233,41 @@ public final class VoxelTerrainRenderer {
         }
     }
 
-    private static boolean isOccupied(VoxelChunkCache.VoxelChunk chunk,
-                                      int x, int y, int z) {
+    private static boolean isOccluding(VoxelChunkCache.VoxelChunk chunk,
+                                       int x, int y, int z) {
         if (y < chunk.minY() || y >= chunk.minY() + chunk.height()) return false;
-        if (x >= 0 && x < 16 && z >= 0 && z < 16) return chunk.blockAt(x, y, z) != 0;
+        VoxelChunkCache.VoxelChunk source = chunk;
+        int localX = x, localZ = z;
+        if (x < 0 || x >= 16 || z < 0 || z >= 16) {
+            int neighborX = chunk.chunkX() + Math.floorDiv(x, 16);
+            int neighborZ = chunk.chunkZ() + Math.floorDiv(z, 16);
+            source = VoxelChunkCache.get(neighborX, neighborZ);
+            if (source == null) return false;
+            localX = Math.floorMod(x, 16);
+            localZ = Math.floorMod(z, 16);
+        }
+        if (source.blockAt(localX, y, localZ) == 0) return false;
+        return source.stateAt(localX, y, localZ).isSolidRender();
+    }
 
-        int neighborX = chunk.chunkX() + Math.floorDiv(x, 16);
-        int neighborZ = chunk.chunkZ() + Math.floorDiv(z, 16);
-        VoxelChunkCache.VoxelChunk neighbor = VoxelChunkCache.get(neighborX, neighborZ);
-        if (neighbor == null) return false;
-        return neighbor.blockAt(Math.floorMod(x, 16), y, Math.floorMod(z, 16)) != 0;
+    private static void emitBakedQuad(BufferBuilder out, Matrix4fc matrix,
+                                      int blockX, int blockY, int blockZ, BakedQuad quad) {
+        Direction face = quad.face();
+        float nx = face.getStepX(), ny = face.getStepY(), nz = face.getStepZ();
+        TextureAtlasSprite sprite = quad.sprite();
+        for (int i = 0; i < 4; i++) {
+            Vector3fc position = quad.position(i);
+            long packedUv = quad.packedUV(i);
+            float u = Float.intBitsToFloat((int) (packedUv >>> 32));
+            float v = Float.intBitsToFloat((int) packedUv);
+            out.addVertex(matrix, blockX + position.x(), blockY + position.y(),
+                            blockZ + position.z())
+                    .setColor(1, 1, 1, 1)
+                    .setUv(u, v)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(LightTexture.FULL_BRIGHT)
+                    .setNormal(nx, ny, nz);
+        }
     }
 
     private static void emitFace(BufferBuilder out, Matrix4fc matrix, float x, float y,
