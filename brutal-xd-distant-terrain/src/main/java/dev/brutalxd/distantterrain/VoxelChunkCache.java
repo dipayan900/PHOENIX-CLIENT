@@ -20,6 +20,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -36,6 +39,12 @@ public final class VoxelChunkCache {
     private static final int FORMAT = 2;
     private static final int MAX_RESIDENT_CHUNKS = 96;
     private static final int MAX_PALETTE = 65535;
+    private static final ExecutorService IO = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "BrutalDistantTerrain-IO");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private static final Map<Long, Boolean> LOADING = new ConcurrentHashMap<>();
     private static final Map<Long, VoxelChunk> RESIDENT =
             new LinkedHashMap<>(32, 0.75f, true) {
                 @Override protected boolean removeEldestEntry(Map.Entry<Long, VoxelChunk> eldest) {
@@ -87,6 +96,7 @@ public final class VoxelChunkCache {
             minY = level.getMinY();
             height = level.getMaxY() - level.getMinY();
             synchronized (RESIDENT) { RESIDENT.clear(); }
+            LOADING.clear();
         }
     }
 
@@ -160,14 +170,59 @@ public final class VoxelChunkCache {
         }
     }
 
+    /**
+     * Returns only an in-memory snapshot. A disk miss is queued on the I/O
+     * worker and never blocks the render thread.
+     */
     public static VoxelChunk get(int chunkX, int chunkZ) {
+        long chunkKey = key(chunkX, chunkZ);
         synchronized (RESIDENT) {
-            VoxelChunk loaded = RESIDENT.get(key(chunkX, chunkZ));
+            VoxelChunk loaded = RESIDENT.get(chunkKey);
             if (loaded != null) return loaded;
         }
-        if (root == null) return null;
-        Path file = root.resolve(worldKey).resolve(chunkX + "_" + chunkZ + ".bxv");
-        if (!Files.isRegularFile(file)) return null;
+        requestLoad(chunkX, chunkZ);
+        return null;
+    }
+
+    public static java.util.List<VoxelChunk> getResidentChunksNear(int centerChunkX,
+                                                                    int centerChunkZ,
+                                                                    int radiusChunks) {
+        java.util.ArrayList<VoxelChunk> result = new java.util.ArrayList<>();
+        int radiusSquared = radiusChunks * radiusChunks;
+        synchronized (RESIDENT) {
+            for (VoxelChunk chunk : RESIDENT.values()) {
+                int dx = chunk.chunkX() - centerChunkX;
+                int dz = chunk.chunkZ() - centerChunkZ;
+                if (dx * dx + dz * dz <= radiusSquared) result.add(chunk);
+            }
+        }
+        return result;
+    }
+
+    public static void requestLoad(int chunkX, int chunkZ) {
+        long chunkKey = key(chunkX, chunkZ);
+        if (root == null) return;
+        synchronized (RESIDENT) {
+            if (RESIDENT.containsKey(chunkKey)) return;
+        }
+        String requestedWorld = worldKey;
+        if (LOADING.putIfAbsent(chunkKey, Boolean.TRUE) != null) return;
+        IO.execute(() -> {
+            try {
+                if (!requestedWorld.equals(worldKey)) return;
+                Path file = root.resolve(requestedWorld).resolve(chunkX + "_" + chunkZ + ".bxv");
+                if (!Files.isRegularFile(file)) return;
+                VoxelChunk loaded = read(file, chunkX, chunkZ);
+                if (loaded != null && requestedWorld.equals(worldKey)) {
+                    synchronized (RESIDENT) { RESIDENT.put(chunkKey, loaded); }
+                }
+            } finally {
+                LOADING.remove(chunkKey);
+            }
+        });
+    }
+
+    private static VoxelChunk read(Path file, int chunkX, int chunkZ) {
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(
                 new GZIPInputStream(Files.newInputStream(file))))) {
             if (in.readInt() != MAGIC || in.readInt() != FORMAT) return null;
@@ -179,15 +234,12 @@ public final class VoxelChunkCache {
             for (int i = 0; i < paletteSize; i++) palette[i] = in.readUTF();
             short[] blocks = new short[16 * 16 * h];
             for (int i = 0; i < blocks.length; i++) blocks[i] = (short) in.readUnsignedShort();
-            VoxelChunk loaded = new VoxelChunk(cx, cz, y, h, palette, blocks);
-            synchronized (RESIDENT) { RESIDENT.put(key(cx, cz), loaded); }
-            return loaded;
+            return new VoxelChunk(cx, cz, y, h, palette, blocks);
         } catch (IOException | OutOfMemoryError e) {
             System.err.println("[Brutal_XD Distant Terrain] Voxel cache read failed: " + e.getMessage());
             return null;
         }
     }
-
 
     private static String stateKey(BlockState state) {
         StringBuilder key = new StringBuilder(BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
