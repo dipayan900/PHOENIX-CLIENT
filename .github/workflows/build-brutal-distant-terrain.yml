@@ -26,7 +26,7 @@ jobs:
         run: gradle build --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: brutal-xd-distant-terrain-alpha
+          name: brutal-xd-distant-terrain-dev
           path: brutal-xd-distant-terrain/build/libs/*.jar
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
