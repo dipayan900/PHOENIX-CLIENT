@@ -262,4 +262,5 @@ public final class TerrainLodRenderer {
         // neutral distance fade so grass, stone and sand are not tinted twice.
         float fog = 0.96f - (float) Math.min(0.38, distance / 512.0 * 0.38);
         return new float[]{fog, fog, fog};
-    }}
+    }
+}
