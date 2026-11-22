@@ -31,6 +31,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
@@ -189,8 +190,8 @@ public final class TerrainLodRenderer {
         return TOP_SPRITES.computeIfAbsent(blockId, id -> {
             try {
                 Identifier identifier = Identifier.tryParse(id);
-                if (identifier == null) return Minecraft.getInstance().getModelManager()
-                        .getMissingModel().particleIcon();
+                if (identifier == null) return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
+                        .getBlockModel(Blocks.STONE.defaultBlockState()).particleIcon();
                 Block block = BuiltInRegistries.BLOCK.get(identifier);
                 BlockState state = block.defaultBlockState();
                 BlockStateModel model = Minecraft.getInstance().getBlockRenderer()
@@ -203,7 +204,8 @@ public final class TerrainLodRenderer {
                 }
                 return model.particleIcon();
             } catch (Throwable ignored) {
-                return Minecraft.getInstance().getModelManager().getMissingModel().particleIcon();
+                return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
+                        .getBlockModel(Blocks.STONE.defaultBlockState()).particleIcon();
             }
         });
     }
