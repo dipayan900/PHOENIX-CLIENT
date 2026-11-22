@@ -99,6 +99,7 @@ public final class VoxelChunkCache {
             synchronized (RESIDENT) { RESIDENT.clear(); }
             LOADING.clear();
             RESOLVED_STATES.clear();
+            VoxelTerrainRenderer.clear();
         }
     }
 
@@ -218,6 +219,7 @@ public final class VoxelChunkCache {
                 VoxelChunk loaded = read(file, chunkX, chunkZ);
                 if (loaded != null && requestedWorld.equals(worldKey)) {
                     synchronized (RESIDENT) { RESIDENT.put(chunkKey, loaded); }
+                    Minecraft.getInstance().execute(() -> VoxelTerrainRenderer.invalidateAround(chunkX, chunkZ));
                 }
             } finally {
                 LOADING.remove(loadKey);
