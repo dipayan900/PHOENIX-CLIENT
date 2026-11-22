@@ -48,6 +48,11 @@ public final class TerrainLodRenderer {
     private static final int MAX_TILES_PER_FRAME = 8192;
     private static MappableRingBuffer vertexBuffer;
     private record Candidate(TerrainCache.SurfaceSample sample, double distance) {}
+    private static List<Candidate> cachedCandidates = List.of();
+    private static int cachedCenterX = Integer.MIN_VALUE;
+    private static int cachedCenterZ = Integer.MIN_VALUE;
+    private static int cachedSampleCount = -1;
+    private static int cachedDistanceChunks = -1;
 
     private TerrainLodRenderer() {}
 
@@ -68,26 +73,38 @@ public final class TerrainLodRenderer {
         Matrix4fc matrix = context.matrices().last().pose();
         int tiles = 0;
 
-        int radiusBlocks = TerrainSettings.distanceChunks * 16;
-        // Select the nearest visible tiles first. The previous queue-order cutoff
-        // could spend the entire per-frame budget on old terrain at the edge of
-        // the cache, leaving holes around the player.
-        List<Candidate> candidates = new ArrayList<>();
-        for (TerrainCache.SurfaceSample sample : TerrainCache.getSurfaceSamplesNear(
-                (int) camera.x, (int) camera.z, radiusBlocks)) {
-            double dx = sample.x() - camera.x;
-            double dz = sample.z() - camera.z;
-            double chunkDistance = Math.sqrt(dx * dx + dz * dz) / 16.0;
-            if (chunkDistance > TerrainSettings.distanceChunks) continue;
-            int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
-                    : chunkDistance < 256 ? 4 : 8;
-            if (Math.floorMod(sample.x(), stride * 4) != 0
-                    || Math.floorMod(sample.z(), stride * 4) != 0) continue;
-            candidates.add(new Candidate(sample, chunkDistance));
+        int centerX = Math.floorDiv((int) camera.x, 16) * 16 + 8;
+        int centerZ = Math.floorDiv((int) camera.z, 16) * 16 + 8;
+        int sampleCount = TerrainCache.getSampleCount();
+        // Rebuild the distance-sorted candidate list only when the player changes
+        // chunk, the explored cache grows, or the configured radius changes.
+        // This avoids allocating and sorting tens of thousands of samples every frame.
+        if (centerX != cachedCenterX || centerZ != cachedCenterZ
+                || sampleCount != cachedSampleCount
+                || TerrainSettings.distanceChunks != cachedDistanceChunks) {
+            int radiusBlocks = TerrainSettings.distanceChunks * 16;
+            List<Candidate> candidates = new ArrayList<>();
+            for (TerrainCache.SurfaceSample sample : TerrainCache.getSurfaceSamplesNear(
+                    centerX, centerZ, radiusBlocks)) {
+                double dx = sample.x() - centerX;
+                double dz = sample.z() - centerZ;
+                double chunkDistance = Math.sqrt(dx * dx + dz * dz) / 16.0;
+                if (chunkDistance > TerrainSettings.distanceChunks) continue;
+                int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
+                        : chunkDistance < 256 ? 4 : 8;
+                if (Math.floorMod(sample.x(), stride * 4) != 0
+                        || Math.floorMod(sample.z(), stride * 4) != 0) continue;
+                candidates.add(new Candidate(sample, chunkDistance));
+            }
+            candidates.sort(Comparator.comparingDouble(Candidate::distance));
+            cachedCandidates = candidates;
+            cachedCenterX = centerX;
+            cachedCenterZ = centerZ;
+            cachedSampleCount = sampleCount;
+            cachedDistanceChunks = TerrainSettings.distanceChunks;
         }
-        candidates.sort(Comparator.comparingDouble(Candidate::distance));
 
-        for (Candidate candidate : candidates) {
+        for (Candidate candidate : cachedCandidates) {
             TerrainCache.SurfaceSample sample = candidate.sample();
             double chunkDistance = candidate.distance();
             int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
