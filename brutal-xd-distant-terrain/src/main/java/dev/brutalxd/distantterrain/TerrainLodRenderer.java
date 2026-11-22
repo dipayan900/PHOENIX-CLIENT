@@ -174,7 +174,15 @@ public final class TerrainLodRenderer {
 
         MeshData mesh = builder.build();
         if (mesh == null) return;
+        // QUADS meshes do not carry an index buffer until their quad index data is built.
+        // Uploading mesh.indexBuffer() before this call passes null to VertexFormat and
+        // crashes the first time the player enters a world (Android crash log line 194).
+        mesh.sortQuads(ALLOCATOR, RenderSystem.getProjectionType().vertexSorting());
         MeshData.DrawState drawState = mesh.drawState();
+        if (mesh.indexBuffer() == null || drawState.indexCount() <= 0) {
+            mesh.close();
+            return;
+        }
         VertexFormat format = drawState.format();
         int bytes = drawState.vertexCount() * format.getVertexSize();
         if (vertexBuffer == null || vertexBuffer.size() < bytes) {
