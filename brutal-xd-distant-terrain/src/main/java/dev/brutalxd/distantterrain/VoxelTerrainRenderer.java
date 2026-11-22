@@ -232,8 +232,12 @@ public final class VoxelTerrainRenderer {
             GpuBuffer vertices = RenderSystem.getDevice().createBuffer(
                     () -> "Brutal_XD voxel chunk vertices",
                     GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer());
-            GpuBuffer indices = PIPELINE.getVertexFormat()
-                    .uploadImmediateIndexBuffer(mesh.indexBuffer());
+            // This mesh is retained across frames, so it must own its index
+            // buffer. uploadImmediateIndexBuffer reuses a shared transient buffer
+            // and would overwrite indices belonging to previously cached chunks.
+            GpuBuffer indices = RenderSystem.getDevice().createBuffer(
+                    () -> "Brutal_XD voxel chunk indices",
+                    GpuBuffer.USAGE_INDEX, mesh.indexBuffer());
             return new ChunkMesh(chunk, vertices, indices, state.indexType(), state.indexCount());
         } finally {
             mesh.close();
