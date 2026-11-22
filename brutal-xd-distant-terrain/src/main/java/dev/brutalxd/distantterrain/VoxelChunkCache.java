@@ -3,6 +3,10 @@ package dev.brutalxd.distantterrain;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.io.BufferedInputStream;
@@ -29,7 +33,7 @@ import java.util.zip.GZIPOutputStream;
  */
 public final class VoxelChunkCache {
     private static final int MAGIC = 0x42585631; // BXV1
-    private static final int FORMAT = 1;
+    private static final int FORMAT = 2;
     private static final int MAX_RESIDENT_CHUNKS = 96;
     private static final int MAX_PALETTE = 65535;
     private static final Map<Long, VoxelChunk> RESIDENT =
@@ -48,7 +52,12 @@ public final class VoxelChunkCache {
         }
         public String blockIdAt(int localX, int y, int localZ) {
             int index = blockAt(localX, y, localZ);
-            return index >= palette.length ? "minecraft:air" : palette[index];
+            return index >= palette.length ? "minecraft:air" : blockIdFromStateKey(palette[index]);
+        }
+        public BlockState stateAt(int localX, int y, int localZ) {
+            int index = blockAt(localX, y, localZ);
+            if (index >= palette.length) return net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+            return resolveState(palette[index]);
         }
     }
 
@@ -90,10 +99,10 @@ public final class VoxelChunkCache {
 
         // Palette index zero is always air. Capture is intentionally performed
         // before leaving the client event; no live Chunk access occurs in I/O tasks.
-        Map<String, Integer> indices = new java.util.HashMap<>();
+        Map<BlockState, Integer> indices = new java.util.HashMap<>();
         java.util.ArrayList<String> palette = new java.util.ArrayList<>();
         palette.add("minecraft:air");
-        indices.put("minecraft:air", 0);
+        indices.put(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 0);
         short[] blocks = new short[16 * 16 * h];
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         int cx = chunk.getPos().x;
@@ -104,13 +113,13 @@ public final class VoxelChunkCache {
                     pos.set(cx * 16 + x, y, cz * 16 + z);
                     var state = chunk.getBlockState(pos);
                     if (state.isAir()) continue;
-                    String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
-                    Integer index = indices.get(id);
+                    String id = stateKey(state);
+                    Integer index = indices.get(state);
                     if (index == null) {
                         if (palette.size() >= MAX_PALETTE) continue;
                         index = palette.size();
                         palette.add(id);
-                        indices.put(id, index);
+                        indices.put(state, index);
                     }
                     blocks[((y - y0) * 16 + z) * 16 + x] = (short) (int) index;
                 }
@@ -177,6 +186,60 @@ public final class VoxelChunkCache {
             System.err.println("[Brutal_XD Distant Terrain] Voxel cache read failed: " + e.getMessage());
             return null;
         }
+    }
+
+
+    private static String stateKey(BlockState state) {
+        StringBuilder key = new StringBuilder(BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
+        if (!state.getValues().isEmpty()) {
+            key.append('[');
+            boolean first = true;
+            for (Map.Entry<Property<?>, Comparable<?>> entry : state.getValues().entrySet()) {
+                if (!first) key.append(',');
+                first = false;
+                key.append(entry.getKey().getName()).append('=');
+                key.append(propertyName(entry.getKey(), entry.getValue()));
+            }
+            key.append(']');
+        }
+        return key.toString();
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static String propertyName(Property property, Comparable value) {
+        return property.getName(value);
+    }
+
+    private static String blockIdFromStateKey(String key) {
+        int bracket = key.indexOf('[');
+        return bracket < 0 ? key : key.substring(0, bracket);
+    }
+
+    private static BlockState resolveState(String key) {
+        int bracket = key.indexOf('[');
+        String id = bracket < 0 ? key : key.substring(0, bracket);
+        Identifier identifier = Identifier.tryParse(id);
+        Block block = identifier == null ? net.minecraft.world.level.block.Blocks.AIR
+                : BuiltInRegistries.BLOCK.get(identifier).map(reference -> reference.value())
+                    .orElse(net.minecraft.world.level.block.Blocks.AIR);
+        BlockState state = block.defaultBlockState();
+        if (bracket < 0 || !key.endsWith("]")) return state;
+        String properties = key.substring(bracket + 1, key.length() - 1);
+        for (String pair : properties.split(",")) {
+            int equals = pair.indexOf('=');
+            if (equals <= 0) continue;
+            String propertyName = pair.substring(0, equals);
+            String valueName = pair.substring(equals + 1);
+            Property<?> property = block.getStateDefinition().getProperty(propertyName);
+            if (property != null) state = applyProperty(state, property, valueName);
+        }
+        return state;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static BlockState applyProperty(BlockState state, Property property, String valueName) {
+        java.util.Optional parsed = property.getValue(valueName);
+        return parsed.isPresent() ? state.setValue(property, (Comparable) parsed.get()) : state;
     }
 
     private static long key(int x, int z) {
