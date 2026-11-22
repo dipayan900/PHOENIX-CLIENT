@@ -1,28 +1,37 @@
 # Brutal_XD Distant Terrain
 
-**Author credit:** Brutal_XD aka DIPAYAN  
+**Author:** Brutal_XD aka DIPAYAN  
 **Target:** Minecraft 1.21.11 · Fabric · Java 21  
-**Initial device profile:** vivo T4x / Mali-G615 MC2 · Balanced · 512-chunk target
+**Design target:** Android-first, balanced rendering, configurable 64–512 chunk radius
 
-## Current alpha implementation
+## Current development build
 
-- Fabric client mod entrypoint for Minecraft 1.21.11.
-- Captures a compact 4-block-grid surface sample when a chunk is naturally loaded by the client.
-- Stores samples locally under `gameDirectory/brutal_xd_distant_terrain/cache`, separated by server identity and dimension.
-- Shows a small cache-status HUD line.
-- Does not force-load chunks or make background requests to a server.
-- Uses Java and Fabric APIs only; no bundled glibc, JNI, LMDB, Zstd, or desktop-native library.
+- Client-only Fabric mod; it does not require a server-side plugin.
+- Captures terrain only from chunks naturally delivered to the client.
+- Stores one surface sample per horizontal block coordinate in a world/dimension-separated local cache.
+- Builds camera-relative terrain meshes with distance-based LOD levels.
+- Uses the Minecraft block atlas, with directional block-model sprites for the terrain skirts.
+- Subdivides LOD cell boundaries using shared cached edge coordinates and adds skirts for missing edge data.
+- Keeps file writes off the render thread and caps per-frame terrain tiles.
+- Provides an F11 settings screen and a configurable 64–512 chunk target.
+- Uses Java/Fabric APIs only; it does not bundle desktop glibc/JNI libraries.
 
-## Important status
+## Scope and limitations
 
-This is the **first buildable data/cache milestone**, not yet a complete Voxy-equivalent LOD renderer. The distant mesh generation, Android GLES rendering backend, seamless LOD transitions, cache eviction, and in-game settings screen are still to be implemented and tested. The HUD's 512 value is the configured target, not a claim that 512 chunks are currently being rendered.
+This is an original mobile-oriented distant-surface renderer, not a Voxy source-code clone. The current cache stores surface samples, not full 3D voxel sections. It therefore does not yet reproduce caves, overhangs, vertical structures, or full volumetric block geometry. Biome tinting and foliage tint indices are not yet implemented. Directional skirt textures and the finer surface grid are implemented in this development build, but their appearance and GLES compatibility still require in-game validation.
 
-The initial cache only records terrain the normal game client has already received. It does not magically discover unexplored terrain beyond server/client view distance.
+The configured radius is a target, not a promise that the client can obtain or render unexplored chunks. The mod does not bypass server view distance, force-load chunks, or request terrain the normal client has not received.
 
-## Build
+## Build and install
 
-Run `gradle build` with JDK 21 and Gradle 9.2.1 or use the GitHub Actions workflow. The remapped mod JAR is produced in `build/libs`.
+Use JDK 21 and Gradle 9.2.1:
 
-## Compatibility approach
+```sh
+gradle build --no-daemon
+```
 
-The project is an original implementation and does not copy Voxy source code. It intentionally avoids desktop Linux native dependencies. OpenGL ES compatibility and performance must be verified on the actual Android renderer/device before claiming support.
+Install the remapped mod JAR from `build/libs` into the Fabric `mods` folder alongside Fabric API. GitHub Actions builds the project and publishes a downloadable workflow artifact for each source update.
+
+## Compatibility
+
+The project avoids desktop-native dependencies by design. Actual rendering, memory use, frame pacing, and 512-chunk behavior must be checked on the target Android launcher/GLES driver before calling a build stable.
