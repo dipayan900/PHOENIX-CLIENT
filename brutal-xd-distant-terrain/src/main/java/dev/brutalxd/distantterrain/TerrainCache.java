@@ -268,4 +268,9 @@ public final class TerrainCache {
     public static int getSampleCount() {
         return SAMPLE_COUNT.get();
     }
+
+    /** Changes whenever the active world/dimension cache namespace changes. */
+    public static long getWorldGeneration() {
+        return worldGeneration;
+    }
 }
