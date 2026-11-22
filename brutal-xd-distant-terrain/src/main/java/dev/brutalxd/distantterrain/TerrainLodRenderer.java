@@ -169,10 +169,10 @@ public final class TerrainLodRenderer {
     }
 
     /**
-     * Emits a triangulated top surface plus four downward skirts. The skirts
-     * close cracks where adjacent cached samples have different heights or
-     * where a coarse LOD cell borders a finer one. All geometry is real 3D
-     * position geometry; the current pass intentionally remains untextured.
+     * Emits a 3D surface cell and four downward skirts. The skirts close
+     * visible T-junction cracks where neighbouring cached cells use different
+     * LOD strides. The active pass is position-colour, so this geometry is
+     * still awaiting block-atlas texturing.
      */
     private static void addTerrainCell(BufferBuilder out, Matrix4fc matrix,
                                        float x0, float z0, float x1, float z1,
@@ -180,27 +180,11 @@ public final class TerrainLodRenderer {
                                        float[] color) {
         float floor = Math.min(Math.min(y00, y10), Math.min(y11, y01)) - 8.0f;
 
-        // Two top triangles retain the sampled height at each corner.
-        addTriangle(out, matrix, x0, y00, z0, x1, y10, z0,
-                x1, y11, z1, color);
-        addTriangle(out, matrix, x0, y00, z0, x1, y11, z1,
-                x0, y01, z1, color);
-
-        // Edge skirts conceal T-junctions between neighbouring LOD levels.
+        addQuad(out, matrix, x0, z0, x1, z1, y00, y10, y11, y01, color);
         addQuad(out, matrix, x0, z0, x1, z0, y00, y10, floor, floor, color);
         addQuad(out, matrix, x1, z0, x1, z1, y10, y11, floor, floor, color);
         addQuad(out, matrix, x1, z1, x0, z1, y11, y01, floor, floor, color);
         addQuad(out, matrix, x0, z1, x0, z0, y01, y00, floor, floor, color);
-    }
-
-    private static void addTriangle(BufferBuilder out, Matrix4fc matrix,
-                                    float x0, float y0, float z0,
-                                    float x1, float y1, float z1,
-                                    float x2, float y2, float z2,
-                                    float[] color) {
-        out.addVertex(matrix, x0, y0, z0).setColor(color[0], color[1], color[2], 1);
-        out.addVertex(matrix, x1, y1, z1).setColor(color[0], color[1], color[2], 1);
-        out.addVertex(matrix, x2, y2, z2).setColor(color[0], color[1], color[2], 1);
     }
 
     private static void addQuad(BufferBuilder out, Matrix4fc matrix,
