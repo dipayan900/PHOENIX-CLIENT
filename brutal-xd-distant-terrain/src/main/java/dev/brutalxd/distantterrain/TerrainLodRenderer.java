@@ -213,6 +213,12 @@ public final class TerrainLodRenderer {
         vertexBuffer.rotate();
     }
 
+    public static TextureAtlasSprite faceSpriteFor(String blockId, Direction direction) {
+        BlockSprites sprites = blockSprites(blockId);
+        return direction == Direction.UP ? sprites.top()
+                : direction == Direction.DOWN ? sprites.top() : sprites.side(direction);
+    }
+
     private static BlockSprites blockSprites(String blockId) {
         return BLOCK_SPRITES.computeIfAbsent(blockId, id -> {
             try {
