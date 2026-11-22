@@ -67,6 +67,11 @@ public final class VoxelTerrainRenderer {
         WorldRenderEvents.BEFORE_TRANSLUCENT.register(VoxelTerrainRenderer::render);
     }
 
+    public static void clear() {
+        for (ChunkMesh mesh : MESHES.values()) mesh.close();
+        MESHES.clear();
+    }
+
     public static void invalidateAround(int chunkX, int chunkZ) {
         for (int dz = -1; dz <= 1; dz++) {
             for (int dx = -1; dx <= 1; dx++) {
