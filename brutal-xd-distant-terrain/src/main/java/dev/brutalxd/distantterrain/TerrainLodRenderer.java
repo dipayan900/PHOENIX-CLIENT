@@ -62,6 +62,7 @@ public final class TerrainLodRenderer {
     private static final int MAX_TILES_PER_FRAME = 8192;
     private static MappableRingBuffer vertexBuffer;
     private record Candidate(TerrainCache.SurfaceSample sample, double distance) {}
+    private record MeshPoint(float x, float y, float z, float u, float v) {}
     private static List<Candidate> cachedCandidates = List.of();
     private static int cachedCenterX = Integer.MIN_VALUE;
     private static int cachedCenterZ = Integer.MIN_VALUE;
@@ -102,8 +103,7 @@ public final class TerrainLodRenderer {
                 double dz = sample.z() - centerZ;
                 double chunkDistance = Math.sqrt(dx * dx + dz * dz) / 16.0;
                 if (chunkDistance > TerrainSettings.distanceChunks) continue;
-                int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
-                        : chunkDistance < 256 ? 4 : 8;
+                int stride = strideForDistance(chunkDistance);
                 if (Math.floorMod(sample.x(), stride * 2) != 0
                         || Math.floorMod(sample.z(), stride * 2) != 0) continue;
                 candidates.add(new Candidate(sample, chunkDistance));
@@ -119,8 +119,7 @@ public final class TerrainLodRenderer {
         for (Candidate candidate : cachedCandidates) {
             TerrainCache.SurfaceSample sample = candidate.sample();
             double chunkDistance = candidate.distance();
-            int stride = chunkDistance < 48 ? 1 : chunkDistance < 128 ? 2
-                    : chunkDistance < 256 ? 4 : 8;
+            int stride = strideForDistance(chunkDistance);
             float size = 2.0f * stride;
             float y00 = sample.y();
             TerrainCache.SurfaceSample east = TerrainCache.getSurfaceSample(sample.x() + (int) size, sample.z());
@@ -134,7 +133,7 @@ public final class TerrainLodRenderer {
             TextureAtlasSprite sprite = topSprite(sample.blockId());
             addTerrainCell(builder, matrix, sample.x(), sample.z(), sample.x() + size,
                     sample.z() + size, y00 + 0.02f, y10 + 0.02f,
-                    y11 + 0.02f, y01 + 0.02f, color, sprite);
+                    y11 + 0.02f, y01 + 0.02f, color, sprite, centerX, centerZ);
             if (++tiles >= MAX_TILES_PER_FRAME) break;
         }
 
@@ -212,17 +211,49 @@ public final class TerrainLodRenderer {
     }
 
     /**
-     * Builds a height-following 3D cell with an atlas-textured top and edge
-     * skirts. Each vertex uses Minecraft's block vertex format, block atlas,
-     * full-bright distant lighting, and the selected block model's top sprite.
+     * Builds a terrain cell as a triangle fan whose boundary is subdivided
+     * wherever the adjacent tile uses a finer LOD. Shared boundary vertices
+     * are sampled from the same cache coordinates on both sides, avoiding
+     * T-junctions between coarse and fine meshes. Skirts remain as a fallback
+     * for unexplored/missing edge samples.
      */
     private static void addTerrainCell(BufferBuilder out, Matrix4fc matrix,
                                        float x0, float z0, float x1, float z1,
                                        float y00, float y10, float y11, float y01,
-                                       float[] color, TextureAtlasSprite sprite) {
+                                       float[] color, TextureAtlasSprite sprite,
+                                       int cameraX, int cameraZ) {
+        float size = x1 - x0;
+        int stride = Math.max(1, Math.round(size / 2.0f));
+        float midX = (x0 + x1) * 0.5f;
+        float midZ = (z0 + z1) * 0.5f;
+        float midY = (y00 + y10 + y11 + y01) * 0.25f;
+        TerrainCache.SurfaceSample centerSample = TerrainCache.getSurfaceSample(
+                Math.round(midX), Math.round(midZ));
+        if (centerSample != null) midY = centerSample.y() + 0.02f;
+
+        List<MeshPoint> perimeter = new ArrayList<>(stride * 4);
+        int west = edgeSegments(stride, cameraX, cameraZ, x0 - 1, midZ);
+        int south = edgeSegments(stride, cameraX, cameraZ, midX, z1 + 1);
+        int east = edgeSegments(stride, cameraX, cameraZ, x1 + 1, midZ);
+        int north = edgeSegments(stride, cameraX, cameraZ, midX, z0 - 1);
+
+        appendEdge(perimeter, x0, z0, y00, x0, z1, y01, west, x0, z0, size, sprite);
+        appendEdge(perimeter, x0, z1, y01, x1, z1, y11, south, x0, z0, size, sprite);
+        appendEdge(perimeter, x1, z1, y11, x1, z0, y10, east, x0, z0, size, sprite);
+        appendEdge(perimeter, x1, z0, y10, x0, z0, y00, north, x0, z0, size, sprite);
+
+        MeshPoint center = new MeshPoint(midX, midY, midZ,
+                (sprite.getU0() + sprite.getU1()) * 0.5f,
+                (sprite.getV0() + sprite.getV1()) * 0.5f);
+        for (int i = 0; i < perimeter.size(); i++) {
+            MeshPoint a = perimeter.get(i);
+            MeshPoint b = perimeter.get((i + 1) % perimeter.size());
+            // QUADS pipeline: the repeated centre vertex turns this into one
+            // valid triangle plus one degenerate triangle.
+            addTexturedQuadPoints(out, matrix, center, a, b, center, color);
+        }
+
         float floor = Math.min(Math.min(y00, y10), Math.min(y11, y01)) - 8.0f;
-        addTexturedQuad(out, matrix, x0, z0, x1, z1,
-                y00, y10, y11, y01, color, sprite, 0, 1, 0);
         addTexturedQuad(out, matrix, x0, z0, x1, z0,
                 y00, y10, floor, floor, color, sprite, 0, 0, -1);
         addTexturedQuad(out, matrix, x1, z0, x1, z1,
@@ -231,6 +262,45 @@ public final class TerrainLodRenderer {
                 y11, y01, floor, floor, color, sprite, 0, 0, 1);
         addTexturedQuad(out, matrix, x0, z1, x0, z0,
                 y01, y00, floor, floor, color, sprite, -1, 0, 0);
+    }
+
+    private static int strideForDistance(double distance) {
+        return distance < 48 ? 1 : distance < 128 ? 2 : distance < 256 ? 4 : 8;
+    }
+
+    private static int edgeSegments(int stride, int cameraX, int cameraZ,
+                                    float edgeX, float edgeZ) {
+        double distance = Math.hypot(edgeX - cameraX, edgeZ - cameraZ) / 16.0;
+        int neighbourStride = strideForDistance(distance);
+        return Math.max(1, stride / Math.min(stride, neighbourStride));
+    }
+
+    private static void appendEdge(List<MeshPoint> points,
+                                   float sx, float sz, float sy,
+                                   float ex, float ez, float ey, int segments,
+                                   float cellX, float cellZ, float cellSize,
+                                   TextureAtlasSprite sprite) {
+        for (int i = 0; i < segments; i++) {
+            float t = i / (float) segments;
+            float x = sx + (ex - sx) * t;
+            float z = sz + (ez - sz) * t;
+            float y = sy + (ey - sy) * t;
+            TerrainCache.SurfaceSample sample = TerrainCache.getSurfaceSample(
+                    Math.round(x), Math.round(z));
+            if (sample != null) y = sample.y() + 0.02f;
+            float u = sprite.getU0() + (x - cellX) / cellSize * (sprite.getU1() - sprite.getU0());
+            float v = sprite.getV0() + (z - cellZ) / cellSize * (sprite.getV1() - sprite.getV0());
+            points.add(new MeshPoint(x, y, z, u, v));
+        }
+    }
+
+    private static void addTexturedQuadPoints(BufferBuilder out, Matrix4fc matrix,
+                                              MeshPoint a, MeshPoint b, MeshPoint c,
+                                              MeshPoint d, float[] color) {
+        addTexturedVertex(out, matrix, a.x(), a.y(), a.z(), a.u(), a.v(), color, 0, 1, 0);
+        addTexturedVertex(out, matrix, b.x(), b.y(), b.z(), b.u(), b.v(), color, 0, 1, 0);
+        addTexturedVertex(out, matrix, c.x(), c.y(), c.z(), c.u(), c.v(), color, 0, 1, 0);
+        addTexturedVertex(out, matrix, d.x(), d.y(), d.z(), d.u(), d.v(), color, 0, 1, 0);
     }
 
     private static void addTexturedQuad(BufferBuilder out, Matrix4fc matrix,
