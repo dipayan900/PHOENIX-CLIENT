@@ -44,7 +44,8 @@ public final class VoxelChunkCache {
         thread.setDaemon(true);
         return thread;
     });
-    private static final Map<Long, Boolean> LOADING = new ConcurrentHashMap<>();
+    private static final Map<String, Boolean> LOADING = new ConcurrentHashMap<>();
+    private static final Map<String, BlockState> RESOLVED_STATES = new ConcurrentHashMap<>();
     private static final Map<Long, VoxelChunk> RESIDENT =
             new LinkedHashMap<>(32, 0.75f, true) {
                 @Override protected boolean removeEldestEntry(Map.Entry<Long, VoxelChunk> eldest) {
@@ -66,7 +67,7 @@ public final class VoxelChunkCache {
         public BlockState stateAt(int localX, int y, int localZ) {
             int index = blockAt(localX, y, localZ);
             if (index >= palette.length) return net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
-            return resolveState(palette[index]);
+            return RESOLVED_STATES.computeIfAbsent(palette[index], VoxelChunkCache::resolveState);
         }
     }
 
@@ -97,6 +98,7 @@ public final class VoxelChunkCache {
             height = level.getMaxY() - level.getMinY();
             synchronized (RESIDENT) { RESIDENT.clear(); }
             LOADING.clear();
+            RESOLVED_STATES.clear();
         }
     }
 
@@ -206,7 +208,8 @@ public final class VoxelChunkCache {
             if (RESIDENT.containsKey(chunkKey)) return;
         }
         String requestedWorld = worldKey;
-        if (LOADING.putIfAbsent(chunkKey, Boolean.TRUE) != null) return;
+        String loadKey = requestedWorld + "/" + chunkX + "_" + chunkZ;
+        if (LOADING.putIfAbsent(loadKey, Boolean.TRUE) != null) return;
         IO.execute(() -> {
             try {
                 if (!requestedWorld.equals(worldKey)) return;
@@ -217,7 +220,7 @@ public final class VoxelChunkCache {
                     synchronized (RESIDENT) { RESIDENT.put(chunkKey, loaded); }
                 }
             } finally {
-                LOADING.remove(chunkKey);
+                LOADING.remove(loadKey);
             }
         });
     }
