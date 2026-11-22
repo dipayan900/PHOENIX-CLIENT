@@ -29,7 +29,7 @@ import java.util.stream.Stream;
  * requests chunks from a server and never force-loads terrain.
  */
 public final class TerrainCache {
-    private static final int SAMPLE_STEP = 2;
+    private static final int SAMPLE_STEP = 1;
     private static final int MAX_IN_MEMORY_SAMPLES = 750_000;
     private static final Set<String> CAPTURED = ConcurrentHashMap.newKeySet();
     private static final Set<String> SAMPLE_KEYS = ConcurrentHashMap.newKeySet();
@@ -76,7 +76,7 @@ public final class TerrainCache {
         SAMPLE_COUNT.set(0);
         CAPTURED_CHUNKS.set(0);
 
-        Path folder = cacheRoot.resolve("surface-v2").resolve(key);
+        Path folder = cacheRoot.resolve("surface-v3").resolve(key);
         CompletableFuture.runAsync(() -> restore(folder, key, generation));
     }
 
@@ -142,7 +142,7 @@ public final class TerrainCache {
         // is moved to the worker thread.
         StringBuilder data = new StringBuilder(2048);
         data.append("# Brutal_XD Distant Terrain surface samples\n");
-        data.append("# format=2,step=2,chunkX=").append(chunkX).append(",chunkZ=")
+        data.append("# format=3,step=1,chunkX=").append(chunkX).append(",chunkZ=")
                 .append(chunkZ).append('\n');
 
         for (int localZ = 0; localZ < 16; localZ += SAMPLE_STEP) {
