@@ -15,9 +15,9 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.OverlayTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
@@ -126,7 +126,7 @@ public final class VoxelTerrainRenderer {
         }
         if (MESHES.size() > MAX_GPU_CHUNKS) {
             List<Map.Entry<Long, ChunkMesh>> farthest = new ArrayList<>(MESHES.entrySet());
-            farthest.sort(Comparator.comparingInt(entry -> {
+            farthest.sort(Comparator.comparingInt((Map.Entry<Long, ChunkMesh> entry) -> {
                 int dx = entry.getValue().source().chunkX() - centerX;
                 int dz = entry.getValue().source().chunkZ() - centerZ;
                 return dx * dx + dz * dz;
@@ -225,10 +225,10 @@ public final class VoxelTerrainRenderer {
         float[][] points = switch (face) {
             case DOWN -> new float[][]{{x,y,z1},{x,y,z},{x1,y,z},{x1,y,z1}};
             case UP -> new float[][]{{x,y1,z},{x,y1,z1},{x1,y1,z1},{x1,y1,z}};
-            case NORTH -> new float[][]{{x1,y,z},{x1,y1,z},{x,y1,z},{x,y,z}};
-            case SOUTH -> new float[][]{{x,y,z1},{x,y1,z1},{x1,y1,z1},{x1,y,z1}};
-            case WEST -> new float[][]{{x,y,z},{x,y1,z},{x,y1,z1},{x,y,z1}};
-            case EAST -> new float[][]{{x1,y,z1},{x1,y1,z1},{x1,y1,z},{x1,y,z}};
+            case NORTH -> new float[][]{{x,y,z},{x,y1,z},{x1,y1,z},{x1,y,z}};
+            case SOUTH -> new float[][]{{x1,y,z1},{x1,y1,z1},{x,y1,z1},{x,y,z1}};
+            case WEST -> new float[][]{{x,y,z1},{x,y1,z1},{x,y1,z},{x,y,z}};
+            case EAST -> new float[][]{{x1,y,z},{x1,y1,z},{x1,y1,z1},{x1,y,z1}};
         };
         float u0 = sprite.getU0(), u1 = sprite.getU1();
         float v0 = sprite.getV0(), v1 = sprite.getV1();
