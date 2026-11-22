@@ -84,6 +84,7 @@ public final class TerrainLodRenderer {
     private static int cachedCenterZ = Integer.MIN_VALUE;
     private static int cachedSampleCount = -1;
     private static int cachedDistanceChunks = -1;
+    private static long cachedWorldGeneration = -1;
 
     private TerrainLodRenderer() {}
 
@@ -105,12 +106,14 @@ public final class TerrainLodRenderer {
         int centerX = Math.floorDiv((int) camera.x, 16) * 16 + 8;
         int centerZ = Math.floorDiv((int) camera.z, 16) * 16 + 8;
         int sampleCount = TerrainCache.getSampleCount();
+        long worldGeneration = TerrainCache.getWorldGeneration();
         // Rebuild the distance-sorted candidate list only when the player changes
         // chunk, the explored cache grows, or the configured radius changes.
         // This avoids allocating and sorting tens of thousands of samples every frame.
         if (centerX != cachedCenterX || centerZ != cachedCenterZ
                 || sampleCount != cachedSampleCount
-                || TerrainSettings.distanceChunks != cachedDistanceChunks) {
+                || TerrainSettings.distanceChunks != cachedDistanceChunks
+                || worldGeneration != cachedWorldGeneration) {
             int radiusBlocks = TerrainSettings.distanceChunks * 16;
             // Keep only the nearest candidates. Sorting every cached column can
             // allocate hundreds of thousands of objects on mobile when the user
@@ -145,6 +148,7 @@ public final class TerrainLodRenderer {
             cachedCenterZ = centerZ;
             cachedSampleCount = sampleCount;
             cachedDistanceChunks = TerrainSettings.distanceChunks;
+            cachedWorldGeneration = worldGeneration;
         }
 
         for (Candidate candidate : cachedCandidates) {
