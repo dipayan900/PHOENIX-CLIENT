@@ -13,6 +13,9 @@
   "entrypoints": {
     "client": [
       "dev.brutalxd.distantterrain.BrutalDistantTerrainClient"
+    ],
+    "sodium:config_api_user": [
+      "dev.brutalxd.distantterrain.TerrainSodiumConfig"
     ]
   },
   "depends": {
@@ -20,5 +23,8 @@
     "minecraft": "~1.21.11",
     "java": ">=21",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "sodium": ">=0.8.0"
   }
 }
